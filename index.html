@@ -123,9 +123,14 @@
                         <div class="bg-slate-950/90 p-3 rounded-xl border border-cyber-border space-y-2">
                             <div class="flex items-center justify-between">
                                 <label class="text-[11px] font-semibold text-cyan-400">Baza / Wklejone Dane</label>
-                                <span id="countBase" class="text-[9px] font-mono text-slate-400">0 w.</span>
+                                <div class="flex items-center gap-2">
+                                    <button id="toggleLockBtn" onclick="toggleBaseLock()" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[9px] flex items-center gap-1">
+                                        <i id="lockIcon" data-lucide="lock" class="w-2.5 h-2.5"></i> <span id="lockText">Zablokowane</span>
+                                    </button>
+                                    <span id="countBase" class="text-[9px] font-mono text-slate-400">0 w.</span>
+                                </div>
                             </div>
-                            <textarea id="pasteBaseArea" rows="2" placeholder="Wklej tutaj dane..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-300 custom-scrollbar resize-y focus:outline-none focus:border-cyan-500"></textarea>
+                            <textarea id="pasteBaseArea" readonly rows="2" placeholder="Wklej tutaj dane..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-300 custom-scrollbar resize-y cursor-not-allowed focus:outline-none focus:border-cyan-500"></textarea>
                         </div>
 
                         <div class="bg-slate-950/90 p-3 rounded-xl border border-cyber-border space-y-2">
@@ -285,6 +290,31 @@
             colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16 },
             pagination: { page: 1, pageSize: 50 }
         };
+
+        let isBaseLocked = true;
+
+        function toggleBaseLock() {
+            isBaseLocked = !isBaseLocked;
+            const textarea = document.getElementById('pasteBaseArea');
+            const lockIcon = document.getElementById('lockIcon');
+            const lockText = document.getElementById('lockText');
+            const toggleBtn = document.getElementById('toggleLockBtn');
+
+            if (isBaseLocked) {
+                textarea.setAttribute('readonly', true);
+                textarea.classList.add('cursor-not-allowed');
+                toggleBtn.className = 'px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[9px] flex items-center gap-1';
+                lockText.textContent = 'Zablokowane';
+                lockIcon.setAttribute('data-lucide', 'lock');
+            } else {
+                textarea.removeAttribute('readonly');
+                textarea.classList.remove('cursor-not-allowed');
+                toggleBtn.className = 'px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-[9px] flex items-center gap-1';
+                lockText.textContent = 'Odblokowane';
+                lockIcon.setAttribute('data-lucide', 'unlock');
+            }
+            lucide.createIcons();
+        }
 
         function cleanRawString(val) {
             if (val === null || val === undefined) return '';
