@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS INV Analytics v0.0.7</title>
+    <title>WMS INV Analytics v0.0.7 Dual-Paste</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -31,17 +31,9 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(156, 163, 175, 0.5);
-            border-radius: 3px;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 3px; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased overflow-x-hidden">
@@ -55,15 +47,17 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold text-white tracking-wide">WMS INV Analytics</h1>
-                    <p class="text-xs text-slate-400">System Analizy Wydajności i Przepływu Towaru</p>
+                    <p class="text-xs text-slate-400">System Analizy Wydajności (Dwie Rubryki)</p>
                 </div>
-                <span class="ml-2 px-2 py-0.5 text-xs font-mono bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full font-semibold">v0.0.7</span>
+                <span class="ml-2 px-2 py-0.5 text-xs font-mono bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full font-semibold">v0.0.7 Dual</span>
             </div>
             
             <div class="flex items-center gap-3">
+                <button id="clearMemoryBtn" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-700/50 flex items-center gap-1.5 transition" title="Wyczyść zapisane w pamięci dane">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Wyczyść pamięć
+                </button>
                 <button id="exportCsvBtn" disabled class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed border border-slate-700 flex items-center gap-1.5 transition">
-                    <i data-lucide="download" class="w-4 h-4"></i>
-                    Pobierz CSV
+                    <i data-lucide="download" class="w-4 h-4"></i> Pobierz CSV
                 </button>
             </div>
         </div>
@@ -71,17 +65,15 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- Input Section (Tabs: Paste / File) -->
-        <section class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-xl">
-            <div class="flex items-center justify-between border-b border-slate-700 pb-3 mb-4">
+        <!-- Input Section (Tabs: Dual Paste / File) -->
+        <section class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
                 <div class="flex gap-4">
                     <button id="tabPasteBtn" class="flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-brand-500 text-brand-400 transition">
-                        <i data-lucide="clipboard-paste" class="w-4 h-4"></i>
-                        Wklej Dane (Ctrl+V)
+                        <i data-lucide="clipboard-paste" class="w-4 h-4"></i> Wklej Dane (Dwie Rubryki)
                     </button>
                     <button id="tabFileBtn" class="flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
-                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-                        Wgraj Plik Excel / CSV
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Wgraj Plik Excel / CSV
                     </button>
                 </div>
                 <span class="text-xs text-slate-400 bg-slate-900/60 px-2.5 py-1 rounded border border-slate-700/50 hidden sm:inline-block">
@@ -89,13 +81,33 @@
                 </span>
             </div>
 
-            <!-- Tab 1: Direct Paste -->
-            <div id="tabPasteContent" class="space-y-3">
-                <textarea id="pasteArea" rows="4" placeholder="Wklej skopiowane wiersze z Excela (Ctrl+V)..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-brand-500 custom-scrollbar resize-y"></textarea>
-                <div class="flex justify-end">
-                    <button id="processPasteBtn" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg shadow transition flex items-center gap-2">
-                        <i data-lucide="play" class="w-4 h-4"></i>
-                        Przetwarzaj Dane
+            <!-- Tab 1: Dual Paste Content -->
+            <div id="tabPasteContent" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Rubryka 1: Baza stała -->
+                <div class="space-y-2 bg-slate-900/50 p-3.5 rounded-xl border border-slate-700/60">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-semibold text-brand-400 flex items-center gap-1.5">
+                            <i data-lucide="database" class="w-3.5 h-3.5"></i> Rubryka 1: Baza Stała (np. starsze 1000+ wierszy)
+                        </label>
+                        <span id="countBase" class="text-[10px] text-slate-400 font-mono">0 wierszy</span>
+                    </div>
+                    <textarea id="pasteBaseArea" rows="4" placeholder="Wklej tutaj starsze/bazowe dane raz i zostaną w pamięci..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-brand-500 custom-scrollbar resize-y"></textarea>
+                </div>
+
+                <!-- Rubryka 2: Świeże dane -->
+                <div class="space-y-2 bg-slate-900/50 p-3.5 rounded-xl border border-slate-700/60">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Rubryka 2: Świeże Dane (kolejne partie / nowe wiersze)
+                        </label>
+                        <span id="countFresh" class="text-[10px] text-slate-400 font-mono">0 wierszy</span>
+                    </div>
+                    <textarea id="pasteFreshArea" rows="4" placeholder="Wklej tutaj tylko nowe/bieżące wiersze..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-brand-500 custom-scrollbar resize-y"></textarea>
+                </div>
+
+                <div class="md:col-span-2 flex justify-end">
+                    <button id="processPasteBtn" class="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg shadow-lg transition flex items-center gap-2">
+                        <i data-lucide="play" class="w-4 h-4"></i> Scal i Przetwarzaj Dane z Obiech Rubryk
                     </button>
                 </div>
             </div>
@@ -268,7 +280,7 @@
                         <tr><th class="py-2.5 px-3">Lp.</th><th class="py-2.5 px-3">Data / Czas</th><th class="py-2.5 px-3">Kod (A)</th><th class="py-2.5 px-3">Strefa / Typ</th><th class="py-2.5 px-3">SKU (B)</th><th class="py-2.5 px-3 text-right">Sztuki (G)</th><th class="py-2.5 px-3">Lok. Docelowa (I)</th><th class="py-2.5 px-3">Pracownik (N)</th></tr>
                     </thead>
                     <tbody id="detailsTableBody" class="divide-y divide-slate-700/50">
-                        <tr><td colspan="8" class="py-8 text-center text-slate-500">Brak wczytanych rekordów. Wklej dane lub wgraj plik.</td></tr>
+                        <tr><td colspan="8" class="py-8 text-center text-slate-500">Brak wczytanych rekordów. Wklej dane w rubryki powyżej.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -330,11 +342,18 @@
             lucide.createIcons();
             initTabs();
             initFileUpload();
-            initPasteMode();
+            initDualPaste();
             initColumnMapping();
             initFilters();
             initPaginationControls();
             initExport();
+
+            // Automatyczne wczytanie z pamięci przeglądarki jeśli wcześniej coś wklejono
+            const savedBase = localStorage.getItem('wms_base_paste') || '';
+            const savedFresh = localStorage.getItem('wms_fresh_paste') || '';
+            if (savedBase) document.getElementById('pasteBaseArea').value = savedBase;
+            if (savedFresh) document.getElementById('pasteFreshArea').value = savedFresh;
+            if (savedBase || savedFresh) processBothAreas();
         });
 
         function switchCategory(cat) {
@@ -401,12 +420,60 @@
             reader.readAsArrayBuffer(file);
         }
 
-        function initPasteMode() {
+        function initDualPaste() {
             document.getElementById('processPasteBtn').addEventListener('click', () => {
-                const text = document.getElementById('pasteArea').value;
-                if (!text.trim()) return;
-                processMatrixData(text.split('\n').map(line => line.split('\t')));
+                processBothAreas();
             });
+
+            document.getElementById('clearMemoryBtn').addEventListener('click', () => {
+                if (confirm('Czy na pewno chcesz wyczyścić zapamiętane dane z obu rubryk?')) {
+                    localStorage.removeItem('wms_base_paste');
+                    localStorage.removeItem('wms_fresh_paste');
+                    document.getElementById('pasteBaseArea').value = '';
+                    document.getElementById('pasteFreshArea').value = '';
+                    state.rawRows = [];
+                    state.parsedData = [];
+                    renderAll();
+                }
+            });
+        }
+
+        function processBothAreas() {
+            const baseText = document.getElementById('pasteBaseArea').value;
+            const freshText = document.getElementById('pasteFreshArea').value;
+
+            localStorage.setItem('wms_base_paste', baseText);
+            localStorage.setItem('wms_fresh_paste', freshText);
+
+            let combinedRows = [];
+            let headerRow = null;
+
+            // Przetwarzanie rubryki 1 (Baza)
+            if (baseText.trim()) {
+                const baseLines = baseText.split('\n').map(line => line.split('\t'));
+                if (baseLines.length > 0) {
+                    headerRow = baseLines[0];
+                    combinedRows.push(...baseLines);
+                }
+            }
+
+            // Przetwarzanie rubryki 2 (Świeże dane)
+            if (freshText.trim()) {
+                const freshLines = freshText.split('\n').map(line => line.split('\t'));
+                if (freshLines.length > 0) {
+                    if (!headerRow) headerRow = freshLines[0];
+                    // Pomijamy nagłówek w świeżych danych jeśli istnieje
+                    const dataLines = freshLines.slice(cleanRawString(freshLines[0][0]).toUpperCase().includes('CODE') ? 1 : 0);
+                    combinedRows.push(...dataLines);
+                }
+            }
+
+            document.getElementById('countBase').textContent = baseText.trim() ? `${baseText.split('\n').length} wierszy` : '0 wierszy';
+            document.getElementById('countFresh').textContent = freshText.trim() ? `${freshText.split('\n').length} wierszy` : '0 wierszy';
+
+            if (combinedRows.length > 0) {
+                processMatrixData(combinedRows);
+            }
         }
 
         function processMatrixData(matrix) {
@@ -461,6 +528,8 @@
             let startIdx = 0;
             if (cleanRawString(state.rawRows[0][state.colMap.code]).toUpperCase().includes('CODE')) startIdx = 1;
 
+            const seen = new Set();
+
             for (let i = startIdx; i < state.rawRows.length; i++) {
                 const row = state.rawRows[i];
                 const code = cleanRawString(row[state.colMap.code]);
@@ -474,6 +543,11 @@
                 if (!code && !sku && !user) continue;
                 if (!user) user = 'BRAK_USERA';
                 
+                // Unikalny klucz zapobiegający dublowaniu wierszy po scaleniu baz
+                const rowKey = `${code}|${sku}|${target}|${time}|${date}|${user}`;
+                if (seen.has(rowKey)) continue;
+                seen.add(rowKey);
+
                 const taskType = classifyTaskType(code);
                 const putawayZone = taskType === 'Putaway' ? classifyPutawayZone(target) : 'N/A';
                 records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone });
@@ -650,7 +724,7 @@
                 data.forEach((r, idx) => csv += `${idx + 1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_v0.0.7_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_v0.0.7_Dual_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
