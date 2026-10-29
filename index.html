@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.1.1</title>
+    <title>WMS Cyberpunk Hub v0.1.1 Cloud</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -25,6 +25,8 @@
     </script>
     <!-- SheetJS (xlsx) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -34,7 +36,6 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #00f2fe; }
         .cyber-glow { box-shadow: 0 0 20px rgba(0, 242, 254, 0.05); }
         
-        /* Tło z wózkiem wysokiego składowania i nakładką przyciemniającą */
         body {
             background-image: linear-gradient(to right, rgba(5, 11, 20, 0.95), rgba(10, 22, 40, 0.88)), 
                               url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1920&q=80');
@@ -55,7 +56,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.1.1-VNA</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.1.1-CLOUD</span>
                 </div>
             </div>
 
@@ -79,7 +80,7 @@
         <!-- Sidebar Footer Action -->
         <div class="p-5 border-t border-cyber-border space-y-3">
             <button id="clearMemoryBtn" class="w-full py-2 px-3 bg-red-950/30 hover:bg-red-900/40 text-red-400 border border-red-900/50 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Reset Pamięci
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Reset Chmury
             </button>
             <button id="exportCsvBtn" disabled class="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i> Eksport CSV
@@ -114,7 +115,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span class="text-[10px] text-slate-400 font-mono hidden sm:inline-block">Kolumny: A, B, G, I, K, M, N</span>
+                        <span id="cloudStatus" class="text-[10px] text-cyan-400 font-mono">Status: Połączono z chmurą</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -140,7 +141,7 @@
 
                         <div class="sm:col-span-2 flex justify-end">
                             <button id="processPasteBtn" class="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center gap-2">
-                                <i data-lucide="cpu" class="w-3.5 h-3.5"></i> Przetwarzaj Strumień
+                                <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i> Wyślij do Chmury
                             </button>
                         </div>
                     </div>
@@ -149,7 +150,7 @@
                     <div id="tabFileContent" class="hidden space-y-3">
                         <div id="dropZone" class="border-2 border-dashed border-cyber-border hover:border-cyan-500 bg-slate-950/70 rounded-xl p-6 text-center cursor-pointer transition">
                             <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
-                            <p class="text-xs text-slate-300">Przeciągnij plik Excel/CSV lub kliknij</p>
+                            <p class="text-xs text-slate-300">Przeciągnij plik Excel/CSV do chmury lub kliknij</p>
                         </div>
                     </div>
                 </div>
@@ -244,432 +245,4 @@
             <!-- DETAILED OPERATIONS TABLE -->
             <section class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Szczegółowa Tabela Operacji</h3>
-                    <div class="relative">
-                        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400"></i>
-                        <input type="text" id="searchInput" placeholder="Szukaj SKU / User / Lok..." class="bg-slate-950 border border-cyber-border text-xs rounded-xl pl-9 pr-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500">
-                    </div>
-                </div>
-                <div class="overflow-x-auto custom-scrollbar border border-cyber-border rounded-xl">
-                    <table class="w-full text-left text-xs text-slate-300">
-                        <thead class="bg-slate-950 text-slate-400 font-medium uppercase tracking-wider border-b border-cyber-border">
-                            <tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>
-                        </thead>
-                        <tbody id="detailsTableBody" class="divide-y divide-cyber-border">
-                            <tr><td colspan="8" class="py-8 text-center text-slate-500">Brak wczytanych danych.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="flex items-center justify-between text-xs text-slate-400 pt-2">
-                    <span id="pageInfo">Pokazuję 0 z 0 wierszy</span>
-                    <div class="flex items-center gap-2">
-                        <button id="prevPageBtn" disabled class="px-3 py-1 bg-slate-950 border border-cyber-border rounded-lg disabled:opacity-40">Poprzednia</button>
-                        <button id="nextPageBtn" disabled class="px-3 py-1 bg-slate-950 border border-cyber-border rounded-lg disabled:opacity-40">Następna</button>
-                    </div>
-                </div>
-            </section>
-
-        </main>
-    </div>
-
-    <script>
-        const state = {
-            rawRows: [],
-            parsedData: [],
-            activeCategory: 'Putaway',
-            activeZone: 'ALL',
-            selectedUser: null,
-            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16 },
-            pagination: { page: 1, pageSize: 50 }
-        };
-
-        let isBaseLocked = true;
-
-        function toggleBaseLock() {
-            isBaseLocked = !isBaseLocked;
-            const textarea = document.getElementById('pasteBaseArea');
-            const toggleBtn = document.getElementById('toggleLockBtn');
-            if (isBaseLocked) {
-                textarea.setAttribute('readonly', true);
-                toggleBtn.textContent = 'Zablokowane';
-                toggleBtn.className = 'px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[9px]';
-            } else {
-                textarea.removeAttribute('readonly');
-                toggleBtn.textContent = 'Odblokowane';
-                toggleBtn.className = 'px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-[9px]';
-            }
-        }
-
-        function cleanRawString(val) {
-            if (val === null || val === undefined) return '';
-            let str = String(val).trim();
-            if (/^\d+(\.\d+)?e\+\d+$/i.test(str)) {
-                try { str = BigInt(Math.round(Number(str))).toString(); } catch(e) {}
-            }
-            return str;
-        }
-
-        function parseQty(val) {
-            if (val === null || val === undefined || val === '') return 0;
-            let num = Number(String(val).replace(/\s+/g, '').replace(',', '.'));
-            return isNaN(num) ? 0 : num;
-        }
-
-        function classifyTaskType(codeStr) {
-            const upper = codeStr.toUpperCase().trim();
-            if (upper.includes('RECEIPT') || upper.includes('PRZYJECIE') || upper.includes('PRZYJĘCIE')) return 'Receipt';
-            if (upper.includes('RELOCATE') || upper.includes('RELOKACJA') || upper.includes('PRZEMIESZCZ')) return 'Relocate';
-            return 'Putaway';
-        }
-
-        function classifyPutawayZone(targetStr, taskType) {
-            const up = targetStr.toUpperCase().trim();
-            if (up.startsWith('AS')) return 'SHELF';
-            if (taskType === 'Relocate') return 'RELOCATE_OTHER';
-            if (up.startsWith('V1-IN') || up.startsWith('V2-IN') || up.startsWith('V1IN') || up.startsWith('V2IN')) return 'VIN';
-            if (up.startsWith('V1') || up.startsWith('V2')) return 'VNA';
-            return 'BULK';
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-            initTabs();
-            initFileUpload();
-            initDualPaste();
-            initFilters();
-            initPaginationControls();
-            initExport();
-            initPresenceModule();
-
-            const savedBase = localStorage.getItem('wms_cyber_base') || '';
-            const savedFresh = localStorage.getItem('wms_cyber_fresh') || '';
-            if (savedBase) document.getElementById('pasteBaseArea').value = savedBase;
-            if (savedFresh) document.getElementById('pasteFreshArea').value = savedFresh;
-            if (savedBase || savedFresh) processBothAreas();
-        });
-
-        function initPresenceModule() {
-            ['presenceDsv', 'presenceServices', 'presenceQlevel'].forEach(id => {
-                const el = document.getElementById(id);
-                const val = localStorage.getItem(`wms_cyber_${id}`);
-                if (val !== null) el.value = val;
-                el.addEventListener('input', () => {
-                    localStorage.setItem(`wms_cyber_${id}`, el.value);
-                    updateTotalPresence();
-                });
-            });
-            updateTotalPresence();
-        }
-
-        function updateTotalPresence() {
-            const total = (parseInt(document.getElementById('presenceDsv').value) || 0) +
-                          (parseInt(document.getElementById('presenceServices').value) || 0) +
-                          (parseInt(document.getElementById('presenceQlevel').value) || 0);
-            document.getElementById('totalPresenceCount').textContent = total;
-        }
-
-        function switchCategory(cat) {
-            state.activeCategory = cat;
-            state.activeZone = 'ALL';
-            state.selectedUser = null;
-
-            ['Putaway', 'Relocate', 'Receipt', 'ClosedPA'].forEach(c => {
-                const btn = document.getElementById(`nav${c}`);
-                if (c === cat) {
-                    btn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 transition';
-                } else {
-                    btn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
-                }
-            });
-
-            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA' };
-            document.getElementById('activeCatLabel').textContent = labels[cat];
-            document.getElementById('putawayZonesSection').classList.toggle('hidden', cat !== 'Putaway');
-
-            state.pagination.page = 1;
-            renderAll();
-        }
-
-        function switchZone(zone) {
-            state.activeZone = zone;
-            state.selectedUser = null;
-            ['ALL', 'BULK', 'VIN', 'VNA', 'SHELF'].forEach(z => {
-                document.getElementById(`zoneBtn${z}`).className = z === zone ? 'p-2.5 bg-slate-900 border border-cyan-500/50 rounded-xl text-left transition' : 'p-2.5 bg-slate-950 border border-cyber-border rounded-xl text-left transition';
-            });
-            state.pagination.page = 1;
-            renderAll();
-        }
-
-        function initTabs() {
-            document.getElementById('tabPasteBtn').addEventListener('click', () => {
-                document.getElementById('tabPasteBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500 text-slate-950 transition';
-                document.getElementById('tabFileBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition';
-                document.getElementById('tabPasteContent').classList.remove('hidden');
-                document.getElementById('tabFileContent').classList.add('hidden');
-            });
-            document.getElementById('tabFileBtn').addEventListener('click', () => {
-                document.getElementById('tabFileBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500 text-slate-950 transition';
-                document.getElementById('tabPasteBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition';
-                document.getElementById('tabFileContent').classList.remove('hidden');
-                document.getElementById('tabPasteContent').classList.add('hidden');
-            });
-        }
-
-        function initFileUpload() {
-            const dropZone = document.getElementById('dropZone');
-            const fileInput = document.getElementById('fileInput');
-            dropZone.addEventListener('click', () => fileInput.click());
-            dropZone.addEventListener('dragover', e => e.preventDefault());
-            dropZone.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
-            fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
-        }
-
-        function handleFile(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array', raw: false, cellText: true });
-                let sheetName = workbook.SheetNames.find(name => name.trim().toUpperCase() === 'INV') || workbook.SheetNames[0];
-                processMatrixData(XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: false, defval: '' }));
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function initDualPaste() {
-            document.getElementById('processPasteBtn').addEventListener('click', processBothAreas);
-            document.getElementById('clearMemoryBtn').addEventListener('click', () => {
-                if (confirm('Wyczyścić pamięć cyber?')) {
-                    localStorage.removeItem('wms_cyber_base');
-                    localStorage.removeItem('wms_cyber_fresh');
-                    document.getElementById('pasteBaseArea').value = '';
-                    document.getElementById('pasteFreshArea').value = '';
-                    state.rawRows = [];
-                    state.parsedData = [];
-                    renderAll();
-                }
-            });
-        }
-
-        function processBothAreas() {
-            const baseText = document.getElementById('pasteBaseArea').value;
-            const freshText = document.getElementById('pasteFreshArea').value;
-            localStorage.setItem('wms_cyber_base', baseText);
-            localStorage.setItem('wms_cyber_fresh', freshText);
-
-            let combined = [], header = null;
-            if (baseText.trim()) {
-                const lines = baseText.split('\n').map(l => l.split('\t'));
-                header = lines[0]; combined.push(...lines);
-            }
-            if (freshText.trim()) {
-                const lines = freshText.split('\n').map(l => l.split('\t'));
-                if (!header) header = lines[0];
-                combined.push(...lines.slice(cleanRawString(lines[0][0]).toUpperCase().includes('CODE') ? 1 : 0));
-            }
-            document.getElementById('countBase').textContent = baseText.trim() ? `${baseText.split('\n').length} w.` : '0 w.';
-            document.getElementById('countFresh').textContent = freshText.trim() ? `${freshText.split('\n').length} w.` : '0 w.';
-            if (combined.length) processMatrixData(combined);
-        }
-
-        function processMatrixData(matrix) {
-            state.rawRows = matrix.map(r => { const row = [...r]; while(row.length < 18) row.push(''); return row; });
-            parseDataset();
-        }
-
-        function parseDataset() {
-            if (!state.rawRows.length) return;
-            const records = [];
-            const start = cleanRawString(state.rawRows[0][state.colMap.code]).toUpperCase().includes('CODE') ? 1 : 0;
-            const seen = new Set();
-
-            for (let i = start; i < state.rawRows.length; i++) {
-                const r = state.rawRows[i];
-                const code = cleanRawString(r[state.colMap.code]);
-                const sku = cleanRawString(r[state.colMap.sku]);
-                const qty = parseQty(r[state.colMap.qty]);
-                const target = cleanRawString(r[state.colMap.target]);
-                const time = cleanRawString(r[state.colMap.time]);
-                const date = cleanRawString(r[state.colMap.date]);
-                let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
-                const completeStatus = cleanRawString(r[state.colMap.complete]);
-                const paValue = cleanRawString(r[state.colMap.paCol]);
-
-                if (!code && !sku && !user) continue;
-                const key = `${code}|${sku}|${target}|${time}|${date}|${user}`;
-                if (seen.has(key)) continue;
-                seen.add(key);
-
-                const taskType = classifyTaskType(code);
-                const putawayZone = classifyPutawayZone(target, taskType);
-                const isComplete = completeStatus.toLowerCase().includes('complete');
-                let closedPAType = 'NONE';
-                if (isComplete) closedPAType = paValue.startsWith('018') ? 'PA_018' : 'PA_OTHER';
-
-                records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone, closedPAType });
-            }
-            state.parsedData = records;
-            state.selectedUser = null;
-            renderAll();
-        }
-
-        function initFilters() {
-            document.getElementById('searchInput').addEventListener('input', () => { state.pagination.page = 1; renderDetailsTable(); });
-        }
-
-        function getActiveFilteredData() {
-            let data = [];
-            if (state.activeCategory === 'Putaway') {
-                data = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
-                if (state.activeZone !== 'ALL') data = data.filter(d => d.putawayZone === state.activeZone);
-            } else if (state.activeCategory === 'Receipt') {
-                data = state.parsedData.filter(d => d.taskType === 'Receipt');
-            } else if (state.activeCategory === 'Relocate') {
-                data = state.parsedData.filter(d => d.taskType === 'Relocate');
-            } else if (state.activeCategory === 'ClosedPA') {
-                data = state.parsedData.filter(d => d.closedPAType !== 'NONE');
-            }
-            return data;
-        }
-
-        function renderAll() {
-            renderDashboardCards();
-            renderZonesCounts();
-            renderWorkers();
-            renderDrilldown();
-            renderDetailsTable();
-            document.getElementById('exportCsvBtn').disabled = !state.parsedData.length;
-        }
-
-        function renderDashboardCards() {
-            const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
-            const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
-            const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
-            const pa018 = state.parsedData.filter(d => d.closedPAType === 'PA_018').length;
-            const paOther = state.parsedData.filter(d => d.closedPAType === 'PA_OTHER').length;
-
-            let vna = 0, bulk = 0, vin = 0, shelf = 0;
-            putawayItems.forEach(d => {
-                if (d.putawayZone === 'VNA') vna++;
-                else if (d.putawayZone === 'BULK') bulk++;
-                else if (d.putawayZone === 'VIN') vin++;
-                else if (d.putawayZone === 'SHELF') shelf++;
-            });
-
-            const purePutaway = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY')).length;
-            const totalSum = purePutaway + relocateItems.length;
-
-            document.getElementById('dashVnaOps').textContent = vna;
-            document.getElementById('dashBulkOps').textContent = bulk;
-            document.getElementById('dashVinOps').textContent = vin;
-            document.getElementById('dashShelfOps').textContent = shelf;
-            document.getElementById('dashPutawayRelocateSum').textContent = totalSum;
-            document.getElementById('dashReceiptOps').textContent = receiptItems.length;
-            document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((s, d) => s + d.qty, 0);
-            document.getElementById('dashPa018Ops').textContent = pa018;
-            document.getElementById('dashPaOtherOps').textContent = paOther;
-        }
-
-        function renderZonesCounts() {
-            const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
-            const stats = { 'ALL': putawayItems.length, 'BULK': 0, 'VIN': 0, 'VNA': 0, 'SHELF': 0 };
-            putawayItems.forEach(d => { if (stats[d.putawayZone] !== undefined) stats[d.putawayZone]++; });
-            ['ALL', 'BULK', 'VIN', 'VNA', 'SHELF'].forEach(z => document.getElementById(`zoneCount${z}`).textContent = `${stats[z]} ops`);
-        }
-
-        function renderWorkers() {
-            const activeData = getActiveFilteredData();
-            const userMap = {};
-            activeData.forEach(d => userMap[d.user] = (userMap[d.user] || 0) + 1);
-            const sorted = Object.entries(userMap).sort((a,b) => b[1] - a[1]);
-
-            document.getElementById('catWorkersCount').textContent = `${sorted.length} osób`;
-            document.getElementById('catTotalOps').textContent = `${activeData.length} ops`;
-
-            const tbody = document.getElementById('categoryWorkersBody');
-            tbody.innerHTML = '';
-            if (!sorted.length) {
-                tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-500">Brak danych</td></tr>`;
-                return;
-            }
-            sorted.forEach(([user, count]) => {
-                const isSelected = state.selectedUser === user;
-                const tr = document.createElement('tr');
-                tr.className = `hover:bg-slate-800/50 transition cursor-pointer ${isSelected ? 'bg-cyan-500/20 border-l-4 border-cyan-400' : ''}`;
-                tr.onclick = () => { state.selectedUser = user; renderWorkers(); renderDrilldown(); };
-                tr.innerHTML = `<td class="py-2.5 px-3 font-semibold text-white">${user}</td><td class="py-2.5 px-3 text-right font-bold text-cyan-400">${count}</td><td class="py-2.5 px-3 text-right"><span class="text-[10px] text-slate-400 underline">Wybierz</span></td>`;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function clearUserSelection() { state.selectedUser = null; renderWorkers(); renderDrilldown(); }
-
-        function renderDrilldown() {
-            const nameEl = document.getElementById('selectedUserName');
-            const tbody = document.getElementById('drilldownTableBody');
-            tbody.innerHTML = '';
-
-            if (!state.selectedUser) {
-                nameEl.textContent = '-';
-                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Wybierz pracownika z listy.</td></tr>';
-                return;
-            }
-            nameEl.textContent = state.selectedUser;
-            const movements = getActiveFilteredData().filter(d => d.user === state.selectedUser);
-            movements.forEach((m, i) => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-800/40 transition';
-                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${i+1}</td><td class="py-2 px-3 text-slate-400">${m.date} ${m.time}</td><td class="py-2 px-3 text-slate-300">${m.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${m.putawayZone}</span></td><td class="py-2 px-3 text-emerald-400">${m.sku}</td><td class="py-2 px-3 text-slate-200">${m.target}</td>`;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function renderDetailsTable() {
-            const tbody = document.getElementById('detailsTableBody');
-            tbody.innerHTML = '';
-            const search = document.getElementById('searchInput').value.toLowerCase().trim();
-            let data = getActiveFilteredData();
-            if (state.selectedUser) data = data.filter(d => d.user === state.selectedUser);
-
-            const filtered = data.filter(item => !search || item.sku.toLowerCase().includes(search) || item.user.toLowerCase().includes(search) || item.target.toLowerCase().includes(search) || item.code.toLowerCase().includes(search));
-            const total = filtered.length;
-            const { page, pageSize } = state.pagination;
-            const start = (page - 1) * pageSize;
-            const pageData = filtered.slice(start, start + pageSize);
-
-            if (!pageData.length) {
-                tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Brak wierszy spełniających kryteria.</td></tr>';
-                document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
-                return;
-            }
-
-            pageData.forEach((row, i) => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-800/40 transition';
-                tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date} ${row.time}</td><td class="py-2.5 px-3 text-slate-300">${row.code}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${row.putawayZone}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user}</td>`;
-                tbody.appendChild(tr);
-            });
-
-            document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} wierszy`;
-            document.getElementById('prevPageBtn').disabled = page === 1;
-            document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
-        }
-
-        function initPaginationControls() {
-            document.getElementById('prevPageBtn').addEventListener('click', () => { if (state.pagination.page > 1) { state.pagination.page--; renderDetailsTable(); } });
-            document.getElementById('nextPageBtn').addEventListener('click', () => { state.pagination.page++; renderDetailsTable(); });
-        }
-
-        function initExport() {
-            document.getElementById('exportCsvBtn').addEventListener('click', () => {
-                const data = getActiveFilteredData();
-                if (!data.length) return;
-                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User\n';
-                data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`);
-                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-            });
-        }
-    </script>
-</body>
-</html>
+                    <h3 class="text-xs font-bold uppercase tracking-wider
