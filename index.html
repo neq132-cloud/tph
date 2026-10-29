@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS INV Analytics v0.0.7</title>
+    <title>WMS INV Analytics v0.0.7 Cloud</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -31,17 +31,9 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(156, 163, 175, 0.5);
-            border-radius: 3px;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 3px; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased overflow-x-hidden">
@@ -55,15 +47,17 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold text-white tracking-wide">WMS INV Analytics</h1>
-                    <p class="text-xs text-slate-400">System Analizy Wydajności i Przepływu Towaru</p>
+                    <p class="text-xs text-slate-400">System Analizy Wydajności (Chmura Google)</p>
                 </div>
                 <span class="ml-2 px-2 py-0.5 text-xs font-mono bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full font-semibold">v0.0.7</span>
             </div>
             
             <div class="flex items-center gap-3">
+                <span id="syncStatus" class="text-xs text-emerald-400 flex items-center gap-1 font-mono">
+                    <i data-lucide="cloud" class="w-3.5 h-3.5"></i> Połączono z chmurą
+                </span>
                 <button id="exportCsvBtn" disabled class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed border border-slate-700 flex items-center gap-1.5 transition">
-                    <i data-lucide="download" class="w-4 h-4"></i>
-                    Eksportuj CSV
+                    <i data-lucide="download" class="w-4 h-4"></i> Pobierz CSV
                 </button>
             </div>
         </div>
@@ -71,84 +65,54 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- Input Section (Tabs: File / Paste) -->
-        <section class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-xl">
-            <div class="flex items-center justify-between border-b border-slate-700 pb-3 mb-4">
+        <!-- Input Section -->
+        <section class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
                 <div class="flex gap-4">
-                    <button id="tabFileBtn" class="flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-brand-500 text-brand-400 transition">
-                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-                        Wgraj Plik Excel / CSV
+                    <button id="tabPasteBtn" class="flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-brand-500 text-brand-400 transition">
+                        <i data-lucide="clipboard-paste" class="w-4 h-4"></i> Wklej Dane (Zapis do Chmury)
                     </button>
-                    <button id="tabPasteBtn" class="flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
-                        <i data-lucide="clipboard-paste" class="w-4 h-4"></i>
-                        Wklej Dane ze Schowka (Ctrl+V)
+                    <button id="tabFileBtn" class="flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Wgraj Plik Excel / CSV
                     </button>
                 </div>
-                <span class="text-xs text-slate-400 bg-slate-900/60 px-2.5 py-1 rounded border border-slate-700/50">
+                <span class="text-xs text-slate-400 bg-slate-900/60 px-2.5 py-1 rounded border border-slate-700/50 hidden sm:inline-block">
                     Układ: <strong class="text-brand-400">A</strong>: Code | <strong class="text-brand-400">B</strong>: SKU | <strong class="text-brand-400">G</strong>: Qty | <strong class="text-brand-400">I</strong>: Target | <strong class="text-brand-400">K</strong>: Czas | <strong class="text-brand-400">M</strong>: Data | <strong class="text-brand-400">N</strong>: User
                 </span>
             </div>
 
-            <!-- Tab 1: File Upload -->
-            <div id="tabFileContent" class="space-y-4">
-                <div id="dropZone" class="border-2 border-dashed border-slate-600 hover:border-brand-500/80 bg-slate-900/40 hover:bg-slate-900/80 rounded-xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2">
-                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
-                    <div class="p-3 bg-slate-800 rounded-full text-brand-400 border border-slate-700">
-                        <i data-lucide="upload-cloud" class="w-6 h-6"></i>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-slate-200">Przeciągnij i upuść plik Excel/CSV lub <span class="text-brand-400 underline">kliknij, aby przeglądać</span></p>
-                        <p class="text-xs text-slate-400 mt-1">Obsługuje pliki z zakładką <code class="bg-slate-800 px-1 py-0.5 rounded text-amber-400">INV</code> lub arkusze pojedyncze</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab 2: Direct Paste -->
-            <div id="tabPasteContent" class="hidden space-y-3">
-                <textarea id="pasteArea" rows="4" placeholder="Wklej skopiowane wiersze z Excela (Ctrl+V)..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-brand-500 custom-scrollbar resize-y"></textarea>
+            <!-- Tab 1: Direct Paste -->
+            <div id="tabPasteContent" class="space-y-3">
+                <textarea id="pasteArea" rows="3" placeholder="Wklej skopiowane wiersze z Excela (Ctrl+V) - dane zapiszą się automatycznie na Dysku Google..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-brand-500 custom-scrollbar resize-y"></textarea>
                 <div class="flex justify-end">
                     <button id="processPasteBtn" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg shadow transition flex items-center gap-2">
-                        <i data-lucide="play" class="w-4 h-4"></i>
-                        Przetwarzaj Dane ze Schowka
+                        <i data-lucide="cloud-upload" class="w-4 h-4"></i> Wyślij i Zapisz na Dysku Google
                     </button>
                 </div>
             </div>
 
+            <!-- Tab 2: File Upload -->
+            <div id="tabFileContent" class="hidden space-y-4">
+                <div id="dropZone" class="border-2 border-dashed border-slate-600 hover:border-brand-500/80 bg-slate-900/40 hover:bg-slate-900/80 rounded-xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2">
+                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
+                    <div class="p-2.5 bg-slate-800 rounded-full text-brand-400 border border-slate-700"><i data-lucide="upload-cloud" class="w-5 h-5"></i></div>
+                    <p class="text-xs font-medium text-slate-200">Przeciągnij plik lub <span class="text-brand-400 underline">kliknij, aby wybrać</span> (automatycznie zasili chmurę)</p>
+                </div>
+            </div>
+
             <!-- Column Mapping Settings -->
-            <details class="mt-4 pt-3 border-t border-slate-700/50">
+            <details class="pt-2 border-t border-slate-700/50">
                 <summary class="text-xs font-medium text-slate-400 hover:text-slate-200 cursor-pointer flex items-center gap-1 select-none">
-                    <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
-                    Ustawienia Mapowania Kolumn (Domyślnie A, B, G, I, K, M, N)
+                    <i data-lucide="settings-2" class="w-3.5 h-3.5"></i> Ustawienia Mapowania Kolumn (Domyślnie A, B, G, I, K, M, N)
                 </summary>
                 <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 mt-3 pt-2">
-                    <div>
-                        <label class="block text-[10px] font-medium text-slate-400 mb-1">Kod (Kol. A)</label>
-                        <select id="colCode" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-medium text-slate-400 mb-1">SKU (Kol. B)</label>
-                        <select id="colSku" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-medium text-slate-400 mb-1">Sztuk (Kol. G)</label>
-                        <select id="colQty" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-medium text-slate-400 mb-1">Lok. Docelowa (Kol. I)</label>
-                        <select id="colTarget" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-medium text-slate-400 mb-1">Czas (Kol. K)</label>
-                        <select id="colTime" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-medium text-slate-400 mb-1">Data (Kol. M)</label>
-                        <select id="colDate" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-medium text-slate-400 mb-1">USER (Kol. N)</label>
-                        <select id="colUser" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select>
-                    </div>
+                    <div><label class="block text-[10px] text-slate-400 mb-1">Kod (Kol. A)</label><select id="colCode" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select></div>
+                    <div><label class="block text-[10px] text-slate-400 mb-1">SKU (Kol. B)</label><select id="colSku" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select></div>
+                    <div><label class="block text-[10px] text-slate-400 mb-1">Sztuk (Kol. G)</label><select id="colQty" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select></div>
+                    <div><label class="block text-[10px] text-slate-400 mb-1">Lok. (Kol. I)</label><select id="colTarget" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select></div>
+                    <div><label class="block text-[10px] text-slate-400 mb-1">Czas (Kol. K)</label><select id="colTime" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select></div>
+                    <div><label class="block text-[10px] text-slate-400 mb-1">Data (Kol. M)</label><select id="colDate" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select></div>
+                    <div><label class="block text-[10px] text-slate-400 mb-1">USER (Kol. N)</label><select id="colUser" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select></div>
                 </div>
             </details>
         </section>
@@ -156,190 +120,85 @@
         <!-- MAIN SHIFT SUMMARY DASHBOARD -->
         <section class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-5 shadow-xl space-y-3">
             <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-brand-400"></i>
-                    Główne Podsumowanie Zmiany (Wszystkie Operacje)
-                </h3>
-                <span class="text-xs text-slate-400 font-mono">Stan na bieżąco</span>
+                <h3 class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="layout-dashboard" class="w-4 h-4 text-brand-400"></i> Główne Podsumowanie Zmiany</h3>
             </div>
-            
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                <div class="bg-slate-900/80 border border-emerald-500/30 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-emerald-400 uppercase tracking-wide">Putaway VNA</span>
-                    <div class="mt-2 flex items-baseline justify-between">
-                        <span id="dashVnaOps" class="text-xl font-bold text-white">0</span>
-                        <span class="text-xs text-slate-400">ops</span>
-                    </div>
-                </div>
-                <div class="bg-slate-900/80 border border-amber-500/30 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-amber-400 uppercase tracking-wide">Putaway BULK</span>
-                    <div class="mt-2 flex items-baseline justify-between">
-                        <span id="dashBulkOps" class="text-xl font-bold text-white">0</span>
-                        <span class="text-xs text-slate-400">ops</span>
-                    </div>
-                </div>
-                <div class="bg-slate-900/80 border border-sky-500/30 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-sky-400 uppercase tracking-wide">Putaway VIN</span>
-                    <div class="mt-2 flex items-baseline justify-between">
-                        <span id="dashVinOps" class="text-xl font-bold text-white">0</span>
-                        <span class="text-xs text-slate-400">ops</span>
-                    </div>
-                </div>
-                <div class="bg-slate-900/80 border border-purple-500/30 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-purple-400 uppercase tracking-wide">Putaway SHELF</span>
-                    <div class="mt-2 flex items-baseline justify-between">
-                        <span id="dashShelfOps" class="text-xl font-bold text-white">0</span>
-                        <span class="text-xs text-slate-400">ops</span>
-                    </div>
-                </div>
-                <div class="bg-slate-900/80 border border-indigo-500/30 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-indigo-400 uppercase tracking-wide">RECEIPT (Ops)</span>
-                    <div class="mt-2 flex items-baseline justify-between">
-                        <span id="dashReceiptOps" class="text-xl font-bold text-white">0</span>
-                        <span class="text-xs text-slate-400">ops</span>
-                    </div>
-                </div>
-                <div class="bg-slate-900/80 border border-indigo-500/50 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-indigo-300 uppercase tracking-wide">ILOSC RECEIPT</span>
-                    <div class="mt-2 flex items-baseline justify-between">
-                        <span id="dashReceiptQty" class="text-lg font-bold text-emerald-400 font-mono">0</span>
-                        <span class="text-xs text-slate-400">szt.</span>
-                    </div>
-                </div>
+                <div class="bg-slate-900/80 border border-emerald-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-xl font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-amber-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-xl font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-sky-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-sky-400 uppercase">Putaway VIN</span><span id="dashVinOps" class="text-xl font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-purple-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-purple-400 uppercase">Putaway SHELF</span><span id="dashShelfOps" class="text-xl font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-indigo-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-indigo-400 uppercase">RECEIPT (Ops)</span><span id="dashReceiptOps" class="text-xl font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-indigo-500/50 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-indigo-300 uppercase">ILOSC RECEIPT</span><span id="dashReceiptQty" class="text-lg font-bold text-emerald-400 font-mono mt-2">0</span></div>
             </div>
         </section>
 
         <!-- Main Category Tabs Navigation -->
         <section class="border-b border-slate-700 flex items-center justify-between">
             <div class="flex gap-2" id="categoryTabs">
-                <button onclick="switchCategory('Putaway')" id="catBtnPutaway" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-800 text-purple-400 border-t border-x border-slate-700 flex items-center gap-2 transition">
-                    <i data-lucide="arrow-up-right" class="w-4 h-4"></i> Putaway (Odłożenia)
-                </button>
-                <button onclick="switchCategory('Relocate')" id="catBtnRelocate" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-900/60 text-slate-400 hover:text-slate-200 border-t border-x border-transparent flex items-center gap-2 transition">
-                    <i data-lucide="repeat" class="w-4 h-4"></i> Relokacje (Relocate)
-                </button>
-                <button onclick="switchCategory('Receipt')" id="catBtnReceipt" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-900/60 text-slate-400 hover:text-slate-200 border-t border-x border-transparent flex items-center gap-2 transition">
-                    <i data-lucide="arrow-down-left" class="w-4 h-4"></i> Przyjęcia (Receipt)
-                </button>
+                <button onclick="switchCategory('Putaway')" id="catBtnPutaway" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-800 text-purple-400 border-t border-x border-slate-700 flex items-center gap-2 transition"><i data-lucide="arrow-up-right" class="w-4 h-4"></i> Putaway (Odłożenia)</button>
+                <button onclick="switchCategory('Relocate')" id="catBtnRelocate" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-900/60 text-slate-400 hover:text-slate-200 border-t border-x border-transparent flex items-center gap-2 transition"><i data-lucide="repeat" class="w-4 h-4"></i> Relokacje (Relocate)</button>
+                <button onclick="switchCategory('Receipt')" id="catBtnReceipt" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-900/60 text-slate-400 hover:text-slate-200 border-t border-x border-transparent flex items-center gap-2 transition"><i data-lucide="arrow-down-left" class="w-4 h-4"></i> Przyjęcia (Receipt)</button>
             </div>
-            <div class="text-xs font-medium text-slate-400 px-3 py-1 bg-slate-800/80 rounded-lg border border-slate-700">
-                Aktywny widok: <strong id="activeCatLabel" class="text-white">Putaway</strong>
-            </div>
+            <div class="text-xs font-medium text-slate-400 px-3 py-1 bg-slate-800/80 rounded-lg border border-slate-700">Widok: <strong id="activeCatLabel" class="text-white">Putaway</strong></div>
         </section>
 
-        <!-- Putaway Zone Sub-Filters (Visible ONLY in Putaway) -->
+        <!-- Putaway Zone Sub-Filters -->
         <section id="putawayZonesSection" class="bg-slate-800/40 border border-slate-700/40 rounded-xl p-4 space-y-3">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-purple-400"></i>
-                    Filtruj Strefy Putaway:
-                </span>
+                <span class="text-xs font-semibold text-slate-300 uppercase flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-purple-400"></i> Strefy Putaway:</span>
                 <span id="zoneActiveLabel" class="text-xs text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">Wszystkie strefy</span>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                <button onclick="switchZone('ALL')" id="zoneBtnALL" class="p-3 bg-slate-800 hover:bg-slate-700 border border-purple-500/40 rounded-lg text-left transition">
-                    <div class="text-[11px] text-slate-400">Wszystkie</div>
-                    <div id="zoneCountALL" class="text-lg font-bold text-white mt-0.5">0 ops</div>
-                </button>
-                <button onclick="switchZone('BULK')" id="zoneBtnBULK" class="p-3 bg-slate-800/60 hover:bg-slate-700 border border-slate-700 rounded-lg text-left transition">
-                    <div class="text-[11px] text-amber-400 font-medium">BULK (A..., B...)</div>
-                    <div id="zoneCountBULK" class="text-lg font-bold text-white mt-0.5">0 ops</div>
-                </button>
-                <button onclick="switchZone('VIN')" id="zoneBtnVIN" class="p-3 bg-slate-800/60 hover:bg-slate-700 border border-slate-700 rounded-lg text-left transition">
-                    <div class="text-[11px] text-sky-400 font-medium">VIN (V1-IN, V2-IN)</div>
-                    <div id="zoneCountVIN" class="text-lg font-bold text-white mt-0.5">0 ops</div>
-                </button>
-                <button onclick="switchZone('VNA')" id="zoneBtnVNA" class="p-3 bg-slate-800/60 hover:bg-slate-700 border border-slate-700 rounded-lg text-left transition">
-                    <div class="text-[11px] text-emerald-400 font-medium">VNA (V1..., V2...)</div>
-                    <div id="zoneCountVNA" class="text-lg font-bold text-white mt-0.5">0 ops</div>
-                </button>
-                <button onclick="switchZone('SHELF')" id="zoneBtnSHELF" class="p-3 bg-slate-800/60 hover:bg-slate-700 border border-slate-700 rounded-lg text-left transition">
-                    <div class="text-[11px] text-purple-400 font-medium">SHELF (AS...)</div>
-                    <div id="zoneCountSHELF" class="text-lg font-bold text-white mt-0.5">0 ops</div>
-                </button>
+                <button onclick="switchZone('ALL')" id="zoneBtnALL" class="p-3 bg-slate-800 hover:bg-slate-700 border border-purple-500/40 rounded-lg text-left transition"><div class="text-[11px] text-slate-400">Wszystkie</div><div id="zoneCountALL" class="text-lg font-bold text-white mt-0.5">0 ops</div></button>
+                <button onclick="switchZone('BULK')" id="zoneBtnBULK" class="p-3 bg-slate-800/60 hover:bg-slate-700 border border-slate-700 rounded-lg text-left transition"><div class="text-[11px] text-amber-400 font-medium">BULK</div><div id="zoneCountBULK" class="text-lg font-bold text-white mt-0.5">0 ops</div></button>
+                <button onclick="switchZone('VIN')" id="zoneBtnVIN" class="p-3 bg-slate-800/60 hover:bg-slate-700 border border-slate-700 rounded-lg text-left transition"><div class="text-[11px] text-sky-400 font-medium">VIN</div><div id="zoneCountVIN" class="text-lg font-bold text-white mt-0.5">0 ops</div></button>
+                <button onclick="switchZone('VNA')" id="zoneBtnVNA" class="p-3 bg-slate-800/60 hover:bg-slate-700 border border-slate-700 rounded-lg text-left transition"><div class="text-[11px] text-emerald-400 font-medium">VNA</div><div id="zoneCountVNA" class="text-lg font-bold text-white mt-0.5">0 ops</div></button>
+                <button onclick="switchZone('SHELF')" id="zoneBtnSHELF" class="p-3 bg-slate-800/60 hover:bg-slate-700 border border-slate-700 rounded-lg text-left transition"><div class="text-[11px] text-purple-400 font-medium">SHELF</div><div id="zoneCountSHELF" class="text-lg font-bold text-white mt-0.5">0 ops</div></button>
             </div>
         </section>
 
         <!-- Category Leaderboard & User Drill-Down Section -->
         <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Left: Workers in Category / Zone -->
             <div class="lg:col-span-1 bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-xl space-y-4">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                        <i data-lucide="users" class="w-4 h-4 text-brand-400"></i>
-                        Pracownicy
-                    </h3>
+                    <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2"><i data-lucide="users" class="w-4 h-4 text-brand-400"></i> Pracownicy</h3>
                     <span id="catWorkersCount" class="text-xs text-slate-400">0 osób</span>
                 </div>
                 <div class="overflow-y-auto max-h-[380px] custom-scrollbar border border-slate-700/60 rounded-lg">
                     <table class="w-full text-left text-xs text-slate-300">
                         <thead class="bg-slate-900/80 text-slate-400 font-medium sticky top-0 z-10 border-b border-slate-700">
-                            <tr>
-                                <th class="py-2 px-2.5">Pracownik</th>
-                                <th class="py-2 px-2.5 text-right">Razem Ops</th>
-                                <th class="py-2 px-2.5 text-right">Akcja</th>
-                            </tr>
+                            <tr><th class="py-2 px-2.5">Pracownik</th><th class="py-2 px-2.5 text-right">Ops</th><th class="py-2 px-2.5 text-right">Akcja</th></tr>
                         </thead>
                         <tbody id="categoryWorkersBody" class="divide-y divide-slate-700/50">
-                            <tr>
-                                <td colspan="3" class="py-6 text-center text-slate-500">Brak danych</td>
-                            </tr>
+                            <tr><td colspan="3" class="py-6 text-center text-slate-500">Brak danych</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Right: Drill-down Movements & Zone Breakdown for Selected User -->
             <div class="lg:col-span-2 bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-xl space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-700 pb-3">
                     <div>
-                        <h3 id="drilldownTitle" class="text-sm font-semibold text-white flex items-center gap-2">
-                            <i data-lucide="eye" class="w-4 h-4 text-brand-400"></i>
-                            Ruchy pracownika: <span id="selectedUserName" class="text-brand-400">-</span>
-                        </h3>
-                        <p id="drilldownSubtitle" class="text-xs text-slate-400 mt-0.5">Wybierz pracownika z tabeli po lewej, aby zobaczyć do jakich stref wrzucił towar.</p>
+                        <h3 class="text-sm font-semibold text-white flex items-center gap-2"><i data-lucide="eye" class="w-4 h-4 text-brand-400"></i> Ruchy pracownika: <span id="selectedUserName" class="text-brand-400">-</span></h3>
+                        <p id="drilldownSubtitle" class="text-xs text-slate-400 mt-0.5">Wybierz pracownika z tabeli po lewej.</p>
                     </div>
-                    <button onclick="clearUserSelection()" id="clearUserBtn" class="hidden px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded transition">
-                        Pokaż wszystkich
-                    </button>
+                    <button onclick="clearUserSelection()" id="clearUserBtn" class="hidden px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded transition">Pokaż wszystkich</button>
                 </div>
 
-                <!-- Zone Breakdown Pill Badges for Selected User -->
                 <div id="userZoneSummaryContainer" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900/60 p-3 rounded-lg border border-slate-700/60">
-                    <div class="text-center p-2 bg-slate-800/80 rounded border border-emerald-500/30">
-                        <div class="text-[10px] text-emerald-400 font-medium">VNA</div>
-                        <div id="uStatVna" class="text-base font-bold text-white">0</div>
-                    </div>
-                    <div class="text-center p-2 bg-slate-800/80 rounded border border-amber-500/30">
-                        <div class="text-[10px] text-amber-400 font-medium">BULK</div>
-                        <div id="uStatBulk" class="text-base font-bold text-white">0</div>
-                    </div>
-                    <div class="text-center p-2 bg-slate-800/80 rounded border border-sky-500/30">
-                        <div class="text-[10px] text-sky-400 font-medium">VIN</div>
-                        <div id="uStatVin" class="text-base font-bold text-white">0</div>
-                    </div>
-                    <div class="text-center p-2 bg-slate-800/80 rounded border border-purple-500/30">
-                        <div class="text-[10px] text-purple-400 font-medium">SHELF</div>
-                        <div id="uStatShelf" class="text-base font-bold text-white">0</div>
-                    </div>
+                    <div class="text-center p-2 bg-slate-800/80 rounded border border-emerald-500/30"><div class="text-[10px] text-emerald-400">VNA</div><div id="uStatVna" class="text-base font-bold text-white">0</div></div>
+                    <div class="text-center p-2 bg-slate-800/80 rounded border border-amber-500/30"><div class="text-[10px] text-amber-400">BULK</div><div id="uStatBulk" class="text-base font-bold text-white">0</div></div>
+                    <div class="text-center p-2 bg-slate-800/80 rounded border border-sky-500/30"><div class="text-[10px] text-sky-400">VIN</div><div id="uStatVin" class="text-base font-bold text-white">0</div></div>
+                    <div class="text-center p-2 bg-slate-800/80 rounded border border-purple-500/30"><div class="text-[10px] text-purple-400">SHELF</div><div id="uStatShelf" class="text-base font-bold text-white">0</div></div>
                 </div>
 
                 <div class="overflow-x-auto custom-scrollbar border border-slate-700/60 rounded-lg max-h-[300px]">
                     <table class="w-full text-left text-xs text-slate-300">
                         <thead class="bg-slate-900/80 text-slate-400 font-medium sticky top-0 z-10 border-b border-slate-700">
-                            <tr>
-                                <th class="py-2.5 px-3">Lp.</th>
-                                <th class="py-2.5 px-3">Data / Czas</th>
-                                <th class="py-2.5 px-3">Kod (A)</th>
-                                <th class="py-2.5 px-3">Strefa</th>
-                                <th class="py-2.5 px-3">SKU (B)</th>
-                                <th class="py-2.5 px-3">Lok. Docelowa (I)</th>
-                            </tr>
+                            <tr><th class="py-2.5 px-3">Lp.</th><th class="py-2.5 px-3">Data / Czas</th><th class="py-2.5 px-3">Kod (A)</th><th class="py-2.5 px-3">Strefa</th><th class="py-2.5 px-3">SKU (B)</th><th class="py-2.5 px-3">Lok. Docelowa (I)</th></tr>
                         </thead>
                         <tbody id="drilldownTableBody" class="divide-y divide-slate-700/50">
-                            <tr>
-                                <td colspan="6" class="py-8 text-center text-slate-500">Nie wybrano pracownika. Kliknij pracownika w tabeli obok.</td>
-                            </tr>
+                            <tr><td colspan="6" class="py-8 text-center text-slate-500">Nie wybrano pracownika.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -349,42 +208,24 @@
         <!-- Detailed Operations Table -->
         <section class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-xl space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                    <i data-lucide="table" class="w-4 h-4 text-brand-400"></i>
-                    Szczegółowa Tabela Operacji
-                </h3>
-                
-                <div class="flex flex-wrap items-center gap-2">
-                    <div class="relative">
-                        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400"></i>
-                        <input type="text" id="searchInput" placeholder="Szukaj SKU / USER / Docel..." class="bg-slate-900 border border-slate-700 text-xs rounded-lg pl-8 pr-3 py-1.5 text-slate-200 focus:outline-none focus:border-brand-500">
-                    </div>
+                <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2"><i data-lucide="table" class="w-4 h-4 text-brand-400"></i> Szczegółowa Tabela Operacji</h3>
+                <div class="relative">
+                    <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400"></i>
+                    <input type="text" id="searchInput" placeholder="Szukaj SKU / USER / Docel..." class="bg-slate-900 border border-slate-700 text-xs rounded-lg pl-8 pr-3 py-1.5 text-slate-200 focus:outline-none focus:border-brand-500">
                 </div>
             </div>
 
             <div class="overflow-x-auto custom-scrollbar border border-slate-700/60 rounded-lg">
                 <table class="w-full text-left text-xs text-slate-300">
                     <thead class="bg-slate-900/80 text-slate-400 font-medium uppercase tracking-wider border-b border-slate-700">
-                        <tr>
-                            <th class="py-2.5 px-3">Lp.</th>
-                            <th class="py-2.5 px-3">Data / Czas</th>
-                            <th class="py-2.5 px-3">Kod (A)</th>
-                            <th class="py-2.5 px-3">Strefa / Typ</th>
-                            <th class="py-2.5 px-3">SKU (B)</th>
-                            <th class="py-2.5 px-3 text-right">Sztuki (G)</th>
-                            <th class="py-2.5 px-3">Lok. Docelowa (I)</th>
-                            <th class="py-2.5 px-3">Pracownik (USER - N)</th>
-                        </tr>
+                        <tr><th class="py-2.5 px-3">Lp.</th><th class="py-2.5 px-3">Data / Czas</th><th class="py-2.5 px-3">Kod (A)</th><th class="py-2.5 px-3">Strefa / Typ</th><th class="py-2.5 px-3">SKU (B)</th><th class="py-2.5 px-3 text-right">Sztuki (G)</th><th class="py-2.5 px-3">Lok. Docelowa (I)</th><th class="py-2.5 px-3">Pracownik (N)</th></tr>
                     </thead>
                     <tbody id="detailsTableBody" class="divide-y divide-slate-700/50">
-                        <tr>
-                            <td colspan="8" class="py-8 text-center text-slate-500">Brak wczytanych rekordów.</td>
-                        </tr>
+                        <tr><td colspan="8" class="py-8 text-center text-slate-500">Pobieranie danych z Dysku Google...</td></tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- Pagination Controls -->
             <div class="flex items-center justify-between text-xs text-slate-400 pt-2">
                 <span id="pageInfo">Pokazuję 0 z 0 wierszy</span>
                 <div class="flex items-center gap-2">
@@ -397,6 +238,9 @@
     </main>
 
     <script>
+        // Zaszyty, stały adres URL do Twojego Google Apps Script
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwOjk8dVnFlA-eKj6ANHRexpAv2wLKFSSeL1-B0UKMyZuOynlMpK9LOB-WDk4ATwNWPXA/exec";
+
         const state = {
             rawRows: [],
             parsedData: [],
@@ -432,21 +276,16 @@
 
         function classifyPutawayZone(targetStr) {
             const up = targetStr.toUpperCase().trim();
-            if (up.startsWith('V1-IN') || up.startsWith('V2-IN') || up.startsWith('V1IN') || up.startsWith('V2IN')) {
-                return 'VIN';
-            }
-            if (up.startsWith('V1') || up.startsWith('V2')) {
-                return 'VNA';
-            }
-            if (up.startsWith('AS')) {
-                return 'SHELF';
-            }
+            if (up.startsWith('V1-IN') || up.startsWith('V2-IN') || up.startsWith('V1IN') || up.startsWith('V2IN')) return 'VIN';
+            if (up.startsWith('V1') || up.startsWith('V2')) return 'VNA';
+            if (up.startsWith('AS')) return 'SHELF';
             return 'BULK';
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             initTabs();
+            fetchFromCloud();
             initFileUpload();
             initPasteMode();
             initColumnMapping();
@@ -470,14 +309,7 @@
             });
 
             document.getElementById('activeCatLabel').textContent = cat === 'Putaway' ? 'Putaway (Odłożenia)' : cat === 'Relocate' ? 'Relokacje (Relocate)' : 'Przyjęcia (Receipt)';
-            
-            const zonesSec = document.getElementById('putawayZonesSection');
-            if (cat === 'Putaway') {
-                zonesSec.classList.remove('hidden');
-            } else {
-                zonesSec.classList.add('hidden');
-            }
-
+            document.getElementById('putawayZonesSection').classList.toggle('hidden', cat !== 'Putaway');
             state.pagination.page = 1;
             renderAll();
         }
@@ -485,56 +317,76 @@
         function switchZone(zone) {
             state.activeZone = zone;
             state.selectedUser = null;
-
             ['ALL', 'BULK', 'VIN', 'VNA', 'SHELF'].forEach(z => {
-                const btn = document.getElementById(`zoneBtn${z}`);
-                if (z === zone) {
-                    btn.className = 'p-3 bg-slate-800 hover:bg-slate-700 border border-purple-500/60 rounded-lg text-left transition shadow';
-                } else {
-                    btn.className = 'p-3 bg-slate-800/60 hover:bg-slate-700 border border-slate-700 rounded-lg text-left transition';
-                }
+                document.getElementById(`zoneBtn${z}`).className = z === zone ? 'p-3 bg-slate-800 hover:bg-slate-700 border border-purple-500/60 rounded-lg text-left transition shadow' : 'p-3 bg-slate-800/60 hover:bg-slate-700 border border-slate-700 rounded-lg text-left transition';
             });
-
-            const zoneNames = { 'ALL': 'Wszystkie strefy', 'BULK': 'Strefa BULK', 'VIN': 'Strefa VIN', 'VNA': 'Strefa VNA', 'SHELF': 'Strefa SHELF' };
-            document.getElementById('zoneActiveLabel').textContent = zoneNames[zone];
-
+            document.getElementById('zoneActiveLabel').textContent = zone;
             state.pagination.page = 1;
             renderAll();
         }
 
         function initTabs() {
-            const tabFileBtn = document.getElementById('tabFileBtn');
-            const tabPasteBtn = document.getElementById('tabPasteBtn');
-            const tabFileContent = document.getElementById('tabFileContent');
-            const tabPasteContent = document.getElementById('tabPasteContent');
-
-            tabFileBtn.addEventListener('click', () => {
-                tabFileBtn.className = 'flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-brand-500 text-brand-400 transition';
-                tabPasteBtn.className = 'flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition';
-                tabFileContent.classList.remove('hidden');
-                tabPasteContent.classList.add('hidden');
+            const tabs = ['Paste', 'File'];
+            tabs.forEach(t => {
+                document.getElementById(`tab${t}Btn`).addEventListener('click', () => {
+                    tabs.forEach(ot => {
+                        document.getElementById(`tab${ot}Btn`).className = ot === t ? 'flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-brand-500 text-brand-400 transition' : 'flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition';
+                        document.getElementById(`tab${ot}Content`).classList.toggle('hidden', ot !== t);
+                    });
+                });
             });
+        }
 
-            tabPasteBtn.addEventListener('click', () => {
-                tabPasteBtn.className = 'flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-brand-500 text-brand-400 transition';
-                tabFileBtn.className = 'flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition';
-                tabPasteContent.classList.remove('hidden');
-                tabFileContent.classList.add('hidden');
+        function fetchFromCloud() {
+            const status = document.getElementById('syncStatus');
+            status.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Pobieranie...`;
+            lucide.createIcons();
+
+            fetch(SCRIPT_URL)
+                .then(res => res.json())
+                .then(rows => {
+                    if (rows && rows.length > 0) {
+                        processMatrixData(rows);
+                        status.innerHTML = `<i data-lucide="cloud-check" class="w-3.5 h-3.5"></i> Zsynchronizowano`;
+                    } else {
+                        status.innerHTML = `<i data-lucide="info" class="w-3.5 h-3.5"></i> Brak danych w chmurze`;
+                    }
+                    lucide.createIcons();
+                })
+                .catch(err => {
+                    status.innerHTML = `<i data-lucide="alert-circle" class="w-3.5 h-3.5 text-red-400"></i> Błąd sieci`;
+                    lucide.createIcons();
+                });
+        }
+
+        function sendToCloud(matrix) {
+            const status = document.getElementById('syncStatus');
+            status.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Zapisywanie...`;
+            lucide.createIcons();
+
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(matrix)
+            })
+            .then(res => res.json())
+            .then(data => {
+                status.innerHTML = `<i data-lucide="cloud-check" class="w-3.5 h-3.5"></i> Zapisano na Dysku Google`;
+                lucide.createIcons();
+                processMatrixData(matrix);
+            })
+            .catch(err => {
+                alert('Błąd podczas zapisywania danych na Dysku Google.');
+                status.innerHTML = `<i data-lucide="alert-circle" class="w-3.5 h-3.5 text-red-400"></i> Błąd zapisu`;
+                lucide.createIcons();
             });
         }
 
         function initFileUpload() {
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('fileInput');
-
             dropZone.addEventListener('click', () => fileInput.click());
-            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-brand-500', 'bg-slate-900/80'); });
-            dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-brand-500', 'bg-slate-900/80'); });
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('border-brand-500', 'bg-slate-900/80');
-                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-            });
+            dropZone.addEventListener('dragover', (e) => e.preventDefault());
+            dropZone.addEventListener('drop', (e) => { e.preventDefault(); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
             fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFile(e.target.files[0]); });
         }
 
@@ -544,9 +396,8 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array', raw: false, cellText: true });
                 let sheetName = workbook.SheetNames.find(name => name.trim().toUpperCase() === 'INV') || workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const rawJson = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: '' });
-                processMatrixData(rawJson);
+                const rawJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: false, defval: '' });
+                sendToCloud(rawJson);
             };
             reader.readAsArrayBuffer(file);
         }
@@ -555,34 +406,27 @@
             document.getElementById('processPasteBtn').addEventListener('click', () => {
                 const text = document.getElementById('pasteArea').value;
                 if (!text.trim()) return;
-                const lines = text.split('\n');
-                const rawMatrix = lines.map(line => line.split('\t'));
-                processMatrixData(rawMatrix);
+                const matrix = text.split('\n').map(line => line.split('\t'));
+                sendToCloud(matrix);
             });
         }
 
         function processMatrixData(matrix) {
             if (!matrix || matrix.length === 0) return;
-            state.rawRows = matrix.map(row => {
-                const r = [...row];
-                while (r.length < 15) r.push('');
-                return r;
-            });
+            state.rawRows = matrix.map(row => { const r = [...row]; while (r.length < 15) r.push(''); return r; });
             populateColumnSelectors(state.rawRows[0]);
             parseDataset();
         }
 
         function populateColumnSelectors(headerRow) {
             const selects = ['colCode', 'colSku', 'colQty', 'colTarget', 'colTime', 'colDate', 'colUser'];
-            const maxCols = Math.max(15, headerRow ? headerRow.length : 15);
             selects.forEach(selId => {
                 const sel = document.getElementById(selId);
                 sel.innerHTML = '';
-                for (let i = 0; i < maxCols; i++) {
-                    const colName = String.fromCharCode(65 + (i % 26)) + (i >= 26 ? Math.floor(i/26) : '');
-                    const label = headerRow && headerRow[i] ? `${colName} - (${cleanRawString(headerRow[i])})` : `Kolumna ${colName}`;
+                for (let i = 0; i < 15; i++) {
+                    const colName = String.fromCharCode(65 + i);
                     const opt = document.createElement('option');
-                    opt.value = i; opt.textContent = label;
+                    opt.value = i; opt.textContent = `${colName} - (${cleanRawString(headerRow[i]) || 'Kolumna'})`;
                     sel.appendChild(opt);
                 }
             });
@@ -617,9 +461,7 @@
             if (state.rawRows.length === 0) return;
             const records = [];
             let startIdx = 0;
-            const firstRowCode = cleanRawString(state.rawRows[0][state.colMap.code]).toUpperCase();
-            const firstRowUser = cleanRawString(state.rawRows[0][state.colMap.user]).toUpperCase();
-            if (firstRowCode.includes('CODE') || firstRowUser.includes('USER')) startIdx = 1;
+            if (cleanRawString(state.rawRows[0][state.colMap.code]).toUpperCase().includes('CODE')) startIdx = 1;
 
             for (let i = startIdx; i < state.rawRows.length; i++) {
                 const row = state.rawRows[i];
@@ -636,7 +478,6 @@
                 
                 const taskType = classifyTaskType(code);
                 const putawayZone = taskType === 'Putaway' ? classifyPutawayZone(target) : 'N/A';
-
                 records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone });
             }
             state.parsedData = records;
@@ -645,19 +486,14 @@
         }
 
         function initFilters() {
-            document.getElementById('searchInput').addEventListener('input', () => {
-                state.pagination.page = 1;
-                renderDetailsTable();
-            });
+            document.getElementById('searchInput').addEventListener('input', () => { state.pagination.page = 1; renderDetailsTable(); });
         }
 
         function getActiveFilteredData() {
             let data = [];
             if (state.activeCategory === 'Putaway') {
                 data = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY'));
-                if (state.activeZone !== 'ALL') {
-                    data = data.filter(d => d.putawayZone === state.activeZone);
-                }
+                if (state.activeZone !== 'ALL') data = data.filter(d => d.putawayZone === state.activeZone);
             } else if (state.activeCategory === 'Receipt') {
                 data = state.parsedData.filter(d => d.taskType === 'Receipt');
             } else if (state.activeCategory === 'Relocate') {
@@ -678,7 +514,6 @@
         function renderDashboardCards() {
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY'));
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
-
             let vna = 0, bulk = 0, vin = 0, shelf = 0;
             putawayItems.forEach(d => {
                 if (d.putawayZone === 'VNA') vna++;
@@ -686,78 +521,45 @@
                 else if (d.putawayZone === 'VIN') vin++;
                 else if (d.putawayZone === 'SHELF') shelf++;
             });
-
-            const receiptOps = receiptItems.length;
-            const receiptQty = receiptItems.reduce((sum, d) => sum + d.qty, 0);
-
             document.getElementById('dashVnaOps').textContent = vna.toLocaleString('pl-PL');
             document.getElementById('dashBulkOps').textContent = bulk.toLocaleString('pl-PL');
             document.getElementById('dashVinOps').textContent = vin.toLocaleString('pl-PL');
             document.getElementById('dashShelfOps').textContent = shelf.toLocaleString('pl-PL');
-            document.getElementById('dashReceiptOps').textContent = receiptOps.toLocaleString('pl-PL');
-            document.getElementById('dashReceiptQty').textContent = receiptQty.toLocaleString('pl-PL');
+            document.getElementById('dashReceiptOps').textContent = receiptItems.length.toLocaleString('pl-PL');
+            document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((sum, d) => sum + d.qty, 0).toLocaleString('pl-PL');
         }
 
         function renderPutawayZonesFilterCounts() {
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY'));
             const stats = { 'ALL': putawayItems.length, 'BULK': 0, 'VIN': 0, 'VNA': 0, 'SHELF': 0 };
-
-            putawayItems.forEach(d => {
-                if (stats[d.putawayZone] !== undefined) stats[d.putawayZone]++;
-            });
-
-            ['ALL', 'BULK', 'VIN', 'VNA', 'SHELF'].forEach(z => {
-                document.getElementById(`zoneCount${z}`).textContent = `${stats[z]} ops`;
-            });
+            putawayItems.forEach(d => { if (stats[d.putawayZone] !== undefined) stats[d.putawayZone]++; });
+            ['ALL', 'BULK', 'VIN', 'VNA', 'SHELF'].forEach(z => document.getElementById(`zoneCount${z}`).textContent = `${stats[z]} ops`);
         }
 
         function renderCategoryWorkers() {
             const activeData = getActiveFilteredData();
             const userMap = {};
-
-            activeData.forEach(d => {
-                if (!userMap[d.user]) userMap[d.user] = 0;
-                userMap[d.user]++;
-            });
-
+            activeData.forEach(d => { userMap[d.user] = (userMap[d.user] || 0) + 1; });
             const sortedUsers = Object.entries(userMap).sort((a, b) => b[1] - a[1]);
             document.getElementById('catWorkersCount').textContent = `${sortedUsers.length} osób`;
 
             const tbody = document.getElementById('categoryWorkersBody');
             tbody.innerHTML = '';
-
             if (sortedUsers.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-500">Brak operacji w wybranym widoku</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-500">Brak operacji</td></tr>`;
                 return;
             }
-
             sortedUsers.forEach(([user, count]) => {
                 const isSelected = state.selectedUser === user;
                 const tr = document.createElement('tr');
-                tr.className = `hover:bg-slate-700/40 transition cursor-pointer ${isSelected ? 'bg-brand-500/20 border-l-4 border-brand-500' : ''}`;
-                tr.onclick = () => selectUser(user);
-                tr.innerHTML = `
-                    <td class="py-2 px-2.5 font-semibold text-white truncate max-w-[120px]">${user}</td>
-                    <td class="py-2 px-2.5 text-right font-bold text-brand-400">${count}</td>
-                    <td class="py-2 px-2.5 text-right">
-                        <button class="px-2 py-0.5 text-[10px] bg-slate-700 hover:bg-brand-600 text-slate-200 rounded transition">Pokaż strefy</button>
-                    </td>
-                `;
+                tr.className = `hover:bg-slate-700/40 transition cursor-pointer ${isSelected ? 'bg-brand-500/25 border-l-4 border-brand-500' : ''}`;
+                tr.onclick = () => { state.selectedUser = user; renderCategoryWorkers(); renderDrilldown(); };
+                tr.innerHTML = `<td class="py-2 px-2.5 font-semibold text-white">${user}</td><td class="py-2 px-2.5 text-right font-bold text-brand-400">${count}</td><td class="py-2 px-2.5 text-right"><button class="px-2 py-0.5 text-[10px] bg-slate-700 hover:bg-brand-600 text-slate-200 rounded">Strefy</button></td>`;
                 tbody.appendChild(tr);
             });
         }
 
-        function selectUser(user) {
-            state.selectedUser = user;
-            renderCategoryWorkers();
-            renderDrilldown();
-        }
-
-        function clearUserSelection() {
-            state.selectedUser = null;
-            renderCategoryWorkers();
-            renderDrilldown();
-        }
+        function clearUserSelection() { state.selectedUser = null; renderCategoryWorkers(); renderDrilldown(); }
 
         function renderDrilldown() {
             const nameEl = document.getElementById('selectedUserName');
@@ -769,19 +571,18 @@
 
             if (!state.selectedUser) {
                 nameEl.textContent = '-';
-                subEl.textContent = 'Wybierz pracownika z tabeli po lewej, aby zobaczyć do jakich stref wrzucił towar.';
+                subEl.textContent = 'Wybierz pracownika z tabeli po lewej.';
                 clearBtn.classList.add('hidden');
                 zoneSummaryBox.classList.add('hidden');
-                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Nie wybrano pracownika. Kliknij pracownika w tabeli obok.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Nie wybrano pracownika.</td></tr>';
                 return;
             }
 
             nameEl.textContent = state.selectedUser;
-            subEl.textContent = `Szczegółowy rozkład stref operatora`;
+            subEl.textContent = 'Szczegółowy rozkład stref operatora';
             clearBtn.classList.remove('hidden');
 
             const userMovements = getActiveFilteredData().filter(d => d.user === state.selectedUser);
-
             if (state.activeCategory === 'Putaway') {
                 zoneSummaryBox.classList.remove('hidden');
                 let uVna = 0, uBulk = 0, uVin = 0, uShelf = 0;
@@ -800,25 +601,9 @@
             }
 
             userMovements.forEach((row, i) => {
-                let zoneBadge = '';
-                if (row.putawayZone === 'VNA') zoneBadge = '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded font-medium">VNA</span>';
-                else if (row.putawayZone === 'BULK') zoneBadge = '<span class="px-2 py-0.5 text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded font-medium">BULK</span>';
-                else if (row.putawayZone === 'VIN') zoneBadge = '<span class="px-2 py-0.5 text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/30 rounded font-medium">VIN</span>';
-                else if (row.putawayZone === 'SHELF') zoneBadge = '<span class="px-2 py-0.5 text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded font-medium">SHELF</span>';
-                else zoneBadge = '<span class="text-slate-400">-</span>';
-
-                const dateTimeStr = `${row.date || ''} ${row.time || ''}`.trim();
-
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-700/30 transition';
-                tr.innerHTML = `
-                    <td class="py-2 px-3 font-mono text-slate-500">${i + 1}</td>
-                    <td class="py-2 px-3 font-mono text-slate-400 text-xs">${dateTimeStr || '-'}</td>
-                    <td class="py-2 px-3 font-mono text-slate-300">${row.code || '-'}</td>
-                    <td class="py-2 px-3">${zoneBadge}</td>
-                    <td class="py-2 px-3 font-mono text-emerald-400 font-medium">${row.sku || '-'}</td>
-                    <td class="py-2 px-3 font-mono text-slate-200">${row.target || '-'}</td>
-                `;
+                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${i + 1}</td><td class="py-2 px-3 text-slate-400 text-xs">${row.date} ${row.time}</td><td class="py-2 px-3 text-slate-300">${row.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-purple-500/10 text-purple-400 rounded">${row.putawayZone}</span></td><td class="py-2 px-3 text-emerald-400">${row.sku}</td><td class="py-2 px-3 text-slate-200">${row.target}</td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -826,87 +611,48 @@
         function renderDetailsTable() {
             const tbody = document.getElementById('detailsTableBody');
             tbody.innerHTML = '';
-
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
             let activeData = getActiveFilteredData();
-            if (state.selectedUser) {
-                activeData = activeData.filter(d => d.user === state.selectedUser);
-            }
+            if (state.selectedUser) activeData = activeData.filter(d => d.user === state.selectedUser);
 
-            const filtered = activeData.filter(item => {
-                return !search || 
-                    item.sku.toLowerCase().includes(search) || 
-                    item.user.toLowerCase().includes(search) || 
-                    item.target.toLowerCase().includes(search) ||
-                    item.code.toLowerCase().includes(search) ||
-                    item.date.toLowerCase().includes(search) ||
-                    item.time.toLowerCase().includes(search);
-            });
-
+            const filtered = activeData.filter(item => !search || item.sku.toLowerCase().includes(search) || item.user.toLowerCase().includes(search) || item.target.toLowerCase().includes(search) || item.code.toLowerCase().includes(search));
             const total = filtered.length;
             const { page, pageSize } = state.pagination;
             const startIdx = (page - 1) * pageSize;
-            const endIdx = Math.min(startIdx + pageSize, total);
-            const pageData = filtered.slice(startIdx, endIdx);
+            const pageData = filtered.slice(startIdx, startIdx + pageSize);
 
             if (pageData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Brak pasujących wierszy.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Brak wierszy spełniających kryteria.</td></tr>';
                 document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
-                document.getElementById('prevPageBtn').disabled = true;
-                document.getElementById('nextPageBtn').disabled = true;
                 return;
             }
 
             pageData.forEach((row, i) => {
-                const dateTimeStr = `${row.date || ''} ${row.time || ''}`.trim();
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-700/30 transition';
-                tr.innerHTML = `
-                    <td class="py-2 px-3 font-mono text-slate-500">${startIdx + i + 1}</td>
-                    <td class="py-2 px-3 font-mono text-slate-400 text-xs">${dateTimeStr || '-'}</td>
-                    <td class="py-2 px-3 font-mono text-slate-300">${row.code || '-'}</td>
-                    <td class="py-2 px-3">
-                        <span class="px-2 py-0.5 text-[10px] font-medium rounded border bg-purple-500/10 text-purple-400 border-purple-500/20">${row.putawayZone !== 'N/A' ? row.putawayZone : row.taskType}</span>
-                    </td>
-                    <td class="py-2 px-3 font-mono text-emerald-400 font-medium">${row.sku || '-'}</td>
-                    <td class="py-2 px-3 font-mono font-bold text-amber-300 text-right">${row.qty > 0 ? row.qty.toLocaleString('pl-PL') : '-'}</td>
-                    <td class="py-2 px-3 font-mono text-slate-300">${row.target || '-'}</td>
-                    <td class="py-2 px-3 font-semibold text-sky-300">${row.user}</td>
-                `;
+                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${startIdx + i + 1}</td><td class="py-2 px-3 text-slate-400 text-xs">${row.date} ${row.time}</td><td class="py-2 px-3 text-slate-300">${row.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-purple-500/10 text-purple-400 rounded">${row.putawayZone !== 'N/A' ? row.putawayZone : row.taskType}</span></td><td class="py-2 px-3 text-emerald-400">${row.sku}</td><td class="py-2 px-3 font-bold text-amber-300 text-right">${row.qty > 0 ? row.qty : '-'}</td><td class="py-2 px-3 text-slate-300">${row.target}</td><td class="py-2 px-3 text-sky-300 font-semibold">${row.user}</td>`;
                 tbody.appendChild(tr);
             });
 
-            document.getElementById('pageInfo').textContent = `Pokazuję ${startIdx + 1}-${endIdx} z ${total} wierszy`;
+            document.getElementById('pageInfo').textContent = `Pokazuję ${startIdx + 1}-${Math.min(startIdx + pageSize, total)} z ${total} wierszy`;
             document.getElementById('prevPageBtn').disabled = page === 1;
-            document.getElementById('nextPageBtn').disabled = endIdx >= total;
+            document.getElementById('nextPageBtn').disabled = startIdx + pageSize >= total;
         }
 
         function initPaginationControls() {
-            document.getElementById('prevPageBtn').addEventListener('click', () => {
-                if (state.pagination.page > 1) { state.pagination.page--; renderDetailsTable(); }
-            });
-            document.getElementById('nextPageBtn').addEventListener('click', () => {
-                state.pagination.page++; renderDetailsTable();
-            });
+            document.getElementById('prevPageBtn').addEventListener('click', () => { if (state.pagination.page > 1) { state.pagination.page--; renderDetailsTable(); } });
+            document.getElementById('nextPageBtn').addEventListener('click', () => { state.pagination.page++; renderDetailsTable(); });
         }
 
         function initExport() {
             document.getElementById('exportCsvBtn').addEventListener('click', () => {
                 const data = getActiveFilteredData();
-                if (data.length === 0) return;
-
-                let csv = 'Lp;Data;Czas;Kod Zadania;Strefa Putaway;SKU;Ilość Sztuk (G);Lokalizacja Docelowa;Pracownik (USER)\n';
-                data.forEach((r, idx) => {
-                    csv += `${idx + 1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`;
-                });
-
+                if (!data.length) return;
+                let csv = 'Lp;Data;Czas;Kod;Strefa;SKU;Sztuki;Docel;User\n';
+                data.forEach((r, idx) => csv += `${idx + 1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `WMS_INV_${state.activeCategory}_${state.activeZone}_v0.0.7_${new Date().toISOString().slice(0,10)}.csv`;
-                a.click();
-                URL.revokeObjectURL(url);
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_v0.0.7_Shared_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
