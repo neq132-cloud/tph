@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS INV Analytics v0.0.9.5</title>
+    <title>WMS INV Analytics v0.0.9.7</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -47,9 +47,9 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold text-white tracking-wide">WMS INV Analytics</h1>
-                    <p class="text-xs text-slate-400">System Analizy Wydajności (Zabezpieczona Baza + Obecność + Suma)</p>
+                    <p class="text-xs text-slate-400">System Analizy Wydajności (Zabezpieczona Baza + SHELF + Relokacje AS)</p>
                 </div>
-                <span class="ml-2 px-2 py-0.5 text-xs font-mono bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full font-semibold">v0.0.9.5</span>
+                <span class="ml-2 px-2 py-0.5 text-xs font-mono bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full font-semibold">v0.0.9.7</span>
             </div>
             
             <div class="flex items-center gap-3">
@@ -187,7 +187,6 @@
                 </h3>
             </div>
             
-            <!-- Dodany kafelek SUMA PUTAWAY + RELOKACJE -->
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-2.5">
                 <div class="bg-slate-900/80 border border-emerald-500/30 rounded-lg p-2.5 flex flex-col justify-between"><span class="text-[10px] font-semibold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-base font-bold text-white mt-1">0</span></div>
                 <div class="bg-slate-900/80 border border-amber-500/30 rounded-lg p-2.5 flex flex-col justify-between"><span class="text-[10px] font-semibold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-base font-bold text-white mt-1">0</span></div>
@@ -252,7 +251,10 @@
             <div class="lg:col-span-1 bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-xl space-y-4">
                 <div class="flex items-center justify-between">
                     <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2"><i data-lucide="users" class="w-4 h-4 text-brand-400"></i> Pracownicy</h3>
-                    <span id="catWorkersCount" class="text-xs text-slate-400">0 osób</span>
+                    <div class="flex items-center gap-2">
+                        <span id="catTotalOps" class="text-xs text-brand-400 font-mono bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20">0 ops</span>
+                        <span id="catWorkersCount" class="text-xs text-slate-400">0 osób</span>
+                    </div>
                 </div>
                 <div class="overflow-y-auto max-h-[380px] custom-scrollbar border border-slate-700/60 rounded-lg">
                     <table class="w-full text-left text-xs text-slate-300">
@@ -389,11 +391,12 @@
             return 'Putaway';
         }
 
-        function classifyPutawayZone(targetStr) {
+        function classifyPutawayZone(targetStr, taskType) {
             const up = targetStr.toUpperCase().trim();
+            if (up.startsWith('AS')) return 'SHELF';
+            if (taskType === 'Relocate') return 'RELOCATE_OTHER';
             if (up.startsWith('V1-IN') || up.startsWith('V2-IN') || up.startsWith('V1IN') || up.startsWith('V2IN')) return 'VIN';
             if (up.startsWith('V1') || up.startsWith('V2')) return 'VNA';
-            if (up.startsWith('AS')) return 'SHELF';
             return 'BULK';
         }
 
@@ -656,7 +659,7 @@
                 seen.add(rowKey);
 
                 const taskType = classifyTaskType(code);
-                const putawayZone = taskType === 'Putaway' ? classifyPutawayZone(target) : 'N/A';
+                const putawayZone = classifyPutawayZone(target, taskType);
                 
                 const isComplete = completeStatus.toLowerCase().includes('complete');
                 let closedPAType = 'NONE';
@@ -678,7 +681,8 @@
         function getActiveFilteredData() {
             let data = [];
             if (state.activeCategory === 'Putaway') {
-                data = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY'));
+                // Putaway oraz relokacje do stref SHELF (AS) wchodzą w skład widoku Putaway
+                data = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
                 if (state.activeZone !== 'ALL') data = data.filter(d => d.putawayZone === state.activeZone);
             } else if (state.activeCategory === 'Receipt') {
                 data = state.parsedData.filter(d => d.taskType === 'Receipt');
@@ -705,7 +709,7 @@
         }
 
         function renderDashboardCards() {
-            const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY'));
+            const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
             const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
             const pa018Items = state.parsedData.filter(d => d.closedPAType === 'PA_018');
@@ -719,7 +723,8 @@
                 else if (d.putawayZone === 'SHELF') shelf++;
             });
 
-            const putawayRelocateSum = putawayItems.length + relocateItems.length;
+            const purePutawayCount = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY')).length;
+            const putawayRelocateSum = purePutawayCount + relocateItems.length;
 
             document.getElementById('dashVnaOps').textContent = vna.toLocaleString('pl-PL');
             document.getElementById('dashBulkOps').textContent = bulk.toLocaleString('pl-PL');
@@ -733,7 +738,7 @@
         }
 
         function renderPutawayZonesFilterCounts() {
-            const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY'));
+            const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
             const stats = { 'ALL': putawayItems.length, 'BULK': 0, 'VIN': 0, 'VNA': 0, 'SHELF': 0 };
             putawayItems.forEach(d => { if (stats[d.putawayZone] !== undefined) stats[d.putawayZone]++; });
             ['ALL', 'BULK', 'VIN', 'VNA', 'SHELF'].forEach(z => document.getElementById(`zoneCount${z}`).textContent = `${stats[z]} ops`);
@@ -751,7 +756,10 @@
             const userMap = {};
             activeData.forEach(d => { userMap[d.user] = (userMap[d.user] || 0) + 1; });
             const sortedUsers = Object.entries(userMap).sort((a, b) => b[1] - a[1]);
+            
             document.getElementById('catWorkersCount').textContent = `${sortedUsers.length} osób`;
+            const totalCategoryOps = activeData.length;
+            document.getElementById('catTotalOps').textContent = `${totalCategoryOps.toLocaleString('pl-PL')} ops`;
 
             const tbody = document.getElementById('categoryWorkersBody');
             tbody.innerHTML = '';
@@ -865,7 +873,7 @@
                 data.forEach((r, idx) => csv += `${idx + 1};"${r.date}";"${r.time}";"${r.code}";"${r.closedPAType !== 'NONE' ? r.closedPAType : r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_v0.0.9.5_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_v0.0.9.7_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
