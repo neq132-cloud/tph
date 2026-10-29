@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS INV Analytics v0.0.9</title>
+    <title>WMS INV Analytics v0.0.9.4</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -47,9 +47,9 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold text-white tracking-wide">WMS INV Analytics</h1>
-                    <p class="text-xs text-slate-400">System Analizy Wydajności (Oficjalna v0.0.9)</p>
+                    <p class="text-xs text-slate-400">System Analizy Wydajności (Zabezpieczona Baza + Obecność + PA)</p>
                 </div>
-                <span class="ml-2 px-2 py-0.5 text-xs font-mono bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full font-semibold">v0.0.9</span>
+                <span class="ml-2 px-2 py-0.5 text-xs font-mono bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full font-semibold">v0.0.9.4</span>
             </div>
             
             <div class="flex items-center gap-3">
@@ -86,11 +86,16 @@
                 <div class="space-y-2 bg-slate-900/50 p-3.5 rounded-xl border border-slate-700/60">
                     <div class="flex items-center justify-between">
                         <label class="text-xs font-semibold text-brand-400 flex items-center gap-1.5">
-                            <i data-lucide="database" class="w-3.5 h-3.5"></i> Rubryka 1: Baza Stała (np. starsze 1000+ wierszy)
+                            <i data-lucide="database" class="w-3.5 h-3.5"></i> Rubryka 1: Baza Stała
                         </label>
-                        <span id="countBase" class="text-[10px] text-slate-400 font-mono">0 wierszy</span>
+                        <div class="flex items-center gap-2">
+                            <button id="toggleLockBtn" onclick="toggleBaseLock()" class="px-2 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded text-[10px] flex items-center gap-1 transition" title="Odblokuj / Zablokuj edycję bazy">
+                                <i id="lockIcon" data-lucide="lock" class="w-3 h-3"></i> <span id="lockText">Zablokowane</span>
+                            </button>
+                            <span id="countBase" class="text-[10px] text-slate-400 font-mono">0 wierszy</span>
+                        </div>
                     </div>
-                    <textarea id="pasteBaseArea" rows="4" placeholder="Wklej tutaj starsze/bazowe dane..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-brand-500 custom-scrollbar resize-y"></textarea>
+                    <textarea id="pasteBaseArea" readonly rows="4" placeholder="Wklej tutaj starsze/bazowe dane..." class="w-full bg-slate-900/80 border border-slate-700 rounded-lg p-2.5 text-xs font-mono text-slate-300 focus:outline-none focus:border-brand-500 custom-scrollbar resize-y cursor-not-allowed opacity-90"></textarea>
                 </div>
 
                 <div class="space-y-2 bg-slate-900/50 p-3.5 rounded-xl border border-slate-700/60">
@@ -136,6 +141,44 @@
             </details>
         </section>
 
+        <!-- RAPORT OBECNOŚCI NA ZMIANIE (3 DZIAŁY) -->
+        <section class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-5 shadow-xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="users" class="w-4 h-4 text-brand-400"></i> Raport Obecności na Zmianie (Sprawdzenie Kadrowe)
+                </h3>
+                <span class="text-xs text-slate-400 bg-slate-900/80 px-3 py-1 rounded-lg border border-slate-700 font-mono">
+                    Łącznie w pracy: <strong id="totalPresenceCount" class="text-emerald-400 text-sm">0</strong> osób
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-2">
+                    <label class="block text-xs font-semibold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="shield" class="w-3.5 h-3.5"></i> DSV
+                    </label>
+                    <input type="number" id="presenceDsv" min="0" placeholder="Wpisz liczbę osób..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm font-bold text-white focus:outline-none focus:border-brand-500 transition">
+                    <p class="text-[10px] text-slate-400">Liczba obecnych pracowników DSV</p>
+                </div>
+
+                <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-2">
+                    <label class="block text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i> DSVSERVICES
+                    </label>
+                    <input type="number" id="presenceServices" min="0" placeholder="Wpisz liczbę osób..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm font-bold text-white focus:outline-none focus:border-brand-500 transition">
+                    <p class="text-[10px] text-slate-400">Liczba obecnych pracowników DSVSERVICES</p>
+                </div>
+
+                <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 space-y-2">
+                    <label class="block text-xs font-semibold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> QLEVEL
+                    </label>
+                    <input type="number" id="presenceQlevel" min="0" placeholder="Wpisz liczbę osób..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm font-bold text-white focus:outline-none focus:border-brand-500 transition">
+                    <p class="text-[10px] text-slate-400">Liczba obecnych pracowników QLEVEL</p>
+                </div>
+            </div>
+        </section>
+
         <!-- MAIN SHIFT SUMMARY DASHBOARD -->
         <section class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-5 shadow-xl space-y-3">
             <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
@@ -144,13 +187,16 @@
                 </h3>
             </div>
             
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                <div class="bg-slate-900/80 border border-emerald-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-xl font-bold text-white mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-amber-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-xl font-bold text-white mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-sky-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-sky-400 uppercase">Putaway VIN</span><span id="dashVinOps" class="text-xl font-bold text-white mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-purple-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-purple-400 uppercase">Putaway SHELF</span><span id="dashShelfOps" class="text-xl font-bold text-white mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-indigo-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-indigo-400 uppercase">RECEIPT (Ops)</span><span id="dashReceiptOps" class="text-xl font-bold text-white mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-indigo-500/50 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-indigo-300 uppercase">ILOSC RECEIPT</span><span id="dashReceiptQty" class="text-lg font-bold text-emerald-400 font-mono mt-2">0</span></div>
+            <!-- Dodane kafle Zamknięte PA 018 oraz Zamknięte PA Inne -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                <div class="bg-slate-900/80 border border-emerald-500/30 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-lg font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-amber-500/30 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-lg font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-sky-500/30 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-sky-400 uppercase">Putaway VIN</span><span id="dashVinOps" class="text-lg font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-purple-500/30 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-purple-400 uppercase">Putaway SHELF</span><span id="dashShelfOps" class="text-lg font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-indigo-500/30 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-indigo-400 uppercase">RECEIPT (Ops)</span><span id="dashReceiptOps" class="text-lg font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-indigo-500/50 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-indigo-300 uppercase">ILOSC RECEIPT</span><span id="dashReceiptQty" class="text-sm font-bold text-emerald-400 font-mono mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-teal-500/50 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-teal-400 uppercase">PA 018 (Zamkn.)</span><span id="dashPa018Ops" class="text-lg font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-orange-500/50 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-orange-400 uppercase">PA Inne (Zamkn.)</span><span id="dashPaOtherOps" class="text-lg font-bold text-white mt-2">0</span></div>
             </div>
         </section>
 
@@ -288,9 +334,36 @@
             activeZone: 'ALL',
             activeClosedPAFilter: '018',
             selectedUser: null,
-            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16 }, // Indeks 16 to kolumna Q
+            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16 },
             pagination: { page: 1, pageSize: 50 }
         };
+
+        let isBaseLocked = true;
+
+        function toggleBaseLock() {
+            isBaseLocked = !isBaseLocked;
+            const textarea = document.getElementById('pasteBaseArea');
+            const lockIcon = document.getElementById('lockIcon');
+            const lockText = document.getElementById('lockText');
+            const toggleBtn = document.getElementById('toggleLockBtn');
+
+            if (isBaseLocked) {
+                textarea.setAttribute('readonly', true);
+                textarea.classList.add('cursor-not-allowed', 'bg-slate-900/80');
+                textarea.classList.remove('bg-slate-900', 'border-amber-500');
+                toggleBtn.className = 'px-2 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded text-[10px] flex items-center gap-1 transition';
+                lockText.textContent = 'Zablokowane';
+                lockIcon.setAttribute('data-lucide', 'lock');
+            } else {
+                textarea.removeAttribute('readonly');
+                textarea.classList.remove('cursor-not-allowed', 'bg-slate-900/80');
+                textarea.classList.add('bg-slate-900', 'border-amber-500');
+                toggleBtn.className = 'px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded text-[10px] flex items-center gap-1 transition';
+                lockText.textContent = 'Odblokowane';
+                lockIcon.setAttribute('data-lucide', 'unlock');
+            }
+            lucide.createIcons();
+        }
 
         function cleanRawString(val) {
             if (val === null || val === undefined) return '';
@@ -332,6 +405,7 @@
             initFilters();
             initPaginationControls();
             initExport();
+            initPresenceModule();
 
             const savedBase = localStorage.getItem('wms_base_paste') || '';
             const savedFresh = localStorage.getItem('wms_fresh_paste') || '';
@@ -339,6 +413,30 @@
             if (savedFresh) document.getElementById('pasteFreshArea').value = savedFresh;
             if (savedBase || savedFresh) processBothAreas();
         });
+
+        function initPresenceModule() {
+            const fields = ['presenceDsv', 'presenceServices', 'presenceQlevel'];
+            
+            fields.forEach(id => {
+                const el = document.getElementById(id);
+                const savedVal = localStorage.getItem(`wms_${id}`);
+                if (savedVal !== null) el.value = savedVal;
+
+                el.addEventListener('input', () => {
+                    localStorage.setItem(`wms_${id}`, el.value);
+                    updateTotalPresence();
+                });
+            });
+            updateTotalPresence();
+        }
+
+        function updateTotalPresence() {
+            const dsv = parseInt(document.getElementById('presenceDsv').value) || 0;
+            const services = parseInt(document.getElementById('presenceServices').value) || 0;
+            const qlevel = parseInt(document.getElementById('presenceQlevel').value) || 0;
+            const total = dsv + services + qlevel;
+            document.getElementById('totalPresenceCount').textContent = total;
+        }
 
         function switchCategory(cat) {
             state.activeCategory = cat;
@@ -434,8 +532,15 @@
                 if (confirm('Czy na pewno chcesz wyczyścić zapamiętane dane?')) {
                     localStorage.removeItem('wms_base_paste');
                     localStorage.removeItem('wms_fresh_paste');
+                    localStorage.removeItem('wms_presenceDsv');
+                    localStorage.removeItem('wms_presenceServices');
+                    localStorage.removeItem('wms_presenceQlevel');
                     document.getElementById('pasteBaseArea').value = '';
                     document.getElementById('pasteFreshArea').value = '';
+                    document.getElementById('presenceDsv').value = '';
+                    document.getElementById('presenceServices').value = '';
+                    document.getElementById('presenceQlevel').value = '';
+                    updateTotalPresence();
                     state.rawRows = [];
                     state.parsedData = [];
                     renderAll();
@@ -539,8 +644,8 @@
                 const time = cleanRawString(row[state.colMap.time]);
                 const date = cleanRawString(row[state.colMap.date]);
                 let user = cleanRawString(row[state.colMap.user]);
-                const completeStatus = cleanRawString(row[state.colMap.complete]); // Kolumna O (index 14)
-                const paValue = cleanRawString(row[state.colMap.paCol]); // Kolumna Q (index 16)
+                const completeStatus = cleanRawString(row[state.colMap.complete]);
+                const paValue = cleanRawString(row[state.colMap.paCol]);
 
                 if (!code && !sku && !user) continue;
                 if (!user) user = 'BRAK_USERA';
@@ -552,7 +657,6 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = taskType === 'Putaway' ? classifyPutawayZone(target) : 'N/A';
                 
-                // Warunek Zamkniętych PA: Kolumna O zawiera "complete", a kolumna Q sprawdza początek "018"
                 const isComplete = completeStatus.toLowerCase().includes('complete');
                 let closedPAType = 'NONE';
                 if (isComplete) {
@@ -602,6 +706,9 @@
         function renderDashboardCards() {
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY'));
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
+            const pa018Items = state.parsedData.filter(d => d.closedPAType === 'PA_018');
+            const paOtherItems = state.parsedData.filter(d => d.closedPAType === 'PA_OTHER');
+
             let vna = 0, bulk = 0, vin = 0, shelf = 0;
             putawayItems.forEach(d => {
                 if (d.putawayZone === 'VNA') vna++;
@@ -615,6 +722,8 @@
             document.getElementById('dashShelfOps').textContent = shelf.toLocaleString('pl-PL');
             document.getElementById('dashReceiptOps').textContent = receiptItems.length.toLocaleString('pl-PL');
             document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((sum, d) => sum + d.qty, 0).toLocaleString('pl-PL');
+            document.getElementById('dashPa018Ops').textContent = pa018Items.length.toLocaleString('pl-PL');
+            document.getElementById('dashPaOtherOps').textContent = paOtherItems.length.toLocaleString('pl-PL');
         }
 
         function renderPutawayZonesFilterCounts() {
@@ -750,7 +859,7 @@
                 data.forEach((r, idx) => csv += `${idx + 1};"${r.date}";"${r.time}";"${r.code}";"${r.closedPAType !== 'NONE' ? r.closedPAType : r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_v0.0.9_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_v0.0.9.4_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
