@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS INV Analytics v0.0.9.4</title>
+    <title>WMS INV Analytics v0.0.9.5</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -47,9 +47,9 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold text-white tracking-wide">WMS INV Analytics</h1>
-                    <p class="text-xs text-slate-400">System Analizy Wydajności (Zabezpieczona Baza + Obecność + PA)</p>
+                    <p class="text-xs text-slate-400">System Analizy Wydajności (Zabezpieczona Baza + Obecność + Suma)</p>
                 </div>
-                <span class="ml-2 px-2 py-0.5 text-xs font-mono bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full font-semibold">v0.0.9.4</span>
+                <span class="ml-2 px-2 py-0.5 text-xs font-mono bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full font-semibold">v0.0.9.5</span>
             </div>
             
             <div class="flex items-center gap-3">
@@ -187,16 +187,17 @@
                 </h3>
             </div>
             
-            <!-- Dodane kafle Zamknięte PA 018 oraz Zamknięte PA Inne -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-                <div class="bg-slate-900/80 border border-emerald-500/30 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-lg font-bold text-white mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-amber-500/30 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-lg font-bold text-white mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-sky-500/30 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-sky-400 uppercase">Putaway VIN</span><span id="dashVinOps" class="text-lg font-bold text-white mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-purple-500/30 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-purple-400 uppercase">Putaway SHELF</span><span id="dashShelfOps" class="text-lg font-bold text-white mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-indigo-500/30 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-indigo-400 uppercase">RECEIPT (Ops)</span><span id="dashReceiptOps" class="text-lg font-bold text-white mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-indigo-500/50 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-indigo-300 uppercase">ILOSC RECEIPT</span><span id="dashReceiptQty" class="text-sm font-bold text-emerald-400 font-mono mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-teal-500/50 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-teal-400 uppercase">PA 018 (Zamkn.)</span><span id="dashPa018Ops" class="text-lg font-bold text-white mt-2">0</span></div>
-                <div class="bg-slate-900/80 border border-orange-500/50 rounded-lg p-3 flex flex-col justify-between"><span class="text-[10px] font-semibold text-orange-400 uppercase">PA Inne (Zamkn.)</span><span id="dashPaOtherOps" class="text-lg font-bold text-white mt-2">0</span></div>
+            <!-- Dodany kafelek SUMA PUTAWAY + RELOKACJE -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-2.5">
+                <div class="bg-slate-900/80 border border-emerald-500/30 rounded-lg p-2.5 flex flex-col justify-between"><span class="text-[10px] font-semibold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-base font-bold text-white mt-1">0</span></div>
+                <div class="bg-slate-900/80 border border-amber-500/30 rounded-lg p-2.5 flex flex-col justify-between"><span class="text-[10px] font-semibold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-base font-bold text-white mt-1">0</span></div>
+                <div class="bg-slate-900/80 border border-sky-500/30 rounded-lg p-2.5 flex flex-col justify-between"><span class="text-[10px] font-semibold text-sky-400 uppercase">Putaway VIN</span><span id="dashVinOps" class="text-base font-bold text-white mt-1">0</span></div>
+                <div class="bg-slate-900/80 border border-purple-500/30 rounded-lg p-2.5 flex flex-col justify-between"><span class="text-[10px] font-semibold text-purple-400 uppercase">Putaway SHELF</span><span id="dashShelfOps" class="text-base font-bold text-white mt-1">0</span></div>
+                <div class="bg-slate-900/80 border border-blue-500/40 rounded-lg p-2.5 flex flex-col justify-between"><span class="text-[10px] font-semibold text-blue-400 uppercase">SUMA PUT.+REL.</span><span id="dashPutawayRelocateSum" class="text-base font-bold text-white mt-1">0</span></div>
+                <div class="bg-slate-900/80 border border-indigo-500/30 rounded-lg p-2.5 flex flex-col justify-between"><span class="text-[10px] font-semibold text-indigo-400 uppercase">RECEIPT (Ops)</span><span id="dashReceiptOps" class="text-base font-bold text-white mt-1">0</span></div>
+                <div class="bg-slate-900/80 border border-indigo-500/50 rounded-lg p-2.5 flex flex-col justify-between"><span class="text-[10px] font-semibold text-indigo-300 uppercase">ILOSC RECEIPT</span><span id="dashReceiptQty" class="text-xs font-bold text-emerald-400 font-mono mt-1">0</span></div>
+                <div class="bg-slate-900/80 border border-teal-500/50 rounded-lg p-2.5 flex flex-col justify-between"><span class="text-[10px] font-semibold text-teal-400 uppercase">PA 018 (Zamkn.)</span><span id="dashPa018Ops" class="text-base font-bold text-white mt-1">0</span></div>
+                <div class="bg-slate-900/80 border border-orange-500/50 rounded-lg p-2.5 flex flex-col justify-between"><span class="text-[10px] font-semibold text-orange-400 uppercase">PA Inne (Zamkn.)</span><span id="dashPaOtherOps" class="text-base font-bold text-white mt-1">0</span></div>
             </div>
         </section>
 
@@ -705,6 +706,7 @@
 
         function renderDashboardCards() {
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY'));
+            const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
             const pa018Items = state.parsedData.filter(d => d.closedPAType === 'PA_018');
             const paOtherItems = state.parsedData.filter(d => d.closedPAType === 'PA_OTHER');
@@ -716,10 +718,14 @@
                 else if (d.putawayZone === 'VIN') vin++;
                 else if (d.putawayZone === 'SHELF') shelf++;
             });
+
+            const putawayRelocateSum = putawayItems.length + relocateItems.length;
+
             document.getElementById('dashVnaOps').textContent = vna.toLocaleString('pl-PL');
             document.getElementById('dashBulkOps').textContent = bulk.toLocaleString('pl-PL');
             document.getElementById('dashVinOps').textContent = vin.toLocaleString('pl-PL');
             document.getElementById('dashShelfOps').textContent = shelf.toLocaleString('pl-PL');
+            document.getElementById('dashPutawayRelocateSum').textContent = putawayRelocateSum.toLocaleString('pl-PL');
             document.getElementById('dashReceiptOps').textContent = receiptItems.length.toLocaleString('pl-PL');
             document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((sum, d) => sum + d.qty, 0).toLocaleString('pl-PL');
             document.getElementById('dashPa018Ops').textContent = pa018Items.length.toLocaleString('pl-PL');
@@ -859,7 +865,7 @@
                 data.forEach((r, idx) => csv += `${idx + 1};"${r.date}";"${r.time}";"${r.code}";"${r.closedPAType !== 'NONE' ? r.closedPAType : r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_v0.0.9.4_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_v0.0.9.5_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
