@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS INV Analytics v0.0.7 Dual-Paste</title>
+    <title>WMS INV Analytics v0.0.9</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -47,13 +47,13 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold text-white tracking-wide">WMS INV Analytics</h1>
-                    <p class="text-xs text-slate-400">System Analizy Wydajności (Dwie Rubryki)</p>
+                    <p class="text-xs text-slate-400">System Analizy Wydajności (Oficjalna v0.0.9)</p>
                 </div>
-                <span class="ml-2 px-2 py-0.5 text-xs font-mono bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full font-semibold">v0.0.7 Dual</span>
+                <span class="ml-2 px-2 py-0.5 text-xs font-mono bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full font-semibold">v0.0.9</span>
             </div>
             
             <div class="flex items-center gap-3">
-                <button id="clearMemoryBtn" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-700/50 flex items-center gap-1.5 transition" title="Wyczyść zapisane w pamięci dane">
+                <button id="clearMemoryBtn" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-700/50 flex items-center gap-1.5 transition" title="Wyczyść zapamiętane dane">
                     <i data-lucide="trash-2" class="w-4 h-4"></i> Wyczyść pamięć
                 </button>
                 <button id="exportCsvBtn" disabled class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed border border-slate-700 flex items-center gap-1.5 transition">
@@ -77,13 +77,12 @@
                     </button>
                 </div>
                 <span class="text-xs text-slate-400 bg-slate-900/60 px-2.5 py-1 rounded border border-slate-700/50 hidden sm:inline-block">
-                    Układ: <strong class="text-brand-400">A</strong>: Code | <strong class="text-brand-400">B</strong>: SKU | <strong class="text-brand-400">G</strong>: Qty | <strong class="text-brand-400">I</strong>: Target | <strong class="text-brand-400">K</strong>: Czas | <strong class="text-brand-400">M</strong>: Data | <strong class="text-brand-400">N</strong>: User
+                    Układ: <strong class="text-brand-400">A</strong>: Code | <strong class="text-brand-400">B</strong>: SKU | <strong class="text-brand-400">G</strong>: Qty | <strong class="text-brand-400">I</strong>: Target | <strong class="text-brand-400">K</strong>: Czas | <strong class="text-brand-400">M</strong>: Data | <strong class="text-brand-400">N</strong>: User | <strong class="text-brand-400">O</strong>: Complete | <strong class="text-brand-400">Q</strong>: PA
                 </span>
             </div>
 
             <!-- Tab 1: Dual Paste Content -->
             <div id="tabPasteContent" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Rubryka 1: Baza stała -->
                 <div class="space-y-2 bg-slate-900/50 p-3.5 rounded-xl border border-slate-700/60">
                     <div class="flex items-center justify-between">
                         <label class="text-xs font-semibold text-brand-400 flex items-center gap-1.5">
@@ -91,14 +90,13 @@
                         </label>
                         <span id="countBase" class="text-[10px] text-slate-400 font-mono">0 wierszy</span>
                     </div>
-                    <textarea id="pasteBaseArea" rows="4" placeholder="Wklej tutaj starsze/bazowe dane raz i zostaną w pamięci..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-brand-500 custom-scrollbar resize-y"></textarea>
+                    <textarea id="pasteBaseArea" rows="4" placeholder="Wklej tutaj starsze/bazowe dane..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-brand-500 custom-scrollbar resize-y"></textarea>
                 </div>
 
-                <!-- Rubryka 2: Świeże dane -->
                 <div class="space-y-2 bg-slate-900/50 p-3.5 rounded-xl border border-slate-700/60">
                     <div class="flex items-center justify-between">
                         <label class="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Rubryka 2: Świeże Dane (kolejne partie / nowe wiersze)
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Rubryka 2: Świeże Dane (kolejne partie wierszy)
                         </label>
                         <span id="countFresh" class="text-[10px] text-slate-400 font-mono">0 wierszy</span>
                     </div>
@@ -107,7 +105,7 @@
 
                 <div class="md:col-span-2 flex justify-end">
                     <button id="processPasteBtn" class="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg shadow-lg transition flex items-center gap-2">
-                        <i data-lucide="play" class="w-4 h-4"></i> Scal i Przetwarzaj Dane z Obiech Rubryk
+                        <i data-lucide="play" class="w-4 h-4"></i> Scal i Przetwarzaj Dane z Obu Rubryk
                     </button>
                 </div>
             </div>
@@ -116,20 +114,15 @@
             <div id="tabFileContent" class="hidden space-y-4">
                 <div id="dropZone" class="border-2 border-dashed border-slate-600 hover:border-brand-500/80 bg-slate-900/40 hover:bg-slate-900/80 rounded-xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2">
                     <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
-                    <div class="p-3 bg-slate-800 rounded-full text-brand-400 border border-slate-700">
-                        <i data-lucide="upload-cloud" class="w-6 h-6"></i>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-slate-200">Przeciągnij i upuść plik Excel/CSV lub <span class="text-brand-400 underline">kliknij, aby przeglądać</span></p>
-                    </div>
+                    <div class="p-3 bg-slate-800 rounded-full text-brand-400 border border-slate-700"><i data-lucide="upload-cloud" class="w-6 h-6"></i></div>
+                    <p class="text-sm font-medium text-slate-200">Przeciągnij i upuść plik Excel/CSV lub <span class="text-brand-400 underline">kliknij, aby przeglądać</span></p>
                 </div>
             </div>
 
             <!-- Column Mapping Settings -->
             <details class="mt-4 pt-3 border-t border-slate-700/50">
                 <summary class="text-xs font-medium text-slate-400 hover:text-slate-200 cursor-pointer flex items-center gap-1 select-none">
-                    <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
-                    Ustawienia Mapowania Kolumn (Domyślnie A, B, G, I, K, M, N)
+                    <i data-lucide="settings-2" class="w-3.5 h-3.5"></i> Ustawienia Mapowania Kolumn
                 </summary>
                 <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 mt-3 pt-2">
                     <div><label class="block text-[10px] text-slate-400 mb-1">Kod (Kol. A)</label><select id="colCode" class="w-full bg-slate-900 border border-slate-700 rounded text-xs p-1.5 text-slate-200"></select></div>
@@ -147,64 +140,37 @@
         <section class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-5 shadow-xl space-y-3">
             <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-brand-400"></i>
-                    Główne Podsumowanie Zmiany (Wszystkie Operacje)
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-brand-400"></i> Główne Podsumowanie Zmiany (Wszystkie Operacje)
                 </h3>
-                <span class="text-xs text-slate-400 font-mono">Stan na bieżąco</span>
             </div>
             
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                <div class="bg-slate-900/80 border border-emerald-500/30 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-emerald-400 uppercase tracking-wide">Putaway VNA</span>
-                    <div class="mt-2 flex items-baseline justify-between"><span id="dashVnaOps" class="text-xl font-bold text-white">0</span><span class="text-xs text-slate-400">ops</span></div>
-                </div>
-                <div class="bg-slate-900/80 border border-amber-500/30 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-amber-400 uppercase tracking-wide">Putaway BULK</span>
-                    <div class="mt-2 flex items-baseline justify-between"><span id="dashBulkOps" class="text-xl font-bold text-white">0</span><span class="text-xs text-slate-400">ops</span></div>
-                </div>
-                <div class="bg-slate-900/80 border border-sky-500/30 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-sky-400 uppercase tracking-wide">Putaway VIN</span>
-                    <div class="mt-2 flex items-baseline justify-between"><span id="dashVinOps" class="text-xl font-bold text-white">0</span><span class="text-xs text-slate-400">ops</span></div>
-                </div>
-                <div class="bg-slate-900/80 border border-purple-500/30 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-purple-400 uppercase tracking-wide">Putaway SHELF</span>
-                    <div class="mt-2 flex items-baseline justify-between"><span id="dashShelfOps" class="text-xl font-bold text-white">0</span><span class="text-xs text-slate-400">ops</span></div>
-                </div>
-                <div class="bg-slate-900/80 border border-indigo-500/30 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-indigo-400 uppercase tracking-wide">RECEIPT (Ops)</span>
-                    <div class="mt-2 flex items-baseline justify-between"><span id="dashReceiptOps" class="text-xl font-bold text-white">0</span><span class="text-xs text-slate-400">ops</span></div>
-                </div>
-                <div class="bg-slate-900/80 border border-indigo-500/50 rounded-lg p-3.5 flex flex-col justify-between">
-                    <span class="text-[11px] font-semibold text-indigo-300 uppercase tracking-wide">ILOSC RECEIPT</span>
-                    <div class="mt-2 flex items-baseline justify-between"><span id="dashReceiptQty" class="text-lg font-bold text-emerald-400 font-mono">0</span><span class="text-xs text-slate-400">szt.</span></div>
-                </div>
+                <div class="bg-slate-900/80 border border-emerald-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-xl font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-amber-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-xl font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-sky-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-sky-400 uppercase">Putaway VIN</span><span id="dashVinOps" class="text-xl font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-purple-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-purple-400 uppercase">Putaway SHELF</span><span id="dashShelfOps" class="text-xl font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-indigo-500/30 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-indigo-400 uppercase">RECEIPT (Ops)</span><span id="dashReceiptOps" class="text-xl font-bold text-white mt-2">0</span></div>
+                <div class="bg-slate-900/80 border border-indigo-500/50 rounded-lg p-3.5 flex flex-col justify-between"><span class="text-[11px] font-semibold text-indigo-300 uppercase">ILOSC RECEIPT</span><span id="dashReceiptQty" class="text-lg font-bold text-emerald-400 font-mono mt-2">0</span></div>
             </div>
         </section>
 
         <!-- Main Category Tabs Navigation -->
-        <section class="border-b border-slate-700 flex items-center justify-between">
-            <div class="flex gap-2" id="categoryTabs">
-                <button onclick="switchCategory('Putaway')" id="catBtnPutaway" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-800 text-purple-400 border-t border-x border-slate-700 flex items-center gap-2 transition">
-                    <i data-lucide="arrow-up-right" class="w-4 h-4"></i> Putaway (Odłożenia)
-                </button>
-                <button onclick="switchCategory('Relocate')" id="catBtnRelocate" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-900/60 text-slate-400 hover:text-slate-200 border-t border-x border-transparent flex items-center gap-2 transition">
-                    <i data-lucide="repeat" class="w-4 h-4"></i> Relokacje (Relocate)
-                </button>
-                <button onclick="switchCategory('Receipt')" id="catBtnReceipt" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-900/60 text-slate-400 hover:text-slate-200 border-t border-x border-transparent flex items-center gap-2 transition">
-                    <i data-lucide="arrow-down-left" class="w-4 h-4"></i> Przyjęcia (Receipt)
-                </button>
+        <section class="border-b border-slate-700 flex items-center justify-between flex-wrap gap-2">
+            <div class="flex gap-2 flex-wrap" id="categoryTabs">
+                <button onclick="switchCategory('Putaway')" id="catBtnPutaway" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-800 text-purple-400 border-t border-x border-slate-700 flex items-center gap-2 transition"><i data-lucide="arrow-up-right" class="w-4 h-4"></i> Putaway</button>
+                <button onclick="switchCategory('Relocate')" id="catBtnRelocate" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-900/60 text-slate-400 hover:text-slate-200 border-t border-x border-transparent flex items-center gap-2 transition"><i data-lucide="repeat" class="w-4 h-4"></i> Relokacje</button>
+                <button onclick="switchCategory('Receipt')" id="catBtnReceipt" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-900/60 text-slate-400 hover:text-slate-200 border-t border-x border-transparent flex items-center gap-2 transition"><i data-lucide="arrow-down-left" class="w-4 h-4"></i> Przyjęcia</button>
+                <button onclick="switchCategory('ClosedPA')" id="catBtnClosedPA" class="px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-900/60 text-emerald-400 hover:text-slate-200 border-t border-x border-transparent flex items-center gap-2 transition"><i data-lucide="check-circle-2" class="w-4 h-4"></i> Zamknięte PA</button>
             </div>
             <div class="text-xs font-medium text-slate-400 px-3 py-1 bg-slate-800/80 rounded-lg border border-slate-700">
-                Aktywny widok: <strong id="activeCatLabel" class="text-white">Putaway</strong>
+                Widok: <strong id="activeCatLabel" class="text-white">Putaway</strong>
             </div>
         </section>
 
         <!-- Putaway Zone Sub-Filters -->
         <section id="putawayZonesSection" class="bg-slate-800/40 border border-slate-700/40 rounded-xl p-4 space-y-3">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-purple-400"></i> Filtruj Strefy Putaway:
-                </span>
+                <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-purple-400"></i> Filtruj Strefy Putaway:</span>
                 <span id="zoneActiveLabel" class="text-xs text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">Wszystkie strefy</span>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
@@ -216,8 +182,26 @@
             </div>
         </section>
 
+        <!-- Zamknięte PA Sub-Filters (Hidden by default) -->
+        <section id="closedPASubSection" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div onclick="switchClosedPAFilter('018')" id="paCard018" class="bg-slate-800/80 hover:bg-slate-800 border-2 border-brand-500/60 rounded-xl p-4 cursor-pointer transition flex items-center justify-between shadow-lg">
+                <div>
+                    <span class="text-xs font-semibold text-brand-400 uppercase tracking-wide flex items-center gap-1.5"><i data-lucide="tag" class="w-4 h-4"></i> Zamknięte PA z początkiem 018 (Kol. Q)</span>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Kol. Q zaczyna się na 018 + Kol. O = In Progress --> Complete</p>
+                </div>
+                <div id="countPA018" class="text-2xl font-bold text-white font-mono">0</div>
+            </div>
+            <div onclick="switchClosedPAFilter('OTHER')" id="paCardOther" class="bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 rounded-xl p-4 cursor-pointer transition flex items-center justify-between shadow-lg">
+                <div>
+                    <span class="text-xs font-semibold text-amber-400 uppercase tracking-wide flex items-center gap-1.5"><i data-lucide="tags" class="w-4 h-4"></i> Zamknięte PA oprócz 018 (Kol. Q)</span>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Inne zamknięte PA (Kol. O = In Progress --> Complete)</p>
+                </div>
+                <div id="countPAOther" class="text-2xl font-bold text-white font-mono">0</div>
+            </div>
+        </section>
+
         <!-- Category Leaderboard & User Drill-Down Section -->
-        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section id="workersSection" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-1 bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-xl space-y-4">
                 <div class="flex items-center justify-between">
                     <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2"><i data-lucide="users" class="w-4 h-4 text-brand-400"></i> Pracownicy</h3>
@@ -277,7 +261,7 @@
             <div class="overflow-x-auto custom-scrollbar border border-slate-700/60 rounded-lg">
                 <table class="w-full text-left text-xs text-slate-300">
                     <thead class="bg-slate-900/80 text-slate-400 font-medium uppercase tracking-wider border-b border-slate-700">
-                        <tr><th class="py-2.5 px-3">Lp.</th><th class="py-2.5 px-3">Data / Czas</th><th class="py-2.5 px-3">Kod (A)</th><th class="py-2.5 px-3">Strefa / Typ</th><th class="py-2.5 px-3">SKU (B)</th><th class="py-2.5 px-3 text-right">Sztuki (G)</th><th class="py-2.5 px-3">Lok. Docelowa (I)</th><th class="py-2.5 px-3">Pracownik (N)</th></tr>
+                        <tr><th class="py-2.5 px-3">Lp.</th><th class="py-2.5 px-3">Data / Czas</th><th class="py-2.5 px-3">Kod (A)</th><th class="py-2.5 px-3">Typ / Status</th><th class="py-2.5 px-3">SKU (B)</th><th class="py-2.5 px-3 text-right">Sztuki (G)</th><th class="py-2.5 px-3">Lok. Docelowa (I)</th><th class="py-2.5 px-3">Pracownik (N)</th></tr>
                     </thead>
                     <tbody id="detailsTableBody" class="divide-y divide-slate-700/50">
                         <tr><td colspan="8" class="py-8 text-center text-slate-500">Brak wczytanych rekordów. Wklej dane w rubryki powyżej.</td></tr>
@@ -302,8 +286,9 @@
             parsedData: [],
             activeCategory: 'Putaway',
             activeZone: 'ALL',
+            activeClosedPAFilter: '018',
             selectedUser: null,
-            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13 },
+            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16 }, // Indeks 16 to kolumna Q
             pagination: { page: 1, pageSize: 50 }
         };
 
@@ -348,7 +333,6 @@
             initPaginationControls();
             initExport();
 
-            // Automatyczne wczytanie z pamięci przeglądarki jeśli wcześniej coś wklejono
             const savedBase = localStorage.getItem('wms_base_paste') || '';
             const savedFresh = localStorage.getItem('wms_fresh_paste') || '';
             if (savedBase) document.getElementById('pasteBaseArea').value = savedBase;
@@ -361,7 +345,7 @@
             state.activeZone = 'ALL';
             state.selectedUser = null;
 
-            ['Putaway', 'Relocate', 'Receipt'].forEach(c => {
+            ['Putaway', 'Relocate', 'Receipt', 'ClosedPA'].forEach(c => {
                 const btn = document.getElementById(`catBtn${c}`);
                 if (c === cat) {
                     btn.className = 'px-4 py-2.5 text-xs font-semibold rounded-t-lg bg-slate-800 text-brand-400 border-t border-x border-slate-700 flex items-center gap-2 transition';
@@ -370,8 +354,13 @@
                 }
             });
 
-            document.getElementById('activeCatLabel').textContent = cat === 'Putaway' ? 'Putaway (Odłożenia)' : cat === 'Relocate' ? 'Relokacje (Relocate)' : 'Przyjęcia (Receipt)';
+            const labels = { 'Putaway': 'Putaway', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA' };
+            document.getElementById('activeCatLabel').textContent = labels[cat];
+            
             document.getElementById('putawayZonesSection').classList.toggle('hidden', cat !== 'Putaway');
+            document.getElementById('closedPASubSection').classList.toggle('hidden', cat !== 'ClosedPA');
+            document.getElementById('workersSection').classList.toggle('hidden', cat === 'ClosedPA');
+
             state.pagination.page = 1;
             renderAll();
         }
@@ -385,6 +374,22 @@
             document.getElementById('zoneActiveLabel').textContent = zone;
             state.pagination.page = 1;
             renderAll();
+        }
+
+        function switchClosedPAFilter(filterType) {
+            state.activeClosedPAFilter = filterType;
+            const card018 = document.getElementById('paCard018');
+            const cardOther = document.getElementById('paCardOther');
+
+            if (filterType === '018') {
+                card018.className = 'bg-slate-800/80 hover:bg-slate-800 border-2 border-brand-500/60 rounded-xl p-4 cursor-pointer transition flex items-center justify-between shadow-lg';
+                cardOther.className = 'bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 rounded-xl p-4 cursor-pointer transition flex items-center justify-between shadow-lg';
+            } else {
+                card018.className = 'bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 rounded-xl p-4 cursor-pointer transition flex items-center justify-between shadow-lg';
+                cardOther.className = 'bg-slate-800/80 hover:bg-slate-800 border-2 border-amber-500/60 rounded-xl p-4 cursor-pointer transition flex items-center justify-between shadow-lg';
+            }
+            state.pagination.page = 1;
+            renderDetailsTable();
         }
 
         function initTabs() {
@@ -426,7 +431,7 @@
             });
 
             document.getElementById('clearMemoryBtn').addEventListener('click', () => {
-                if (confirm('Czy na pewno chcesz wyczyścić zapamiętane dane z obu rubryk?')) {
+                if (confirm('Czy na pewno chcesz wyczyścić zapamiętane dane?')) {
                     localStorage.removeItem('wms_base_paste');
                     localStorage.removeItem('wms_fresh_paste');
                     document.getElementById('pasteBaseArea').value = '';
@@ -448,7 +453,6 @@
             let combinedRows = [];
             let headerRow = null;
 
-            // Przetwarzanie rubryki 1 (Baza)
             if (baseText.trim()) {
                 const baseLines = baseText.split('\n').map(line => line.split('\t'));
                 if (baseLines.length > 0) {
@@ -457,12 +461,10 @@
                 }
             }
 
-            // Przetwarzanie rubryki 2 (Świeże dane)
             if (freshText.trim()) {
                 const freshLines = freshText.split('\n').map(line => line.split('\t'));
                 if (freshLines.length > 0) {
                     if (!headerRow) headerRow = freshLines[0];
-                    // Pomijamy nagłówek w świeżych danych jeśli istnieje
                     const dataLines = freshLines.slice(cleanRawString(freshLines[0][0]).toUpperCase().includes('CODE') ? 1 : 0);
                     combinedRows.push(...dataLines);
                 }
@@ -478,7 +480,7 @@
 
         function processMatrixData(matrix) {
             if (!matrix || matrix.length === 0) return;
-            state.rawRows = matrix.map(row => { const r = [...row]; while (r.length < 15) r.push(''); return r; });
+            state.rawRows = matrix.map(row => { const r = [...row]; while (r.length < 18) r.push(''); return r; });
             populateColumnSelectors(state.rawRows[0]);
             parseDataset();
         }
@@ -488,7 +490,7 @@
             selects.forEach(selId => {
                 const sel = document.getElementById(selId);
                 sel.innerHTML = '';
-                for (let i = 0; i < 15; i++) {
+                for (let i = 0; i < 18; i++) {
                     const colName = String.fromCharCode(65 + i);
                     const opt = document.createElement('option');
                     opt.value = i; opt.textContent = `${colName} - (${cleanRawString(headerRow[i]) || 'Kolumna'})`;
@@ -502,21 +504,19 @@
             document.getElementById('colTime').value = 10;
             document.getElementById('colDate').value = 12;
             document.getElementById('colUser').value = 13;
-            state.colMap = { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13 };
+            state.colMap = { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16 };
         }
 
         function initColumnMapping() {
             ['colCode', 'colSku', 'colQty', 'colTarget', 'colTime', 'colDate', 'colUser'].forEach(id => {
                 document.getElementById(id).addEventListener('change', () => {
-                    state.colMap = {
-                        code: parseInt(document.getElementById('colCode').value),
-                        sku: parseInt(document.getElementById('colSku').value),
-                        qty: parseInt(document.getElementById('colQty').value),
-                        target: parseInt(document.getElementById('colTarget').value),
-                        time: parseInt(document.getElementById('colTime').value),
-                        date: parseInt(document.getElementById('colDate').value),
-                        user: parseInt(document.getElementById('colUser').value)
-                    };
+                    state.colMap.code = parseInt(document.getElementById('colCode').value);
+                    state.colMap.sku = parseInt(document.getElementById('colSku').value);
+                    state.colMap.qty = parseInt(document.getElementById('colQty').value);
+                    state.colMap.target = parseInt(document.getElementById('colTarget').value);
+                    state.colMap.time = parseInt(document.getElementById('colTime').value);
+                    state.colMap.date = parseInt(document.getElementById('colDate').value);
+                    state.colMap.user = parseInt(document.getElementById('colUser').value);
                     parseDataset();
                 });
             });
@@ -539,18 +539,27 @@
                 const time = cleanRawString(row[state.colMap.time]);
                 const date = cleanRawString(row[state.colMap.date]);
                 let user = cleanRawString(row[state.colMap.user]);
+                const completeStatus = cleanRawString(row[state.colMap.complete]); // Kolumna O (index 14)
+                const paValue = cleanRawString(row[state.colMap.paCol]); // Kolumna Q (index 16)
 
                 if (!code && !sku && !user) continue;
                 if (!user) user = 'BRAK_USERA';
                 
-                // Unikalny klucz zapobiegający dublowaniu wierszy po scaleniu baz
                 const rowKey = `${code}|${sku}|${target}|${time}|${date}|${user}`;
                 if (seen.has(rowKey)) continue;
                 seen.add(rowKey);
 
                 const taskType = classifyTaskType(code);
                 const putawayZone = taskType === 'Putaway' ? classifyPutawayZone(target) : 'N/A';
-                records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone });
+                
+                // Warunek Zamkniętych PA: Kolumna O zawiera "complete", a kolumna Q sprawdza początek "018"
+                const isComplete = completeStatus.toLowerCase().includes('complete');
+                let closedPAType = 'NONE';
+                if (isComplete) {
+                    closedPAType = paValue.startsWith('018') ? 'PA_018' : 'PA_OTHER';
+                }
+
+                records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone, completeStatus, paValue, closedPAType });
             }
             state.parsedData = records;
             state.selectedUser = null;
@@ -570,6 +579,12 @@
                 data = state.parsedData.filter(d => d.taskType === 'Receipt');
             } else if (state.activeCategory === 'Relocate') {
                 data = state.parsedData.filter(d => d.taskType === 'Relocate');
+            } else if (state.activeCategory === 'ClosedPA') {
+                if (state.activeClosedPAFilter === '018') {
+                    data = state.parsedData.filter(d => d.closedPAType === 'PA_018');
+                } else {
+                    data = state.parsedData.filter(d => d.closedPAType === 'PA_OTHER');
+                }
             }
             return data;
         }
@@ -577,6 +592,7 @@
         function renderAll() {
             renderDashboardCards();
             renderPutawayZonesFilterCounts();
+            renderClosedPACounters();
             renderCategoryWorkers();
             renderDrilldown();
             renderDetailsTable();
@@ -606,6 +622,13 @@
             const stats = { 'ALL': putawayItems.length, 'BULK': 0, 'VIN': 0, 'VNA': 0, 'SHELF': 0 };
             putawayItems.forEach(d => { if (stats[d.putawayZone] !== undefined) stats[d.putawayZone]++; });
             ['ALL', 'BULK', 'VIN', 'VNA', 'SHELF'].forEach(z => document.getElementById(`zoneCount${z}`).textContent = `${stats[z]} ops`);
+        }
+
+        function renderClosedPACounters() {
+            const count018 = state.parsedData.filter(d => d.closedPAType === 'PA_018').length;
+            const countOther = state.parsedData.filter(d => d.closedPAType === 'PA_OTHER').length;
+            document.getElementById('countPA018').textContent = count018.toLocaleString('pl-PL');
+            document.getElementById('countPAOther').textContent = countOther.toLocaleString('pl-PL');
         }
 
         function renderCategoryWorkers() {
@@ -685,7 +708,7 @@
             tbody.innerHTML = '';
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
             let activeData = getActiveFilteredData();
-            if (state.selectedUser) activeData = activeData.filter(d => d.user === state.selectedUser);
+            if (state.selectedUser && state.activeCategory !== 'ClosedPA') activeData = activeData.filter(d => d.user === state.selectedUser);
 
             const filtered = activeData.filter(item => !search || item.sku.toLowerCase().includes(search) || item.user.toLowerCase().includes(search) || item.target.toLowerCase().includes(search) || item.code.toLowerCase().includes(search));
             const total = filtered.length;
@@ -702,7 +725,10 @@
             pageData.forEach((row, i) => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-700/30 transition';
-                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${startIdx + i + 1}</td><td class="py-2 px-3 text-slate-400 text-xs">${row.date} ${row.time}</td><td class="py-2 px-3 text-slate-300">${row.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-purple-500/10 text-purple-400 rounded">${row.putawayZone !== 'N/A' ? row.putawayZone : row.taskType}</span></td><td class="py-2 px-3 text-emerald-400">${row.sku}</td><td class="py-2 px-3 font-bold text-amber-300 text-right">${row.qty > 0 ? row.qty : '-'}</td><td class="py-2 px-3 text-slate-300">${row.target}</td><td class="py-2 px-3 text-sky-300 font-semibold">${row.user}</td>`;
+                let badgeText = row.putawayZone !== 'N/A' ? row.putawayZone : row.taskType;
+                if (state.activeCategory === 'ClosedPA') badgeText = row.closedPAType === 'PA_018' ? 'PA 018 (Zamknięte)' : 'PA Inne (Zamknięte)';
+
+                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${startIdx + i + 1}</td><td class="py-2 px-3 text-slate-400 text-xs">${row.date} ${row.time}</td><td class="py-2 px-3 text-slate-300">${row.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-emerald-500/10 text-emerald-400 rounded">${badgeText}</span></td><td class="py-2 px-3 text-emerald-400">${row.sku}</td><td class="py-2 px-3 font-bold text-amber-300 text-right">${row.qty > 0 ? row.qty : '-'}</td><td class="py-2 px-3 text-slate-300">${row.target}</td><td class="py-2 px-3 text-sky-300 font-semibold">${row.user}</td>`;
                 tbody.appendChild(tr);
             });
 
@@ -720,11 +746,11 @@
             document.getElementById('exportCsvBtn').addEventListener('click', () => {
                 const data = getActiveFilteredData();
                 if (!data.length) return;
-                let csv = 'Lp;Data;Czas;Kod;Strefa;SKU;Sztuki;Docel;User\n';
-                data.forEach((r, idx) => csv += `${idx + 1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`);
+                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User\n';
+                data.forEach((r, idx) => csv += `${idx + 1};"${r.date}";"${r.time}";"${r.code}";"${r.closedPAType !== 'NONE' ? r.closedPAType : r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_v0.0.7_Dual_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_v0.0.9_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
