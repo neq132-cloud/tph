@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.3.0-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.3.2-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.3.0-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.3.2-STABLE</span>
                 </div>
             </div>
 
@@ -413,10 +413,12 @@
 
         async function loadDataFromCloud() {
             try {
-                const { data, error } = await supabaseClient.from('wms_operations').select('*');
-                if (error) throw error;
-                if (data && data.length > 0) {
-                    state.parsedData = data.map(d => ({
+                // Pobieramy główne operacje
+                const { data: opData, error: opError } = await supabaseClient.from('wms_operations').select('*');
+                if (opError) throw opError;
+                
+                if (opData && opData.length > 0) {
+                    state.parsedData = opData.map(d => ({
                         id: d.id,
                         code: d.code,
                         sku: d.sku,
@@ -431,25 +433,31 @@
                         activity: d.activity || ''
                     }));
                     
-                    // Wypełniamy okno bazy załadowanymi danymi w formacie tekstowym
                     const textRows = state.parsedData.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity || ''}`).join('\n');
                     document.getElementById('pasteBaseArea').value = textRows;
                     document.getElementById('countBase').textContent = `${state.parsedData.length} w.`;
-
-                    document.getElementById('systemStatusLabel').textContent = `Załadowano ${state.parsedData.length} wierszy`;
-                    showToast(`Załadowano dane (${new Date().toLocaleTimeString().slice(0,5)})`);
-                    renderAll();
-                } else {
-                    document.getElementById('systemStatusLabel').textContent = 'Gotowy do pracy';
                 }
+
+                // Pobieramy zawartość okienka "Świeże dane" z bazy chmurowej
+                const { data: freshData, error: freshError } = await supabaseClient.from('wms_meta').select('*').eq('key', 'fresh_buffer').single();
+                if (!freshError && freshData && freshData.value) {
+                    document.getElementById('pasteFreshArea').value = freshData.value;
+                    const linesCount = freshData.value.trim() ? freshData.value.split('\n').length : 0;
+                    document.getElementById('countFresh').textContent = `${linesCount} w.`;
+                }
+
+                document.getElementById('systemStatusLabel').textContent = `Załadowano pomyślnie`;
+                showToast(`Załadowano dane z bazy (${new Date().toLocaleTimeString().slice(0,5)})`);
+                renderAll();
             } catch (err) {
                 console.error('Błąd pobierania:', err);
                 document.getElementById('systemStatusLabel').textContent = 'Gotowy do pracy';
             }
         }
 
-        async function saveDataToCloud(records) {
+        async function saveDataToCloud(records, freshBufferText = '') {
             try {
+                // Zapisujemy operacje
                 await supabaseClient.from('wms_operations').delete().neq('id', 0);
                 const batchSize = 500;
                 for (let i = 0; i < records.length; i += batchSize) {
@@ -469,6 +477,10 @@
                     const { error } = await supabaseClient.from('wms_operations').insert(batch);
                     if (error) console.error('Błąd zapisu batcha:', error);
                 }
+
+                // Zapisujemy bufor świeżych danych w tabeli w chmurze
+                await supabaseClient.from('wms_meta').upsert({ key: 'fresh_buffer', value: freshBufferText });
+
                 document.getElementById('systemStatusLabel').textContent = `Zapisano ${records.length} wierszy`;
                 showToast(`Zaktualizowano pomyślnie o ${new Date().toLocaleTimeString().slice(0,5)}`);
             } catch(e) {
@@ -568,6 +580,17 @@
 
         function initDualPaste() {
             document.getElementById('processPasteBtn').addEventListener('click', processBothAreas);
+            document.getElementById('pasteFreshArea').addEventListener('input', async (e) => {
+                const text = e.target.value;
+                const lines = text.trim() ? text.split('\n').length : 0;
+                document.getElementById('countFresh').textContent = `${lines} w.`;
+                // Automatycznie zapisujemy bufor świeżych danych w bazie w tle
+                try {
+                    await supabaseClient.from('wms_meta').upsert({ key: 'fresh_buffer', value: text });
+                } catch(err) {
+                    console.error(err);
+                }
+            });
         }
 
         function processBothAreas() {
@@ -630,14 +653,15 @@
             state.selectedUser = null;
             state.selectedOdbiciaUser = null;
             
-            // Po przetworzeniu aktualizujemy pole bazy i czyszczymy świeże dane
             const textRows = records.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity || ''}`).join('\n');
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
+            
+            // Po scaleniu czyszczymy świeże dane i aktualizujemy bazę w chmurze
             document.getElementById('pasteFreshArea').value = '';
             document.getElementById('countFresh').textContent = '0 w.';
 
-            await saveDataToCloud(records);
+            await saveDataToCloud(records, '');
             renderAll();
         }
 
@@ -685,10 +709,6 @@
 
         function initFilters() {
             document.getElementById('searchInput').addEventListener('input', () => { state.pagination.page = 1; renderDetailsTable(); });
-            document.getElementById('pasteFreshArea').addEventListener('input', (e) => {
-                const lines = e.target.value.trim() ? e.target.value.split('\n').length : 0;
-                document.getElementById('countFresh').textContent = `${lines} w.`;
-            });
         }
 
         function renderAll() {
