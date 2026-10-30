@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.1.8-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.1.9-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.1.8-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.1.9-STABLE</span>
                 </div>
             </div>
 
@@ -97,7 +97,7 @@
                     <i data-lucide="check-circle-2" class="w-4 h-4"></i> Zamknięte PA
                 </button>
                 <button onclick="switchCategory('Odbicia')" id="navOdbicia" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
-                    <i data-lucide="user-check" class="w-4 h-4"></i> Odbicia (Live Status)
+                    <i data-lucide="clock" class="w-4 h-4"></i> Odbicia (Job Start/End)
                 </button>
             </nav>
         </div>
@@ -324,7 +324,7 @@
             activeCategory: 'Putaway',
             activeZone: 'ALL',
             selectedUser: null,
-            colMap: { jobStart: 0, jobStop: 1, code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
+            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
             pagination: { page: 1, pageSize: 50 }
         };
 
@@ -506,7 +506,7 @@
                 }
             });
 
-            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA', 'Odbicia': 'Odbicia (Live Status)' };
+            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA', 'Odbicia': 'Odbicia (Job Start/End)' };
             document.getElementById('activeCatLabel').textContent = labels[cat];
             document.getElementById('putawayZonesSection').classList.toggle('hidden', cat !== 'Putaway');
             
@@ -607,13 +607,10 @@
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
                 const completeStatus = cleanRawString(r[state.colMap.complete]);
                 const paValue = cleanRawString(r[state.colMap.paCol]);
-                
-                const jobStart = cleanRawString(r[state.colMap.jobStart]);
-                const jobStop = cleanRawString(r[state.colMap.jobStop]);
                 const activity = cleanRawString(r[state.colMap.activity]);
 
-                if (!code && !sku && !user && !activity && !jobStart) continue;
-                const key = `${code}|${sku}|${target}|${time}|${date}|${user}|${jobStart}`;
+                if (!code && !sku && !user && !activity) continue;
+                const key = `${code}|${sku}|${target}|${time}|${date}|${user}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
 
@@ -622,6 +619,16 @@
                 const isComplete = completeStatus.toLowerCase().includes('complete');
                 let closedPAType = 'NONE';
                 if (isComplete) closedPAType = paValue.startsWith('018') ? 'PA_018' : 'PA_OTHER';
+
+                // Wykrywanie Job Start / Job End na podstawie kodu operacji
+                const upperCode = code.toUpperCase();
+                let jobStart = '';
+                let jobStop = '';
+                if (upperCode.includes('JOB START')) {
+                    jobStart = time;
+                } else if (upperCode.includes('JOB END') || upperCode.includes('JOB STOP')) {
+                    jobStop = time;
+                }
 
                 records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone, closedPAType, jobStart, jobStop, activity });
             }
@@ -644,15 +651,11 @@
             } else if (state.activeCategory === 'ClosedPA') {
                 data = state.parsedData.filter(d => d.closedPAType !== 'NONE');
             } else if (state.activeCategory === 'Odbicia') {
-                // Dla zakładki Odbicia generujemy unikalną listę: jeden wiersz na pracownika (stan aktualny)
-                const userLatest = {};
-                state.parsedData.forEach(d => {
-                    if (d.user && d.user !== 'BRAK_USERA') {
-                        // Złap ostatni wpis dla użytkownika
-                        userLatest[d.user] = d;
-                    }
+                // Filtrujemy TYLKO wiersze, które w kodzie mają Job Start lub Job End
+                data = state.parsedData.filter(d => {
+                    const up = d.code.toUpperCase();
+                    return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
                 });
-                data = Object.values(userLatest).filter(d => d.activity || d.jobStart);
             }
             return data;
         }
@@ -782,29 +785,29 @@
             const pageData = filtered.slice(start, start + pageSize);
 
             if (state.activeCategory === 'Odbicia') {
-                titleEl.textContent = 'Aktualny Status Pracowników na Hali (Live Monitor Aktywności)';
-                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Pracownik</th><th class="py-3 px-3">Status</th><th class="py-3 px-3">Job Start</th><th class="py-3 px-3">Aktualna Aktywność (AQ)</th></tr>`;
+                titleEl.textContent = 'Rejestr Odbić (Job Start / End)';
+                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie</th><th class="py-3 px-3">Aktywność (AQ)</th><th class="py-3 px-3">Pracownik</th></tr>`;
                 
                 if (!pageData.length) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak aktywnych pracowników w pliku.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak odbić Job Start / End w danych.</td></tr>';
                     document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                     return;
                 }
 
                 pageData.forEach((row, i) => {
-                    const hasStopped = row.jobStop && row.jobStop.trim() !== '' && row.jobStop !== '-';
-                    const statusBadge = hasStopped 
-                        ? '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-full font-bold">ZATRZYMANY</span>'
-                        : '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full font-bold animate-pulse">AKTYWNY</span>';
+                    const isStart = row.code.toUpperCase().includes('START');
+                    const badge = isStart 
+                        ? '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">JOB START</span>'
+                        : '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded font-bold">JOB END</span>';
 
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition';
                     tr.innerHTML = `
                         <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
-                        <td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user}</td>
-                        <td class="py-2.5 px-3">${statusBadge}</td>
-                        <td class="py-2.5 px-3 text-slate-300 font-mono">${row.jobStart || '-'}</td>
+                        <td class="py-2.5 px-3 text-slate-400">${row.date} ${row.time}</td>
+                        <td class="py-2.5 px-3">${badge}</td>
                         <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || '-'}</td>
+                        <td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -840,11 +843,11 @@
             document.getElementById('exportCsvBtn').addEventListener('click', () => {
                 const data = getActiveFilteredData();
                 if (!data.length) return;
-                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;JobStart;JobStop;Activity\n';
-                data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}";"${r.jobStart}";"${r.jobStop}";"${r.activity}"\n`);
+                let csv = 'Lp;Data;Czas;Kod;Aktywnosc;User\n';
+                data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.activity}";"${r.user}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_LIVE_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_ODBICA_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
