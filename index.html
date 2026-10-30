@@ -323,7 +323,7 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
-            // Mapowanie: A=0 (code), O=14 (complete/status), Q=16 (paCol / 018 check)
+            // Mapowanie: A=0 (PreAdv Status / code), O=14 (In Progress --> Complete), Q=16 (paCol / numery PA)
             colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
@@ -599,7 +599,6 @@
             });
         }
 
-        // Pobieramy dane z Bazy Głównej oraz dopisane ze Świeżych Danych i scalamy je w jedną całość
         function processBothAreas() {
             const baseText = document.getElementById('pasteBaseArea').value;
             const freshText = document.getElementById('pasteFreshArea').value;
@@ -651,11 +650,14 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
-                // Precyzyjna logika Zamkniętych PA: Kolumna O zawiera "complete", a Kolumna Q sprawdza czy zaczyna się od "018"
-                const statusStr = completeStatus.toLowerCase();
+                // Precyzyjna logika Zamkniętych PA:
+                // Kolumna O musi zawierać "In Progress --> Complete", a Kolumna Q musi posiadać numer
+                const statusO = completeStatus.trim().toLowerCase();
+                const valQ = paValue.trim();
                 let closedPAType = 'NONE';
-                if (statusStr.includes('complete') || statusStr.includes('zamknięte')) {
-                    if (paValue.startsWith('018')) {
+
+                if (statusO.includes('in progress --> complete') && valQ !== '') {
+                    if (valQ.startsWith('018')) {
                         closedPAType = 'PA_018';
                     } else {
                         closedPAType = 'PA_OTHER';
