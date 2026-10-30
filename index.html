@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.1.7-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.1.8-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.1.7-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.1.8-STABLE</span>
                 </div>
             </div>
 
@@ -97,7 +97,7 @@
                     <i data-lucide="check-circle-2" class="w-4 h-4"></i> Zamknięte PA
                 </button>
                 <button onclick="switchCategory('Odbicia')" id="navOdbicia" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
-                    <i data-lucide="clock" class="w-4 h-4"></i> Odbicia i Statusy
+                    <i data-lucide="user-check" class="w-4 h-4"></i> Odbicia (Live Status)
                 </button>
             </nav>
         </div>
@@ -324,7 +324,6 @@
             activeCategory: 'Putaway',
             activeZone: 'ALL',
             selectedUser: null,
-            // Precyzyjne mapowanie kolumn: A=0 (Job Start), B=1 (Job Stop), K=10 (Time), M=12 (Date), AQ=42 (Activity)
             colMap: { jobStart: 0, jobStop: 1, code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
             pagination: { page: 1, pageSize: 50 }
         };
@@ -507,7 +506,7 @@
                 }
             });
 
-            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA', 'Odbicia': 'Odbicia i Aktywności' };
+            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA', 'Odbicia': 'Odbicia (Live Status)' };
             document.getElementById('activeCatLabel').textContent = labels[cat];
             document.getElementById('putawayZonesSection').classList.toggle('hidden', cat !== 'Putaway');
             
@@ -603,15 +602,15 @@
                 const sku = cleanRawString(r[state.colMap.sku]);
                 const qty = parseQty(r[state.colMap.qty]);
                 const target = cleanRawString(r[state.colMap.target]);
-                const time = cleanRawString(r[state.colMap.time]); // Kolumna K
-                const date = cleanRawString(r[state.colMap.date]); // Kolumna M
+                const time = cleanRawString(r[state.colMap.time]);
+                const date = cleanRawString(r[state.colMap.date]);
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
                 const completeStatus = cleanRawString(r[state.colMap.complete]);
                 const paValue = cleanRawString(r[state.colMap.paCol]);
                 
-                const jobStart = cleanRawString(r[state.colMap.jobStart]); // Kolumna A
-                const jobStop = cleanRawString(r[state.colMap.jobStop]);   // Kolumna B
-                const activity = cleanRawString(r[state.colMap.activity]); // Kolumna AQ
+                const jobStart = cleanRawString(r[state.colMap.jobStart]);
+                const jobStop = cleanRawString(r[state.colMap.jobStop]);
+                const activity = cleanRawString(r[state.colMap.activity]);
 
                 if (!code && !sku && !user && !activity && !jobStart) continue;
                 const key = `${code}|${sku}|${target}|${time}|${date}|${user}|${jobStart}`;
@@ -633,10 +632,6 @@
             renderAll();
         }
 
-        function initFilters() {
-            document.getElementById('searchInput').addEventListener('input', () => { state.pagination.page = 1; renderDetailsTable(); });
-        }
-
         function getActiveFilteredData() {
             let data = [];
             if (state.activeCategory === 'Putaway') {
@@ -649,9 +644,21 @@
             } else if (state.activeCategory === 'ClosedPA') {
                 data = state.parsedData.filter(d => d.closedPAType !== 'NONE');
             } else if (state.activeCategory === 'Odbicia') {
-                data = state.parsedData.filter(d => d.jobStart || d.jobStop || d.activity);
+                // Dla zakładki Odbicia generujemy unikalną listę: jeden wiersz na pracownika (stan aktualny)
+                const userLatest = {};
+                state.parsedData.forEach(d => {
+                    if (d.user && d.user !== 'BRAK_USERA') {
+                        // Złap ostatni wpis dla użytkownika
+                        userLatest[d.user] = d;
+                    }
+                });
+                data = Object.values(userLatest).filter(d => d.activity || d.jobStart);
             }
             return data;
+        }
+
+        function initFilters() {
+            document.getElementById('searchInput').addEventListener('input', () => { state.pagination.page = 1; renderDetailsTable(); });
         }
 
         function renderAll() {
@@ -775,23 +782,28 @@
             const pageData = filtered.slice(start, start + pageSize);
 
             if (state.activeCategory === 'Odbicia') {
-                titleEl.textContent = 'Rejestr Odbić i Aktywności (Job Start / Stop & AQ)';
-                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Pracownik</th><th class="py-3 px-3">Job Start</th><th class="py-3 px-3">Job Stop</th><th class="py-3 px-3">Aktywność (AQ)</th></tr>`;
+                titleEl.textContent = 'Aktualny Status Pracowników na Hali (Live Monitor Aktywności)';
+                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Pracownik</th><th class="py-3 px-3">Status</th><th class="py-3 px-3">Job Start</th><th class="py-3 px-3">Aktualna Aktywność (AQ)</th></tr>`;
                 
                 if (!pageData.length) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych o odbiciach w wklejonym pliku.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak aktywnych pracowników w pliku.</td></tr>';
                     document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                     return;
                 }
 
                 pageData.forEach((row, i) => {
+                    const hasStopped = row.jobStop && row.jobStop.trim() !== '' && row.jobStop !== '-';
+                    const statusBadge = hasStopped 
+                        ? '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-full font-bold">ZATRZYMANY</span>'
+                        : '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full font-bold animate-pulse">AKTYWNY</span>';
+
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition';
                     tr.innerHTML = `
                         <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
                         <td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user}</td>
-                        <td class="py-2.5 px-3 text-emerald-400 font-mono">${row.jobStart || '-'}</td>
-                        <td class="py-2.5 px-3 text-rose-400 font-mono">${row.jobStop || '-'}</td>
+                        <td class="py-2.5 px-3">${statusBadge}</td>
+                        <td class="py-2.5 px-3 text-slate-300 font-mono">${row.jobStart || '-'}</td>
                         <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || '-'}</td>
                     `;
                     tbody.appendChild(tr);
@@ -832,7 +844,7 @@
                 data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}";"${r.jobStart}";"${r.jobStop}";"${r.activity}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_STABLE_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_LIVE_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
