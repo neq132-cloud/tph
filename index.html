@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.2.3-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.2.4-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.2.3-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.2.4-STABLE</span>
                 </div>
             </div>
 
@@ -320,7 +320,7 @@
 
     <script>
         const SUPABASE_URL = 'https://kopwsxkfscnhaoocdxzk.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvcHdzeGtmc2NuaGFvb2NkeHprIiwicm9sZSI6ImFub24iOjE3OTMzMTE4MTYsImV4cCI6MjEwODg4NzgxNn0.Vb01SXWqE0pqPpUV0rExs834M580_imz4Y5d-alCEN4';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvcHdzeGtmc2NuaGFvb2NkeHprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzMTE4MTYsImV4cCI6MjEwODg4NzgxNn0.Vb01SXWqE0pqPpUV0rExs834M580_imz4Y5d-alCEN4';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const state = {
@@ -420,59 +420,64 @@
 
         async function loadDataFromCloud() {
             document.getElementById('cloudStatus').textContent = 'Pobieranie z chmury...';
-            const { data, error } = await supabaseClient.from('wms_operations').select('*');
-            if (error) {
-                console.error('Błąd pobierania:', error);
-                document.getElementById('cloudStatus').textContent = 'Błąd połączenia z chmurą';
-                return;
-            }
-            if (data && data.length > 0) {
-                state.parsedData = data.map(d => ({
-                    id: d.id,
-                    code: d.code,
-                    sku: d.sku,
-                    qty: d.qty,
-                    target: d.target,
-                    time: d.time,
-                    date: d.date,
-                    user: d.user,
-                    taskType: d.task_type,
-                    putawayZone: d.putaway_zone,
-                    closedPAType: d.closed_pa_type,
-                    activity: d.activity || ''
-                }));
-                document.getElementById('cloudStatus').textContent = `Załadowano ${state.parsedData.length} w. z chmury`;
-                showToast(`Pobrano dane z godziny ${new Date().toLocaleTimeString().slice(0,5)}`);
-                renderAll();
-            } else {
-                document.getElementById('cloudStatus').textContent = 'Chmura pusta - wklej dane';
+            try {
+                const { data, error } = await supabaseClient.from('wms_operations').select('*');
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    state.parsedData = data.map(d => ({
+                        id: d.id,
+                        code: d.code,
+                        sku: d.sku,
+                        qty: d.qty,
+                        target: d.target,
+                        time: d.time,
+                        date: d.date,
+                        user: d.user,
+                        taskType: d.task_type,
+                        putawayZone: d.putaway_zone,
+                        closedPAType: d.closed_pa_type,
+                        activity: d.activity || ''
+                    }));
+                    document.getElementById('cloudStatus').textContent = `Załadowano ${state.parsedData.length} w. z chmury`;
+                    showToast(`Pobrano dane z godziny ${new Date().toLocaleTimeString().slice(0,5)}`);
+                    renderAll();
+                } else {
+                    document.getElementById('cloudStatus').textContent = 'Chmura pusta - wklej dane';
+                }
+            } catch (err) {
+                console.error('Błąd pobierania:', err);
+                document.getElementById('cloudStatus').textContent = 'Błąd połączenia z chmurą (użyj wklejania)';
             }
         }
 
         async function saveDataToCloud(records) {
             document.getElementById('cloudStatus').textContent = 'Zapisywanie w chmurze...';
-            await supabaseClient.from('wms_operations').delete().neq('id', 0);
-
-            const batchSize = 500;
-            for (let i = 0; i < records.length; i += batchSize) {
-                const batch = records.slice(i, i + batchSize).map(r => ({
-                    code: r.code,
-                    sku: r.sku,
-                    qty: r.qty,
-                    target: r.target,
-                    time: r.time,
-                    date: r.date,
-                    user: r.user,
-                    task_type: r.taskType,
-                    putaway_zone: r.putawayZone,
-                    closed_pa_type: r.closedPAType,
-                    activity: r.activity
-                }));
-                const { error } = await supabaseClient.from('wms_operations').insert(batch);
-                if (error) console.error('Błąd zapisu batcha:', error);
+            try {
+                await supabaseClient.from('wms_operations').delete().neq('id', 0);
+                const batchSize = 500;
+                for (let i = 0; i < records.length; i += batchSize) {
+                    const batch = records.slice(i, i + batchSize).map(r => ({
+                        code: r.code,
+                        sku: r.sku,
+                        qty: r.qty,
+                        target: r.target,
+                        time: r.time,
+                        date: r.date,
+                        user: r.user,
+                        task_type: r.taskType,
+                        putaway_zone: r.putawayZone,
+                        closed_pa_type: r.closedPAType,
+                        activity: r.activity
+                    }));
+                    const { error } = await supabaseClient.from('wms_operations').insert(batch);
+                    if (error) console.error('Błąd zapisu batcha:', error);
+                }
+                document.getElementById('cloudStatus').textContent = `Zapisano ${records.length} w. w chmurze`;
+                showToast(`Zaktualizowano pomyślnie o ${new Date().toLocaleTimeString().slice(0,5)}`);
+            } catch(e) {
+                console.error('Supabase error:', e);
+                document.getElementById('cloudStatus').textContent = 'Zapisano lokalnie (błąd chmury)';
             }
-            document.getElementById('cloudStatus').textContent = `Zapisano ${records.length} w. w chmurze`;
-            showToast(`Zaktualizowano pomyślnie o ${new Date().toLocaleTimeString().slice(0,5)}`);
         }
 
         function initPresenceModule() {
@@ -655,17 +660,17 @@
                 if (state.selectedOdbiciaUser) {
                     data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
                 } else {
-                    // LIVE STATUS: Dla każdego pracownika bierzemy ABSOLUTNIE NAJNOWSZY wpis (zarówno Job Start jak i Job End) wg daty i czasu
+                    // BEZPIECZNE POBIERANIE NAJNOWSZEGO WPISU: sortujemy rosnąco i nadpisujemy wpisami z najwyższym czasem
                     const sortedOdbicia = [...odbiciaRows].sort((a, b) => {
-                        const tA = `${a.date} ${a.time}`;
-                        const tB = `${b.date} ${b.time}`;
-                        return tA.localeCompare(tB); // od najstarszego do najnowszego, dzięki czemu ostatni nadpisze poprzednie
+                        const tA = `${a.date || ''} ${a.time || ''}`.trim();
+                        const tB = `${b.date || ''} ${b.time || ''}`.trim();
+                        return tA.localeCompare(tB);
                     });
 
                     const userLatestMap = {};
                     sortedOdbicia.forEach(d => {
                         if (d.user && d.user !== 'BRAK_USERA') {
-                            userLatestMap[d.user] = d; // każdy kolejny wpis nadpisuje wcześniejszy, zostawiając najświeższy
+                            userLatestMap[d.user] = d;
                         }
                     });
                     data = Object.values(userLatestMap);
@@ -827,17 +832,17 @@
             filtered.sort((a, b) => {
                 let valA, valB;
                 if (state.sortField === 'date') {
-                    valA = `${a.date} ${a.time}`;
-                    valB = `${b.date} ${b.time}`;
+                    valA = `${a.date || ''} ${a.time || ''}`;
+                    valB = `${b.date || ''} ${b.time || ''}`;
                 } else if (state.sortField === 'code') {
-                    valA = a.code; valB = b.code;
+                    valA = a.code || ''; valB = b.code || '';
                 } else if (state.sortField === 'user') {
-                    valA = a.user; valB = b.user;
+                    valA = a.user || ''; valB = b.user || '';
                 } else if (state.sortField === 'qty') {
-                    valA = a.qty; valB = b.qty;
+                    valA = a.qty || 0; valB = b.qty || 0;
                 } else {
-                    valA = `${a.date} ${a.time}`;
-                    valB = `${b.date} ${b.time}`;
+                    valA = `${a.date || ''} ${a.time || ''}`;
+                    valB = `${b.date || ''} ${b.time || ''}`;
                 }
 
                 if (valA < valB) return state.sortDir === 'asc' ? -1 : 1;
@@ -873,7 +878,7 @@
                 }
 
                 pageData.forEach((row, i) => {
-                    const isStart = row.code.toUpperCase().includes('START');
+                    const isStart = (row.code || '').toUpperCase().includes('START');
                     let badge = isStart 
                         ? '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">JOB START</span>'
                         : '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded font-bold">JOB END</span>';
@@ -891,10 +896,10 @@
 
                     tr.innerHTML = `
                         <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
-                        <td class="py-2.5 px-3 text-slate-400">${row.date} ${row.time}</td>
+                        <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
                         <td class="py-2.5 px-3">${badge}</td>
                         <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || '-'}</td>
-                        <td class="py-2.5 px-3 text-cyan-300 font-semibold underline">${row.user}</td>
+                        <td class="py-2.5 px-3 text-cyan-300 font-semibold underline">${row.user || '-'}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -922,7 +927,7 @@
                 pageData.forEach((row, i) => {
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition';
-                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date} ${row.time}</td><td class="py-2.5 px-3 text-slate-300">${row.code}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${row.putawayZone}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user}</td>`;
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${row.putawayZone || '-'}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku || '-'}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user || '-'}</td>`;
                     tbody.appendChild(tr);
                 });
             }
@@ -942,7 +947,7 @@
                 const data = getActiveFilteredData();
                 if (!data.length) return;
                 let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;Activity\n';
-                data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}";"${r.activity}"\n`);
+                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${r.putawayZone || ''}";"${r.sku || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.activity || ''}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_EXPORT_${new Date().toISOString().slice(0,10)}.csv`; a.click();
