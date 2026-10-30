@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.2.7-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.2.8-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.2.7-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.2.8-STABLE</span>
                 </div>
             </div>
 
@@ -146,29 +146,16 @@
                     </div>
 
                     <!-- Paste Tab -->
-                    <div id="tabPasteContent" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div id="tabPasteContent" class="space-y-3">
                         <div class="bg-slate-950/90 p-3 rounded-xl border border-cyber-border space-y-2">
                             <div class="flex items-center justify-between">
-                                <label class="text-[11px] font-semibold text-cyan-400">Baza / Wklejone Dane</label>
-                                <div class="flex items-center gap-2">
-                                    <button id="toggleLockBtn" onclick="toggleBaseLock()" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[9px] flex items-center gap-1">
-                                        <i id="lockIcon" data-lucide="lock" class="w-2.5 h-2.5"></i> <span id="lockText">Zablokowane</span>
-                                    </button>
-                                    <span id="countBase" class="text-[9px] font-mono text-slate-400">0 w.</span>
-                                </div>
+                                <label class="text-[11px] font-semibold text-cyan-400">Wklej dane (Excel / Raport)</label>
+                                <span id="countBase" class="text-[9px] font-mono text-slate-400">0 w.</span>
                             </div>
-                            <textarea id="pasteBaseArea" readonly rows="2" placeholder="Wklej tutaj dane..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-300 custom-scrollbar resize-y cursor-not-allowed focus:outline-none focus:border-cyan-500"></textarea>
+                            <textarea id="pasteBaseArea" rows="3" placeholder="Wklej tutaj dane ze schowka..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2.5 text-[11px] font-mono text-slate-200 custom-scrollbar resize-y focus:outline-none focus:border-cyan-500"></textarea>
                         </div>
 
-                        <div class="bg-slate-950/90 p-3 rounded-xl border border-cyber-border space-y-2">
-                            <div class="flex items-center justify-between">
-                                <label class="text-[11px] font-semibold text-emerald-400">Dodatkowe / Świeże</label>
-                                <span id="countFresh" class="text-[9px] font-mono text-slate-400">0 w.</span>
-                            </div>
-                            <textarea id="pasteFreshArea" rows="2" placeholder="Dodatkowe wiersze..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-200 custom-scrollbar resize-y focus:outline-none focus:border-cyan-500"></textarea>
-                        </div>
-
-                        <div class="sm:col-span-2 flex justify-end">
+                        <div class="flex justify-end">
                             <button id="processPasteBtn" class="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center gap-2">
                                 <i data-lucide="cpu" class="w-3.5 h-3.5"></i> Przetwarzaj Dane
                             </button>
@@ -209,11 +196,11 @@
 
             <!-- KPI DASHBOARD TILES -->
             <div id="kpiContainer" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
-                <div class="bg-cyber-card/90 backdrop-blur-md border border-emerald-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-lg font-black text-white mt-1">0</span></div>
-                <div class="bg-cyber-card/90 backdrop-blur-md border border-amber-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-lg font-black text-white mt-1">0</span></div>
-                <div class="bg-cyber-card/90 backdrop-blur-md border border-sky-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-sky-400 uppercase">Putaway VIN</span><span id="dashVinOps" class="text-lg font-black text-white mt-1">0</span></div>
-                <div class="bg-cyber-card/90 backdrop-blur-md border border-purple-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-purple-400 uppercase">Putaway SHELF</span><span id="dashShelfOps" class="text-lg font-black text-white mt-1">0</span></div>
-                <div class="bg-cyber-card/90 backdrop-blur-md border border-cyan-500/40 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-cyan-400 uppercase">Suma Put.+Rel.</span><span id="dashPutawayRelocateSum" class="text-lg font-black text-white mt-1">0</span></div>
+                <div onclick="switchZone('VNA')" class="bg-cyber-card/90 backdrop-blur-md border border-emerald-500/30 hover:border-emerald-500 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition"><span class="text-[9px] font-bold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-lg font-black text-white mt-1">0</span></div>
+                <div onclick="switchZone('BULK')" class="bg-cyber-card/90 backdrop-blur-md border border-amber-500/30 hover:border-amber-500 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition"><span class="text-[9px] font-bold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-lg font-black text-white mt-1">0</span></div>
+                <div onclick="switchZone('VIN')" class="bg-cyber-card/90 backdrop-blur-md border border-sky-500/30 hover:border-sky-500 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition"><span class="text-[9px] font-bold text-sky-400 uppercase">Putaway VIN</span><span id="dashVinOps" class="text-lg font-black text-white mt-1">0</span></div>
+                <div onclick="switchZone('SHELF')" class="bg-cyber-card/90 backdrop-blur-md border border-purple-500/30 hover:border-purple-500 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition"><span class="text-[9px] font-bold text-purple-400 uppercase">Putaway SHELF</span><span id="dashShelfOps" class="text-lg font-black text-white mt-1">0</span></div>
+                <div onclick="switchZone('ALL')" class="bg-cyber-card/90 backdrop-blur-md border border-cyan-500/40 hover:border-cyan-500 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition"><span class="text-[9px] font-bold text-cyan-400 uppercase">Suma Put.+Rel.</span><span id="dashPutawayRelocateSum" class="text-lg font-black text-white mt-1">0</span></div>
                 
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-indigo-500/50 rounded-xl p-3 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
@@ -234,15 +221,6 @@
                         <span id="dashPaOtherOps" class="text-orange-400">0</span>
                     </div>
                 </div>
-            </div>
-
-            <!-- Putaway Zone Filters Bar -->
-            <div id="putawayZonesSection" class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                <button onclick="switchZone('ALL')" id="zoneBtnALL" class="p-2.5 bg-slate-900 border border-cyan-500/50 rounded-xl text-left transition"><div class="text-[10px] text-slate-400">Wszystkie Strefy</div><div id="zoneCountALL" class="text-sm font-bold text-white">0 ops</div></button>
-                <button onclick="switchZone('BULK')" id="zoneBtnBULK" class="p-2.5 bg-slate-950 border border-cyber-border rounded-xl text-left transition"><div class="text-[10px] text-amber-400">BULK</div><div id="zoneCountBULK" class="text-sm font-bold text-white">0 ops</div></button>
-                <button onclick="switchZone('VIN')" id="zoneBtnVIN" class="p-2.5 bg-slate-950 border border-cyber-border rounded-xl text-left transition"><div class="text-[10px] text-sky-400">VIN</div><div id="zoneCountVIN" class="text-sm font-bold text-white">0 ops</div></button>
-                <button onclick="switchZone('VNA')" id="zoneBtnVNA" class="p-2.5 bg-slate-950 border border-cyber-border rounded-xl text-left transition"><div class="text-[10px] text-emerald-400">VNA</div><div id="zoneCountVNA" class="text-sm font-bold text-white">0 ops</div></button>
-                <button onclick="switchZone('SHELF')" id="zoneBtnSHELF" class="p-2.5 bg-slate-950 border border-cyber-border rounded-xl text-left transition"><div class="text-[10px] text-purple-400">SHELF (+AS)</div><div id="zoneCountSHELF" class="text-sm font-bold text-white">0 ops</div></button>
             </div>
 
             <!-- WORKERS & DRILLDOWN SECTION -->
@@ -336,31 +314,6 @@
             sortDir: 'desc'
         };
 
-        let isBaseLocked = true;
-
-        function toggleBaseLock() {
-            isBaseLocked = !isBaseLocked;
-            const textarea = document.getElementById('pasteBaseArea');
-            const lockIcon = document.getElementById('lockIcon');
-            const lockText = document.getElementById('lockText');
-            const toggleBtn = document.getElementById('toggleLockBtn');
-
-            if (isBaseLocked) {
-                textarea.setAttribute('readonly', true);
-                textarea.classList.add('cursor-not-allowed');
-                toggleBtn.className = 'px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[9px] flex items-center gap-1';
-                lockText.textContent = 'Zablokowane';
-                lockIcon.setAttribute('data-lucide', 'lock');
-            } else {
-                textarea.removeAttribute('readonly');
-                textarea.classList.remove('cursor-not-allowed');
-                toggleBtn.className = 'px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-[9px] flex items-center gap-1';
-                lockText.textContent = 'Odblokowane';
-                lockIcon.setAttribute('data-lucide', 'unlock');
-            }
-            lucide.createIcons();
-        }
-
         function showToast(message) {
             const toast = document.getElementById('toastNotification');
             document.getElementById('toastTimeSub').textContent = message;
@@ -409,7 +362,7 @@
             lucide.createIcons();
             initTabs();
             initFileUpload();
-            initDualPaste();
+            initSinglePaste();
             initFilters();
             initPaginationControls();
             initExport();
@@ -515,7 +468,6 @@
 
             const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA', 'Odbicia': 'Odbicia (Live)' };
             document.getElementById('activeCatLabel').textContent = labels[cat];
-            document.getElementById('putawayZonesSection').classList.toggle('hidden', cat !== 'Putaway');
             
             document.getElementById('kpiContainer').style.display = (cat === 'Odbicia') ? 'none' : 'grid';
             document.getElementById('workersSection').style.display = (cat === 'Odbicia') ? 'none' : 'grid';
@@ -527,9 +479,6 @@
         function switchZone(zone) {
             state.activeZone = zone;
             state.selectedUser = null;
-            ['ALL', 'BULK', 'VIN', 'VNA', 'SHELF'].forEach(z => {
-                document.getElementById(`zoneBtn${z}`).className = z === zone ? 'p-2.5 bg-slate-900 border border-cyan-500/50 rounded-xl text-left transition' : 'p-2.5 bg-slate-950 border border-cyber-border rounded-xl text-left transition';
-            });
             state.pagination.page = 1;
             renderAll();
         }
@@ -569,27 +518,16 @@
             reader.readAsArrayBuffer(file);
         }
 
-        function initDualPaste() {
-            document.getElementById('processPasteBtn').addEventListener('click', processBothAreas);
+        function initSinglePaste() {
+            document.getElementById('processPasteBtn').addEventListener('click', processPasteArea);
         }
 
-        function processBothAreas() {
-            const baseText = document.getElementById('pasteBaseArea').value;
-            const freshText = document.getElementById('pasteFreshArea').value;
-
-            let combined = [], header = null;
-            if (baseText.trim()) {
-                const lines = baseText.split('\n').map(l => l.split('\t'));
-                header = lines[0]; combined.push(...lines);
-            }
-            if (freshText.trim()) {
-                const lines = freshText.split('\n').map(l => l.split('\t'));
-                if (!header) header = lines[0];
-                combined.push(...lines.slice(cleanRawString(lines[0][0]).toUpperCase().includes('CODE') ? 1 : 0));
-            }
-            document.getElementById('countBase').textContent = baseText.trim() ? `${baseText.split('\n').length} w.` : '0 w.';
-            document.getElementById('countFresh').textContent = freshText.trim() ? `${freshText.split('\n').length} w.` : '0 w.';
-            if (combined.length) processMatrixData(combined);
+        function processPasteArea() {
+            const text = document.getElementById('pasteBaseArea').value;
+            if (!text.trim()) return;
+            const lines = text.split('\n').map(l => l.split('\t'));
+            document.getElementById('countBase').textContent = `${lines.length} w.`;
+            processMatrixData(lines);
         }
 
         function processMatrixData(matrix) {
@@ -686,7 +624,6 @@
         function renderAll() {
             renderSidebarBadges();
             renderDashboardCards();
-            renderZonesCounts();
             renderWorkers();
             renderDrilldown();
             renderDetailsTable();
@@ -740,13 +677,6 @@
             document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((s, d) => s + d.qty, 0);
             document.getElementById('dashPa018Ops').textContent = pa018;
             document.getElementById('dashPaOtherOps').textContent = paOther;
-        }
-
-        function renderZonesCounts() {
-            const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
-            const stats = { 'ALL': putawayItems.length, 'BULK': 0, 'VIN': 0, 'VNA': 0, 'SHELF': 0 };
-            putawayItems.forEach(d => { if (stats[d.putawayZone] !== undefined) stats[d.putawayZone]++; });
-            ['ALL', 'BULK', 'VIN', 'VNA', 'SHELF'].forEach(z => document.getElementById(`zoneCount${z}`).textContent = `${stats[z]} ops`);
         }
 
         function renderWorkers() {
@@ -904,7 +834,8 @@
                     tbody.appendChild(tr);
                 });
             } else {
-                titleEl.innerHTML = `Szczegółowa Tabela Operacji <span class="ml-2 px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded text-[10px] font-mono">${total} ops</span>`;
+                let zoneTitle = state.activeZone === 'ALL' ? 'Wszystkie Strefy' : state.activeZone;
+                titleEl.innerHTML = `Szczegółowa Tabela Operacji (${zoneTitle}) <span class="ml-2 px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded text-[10px] font-mono">${total} ops</span>`;
                 
                 thead.innerHTML = `
                     <tr>
