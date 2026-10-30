@@ -147,7 +147,7 @@
 
                     <!-- Paste Tab -->
                     <div id="tabPasteContent" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <!-- Okno 1: Baza / 1000 rekordów -->
+                        <!-- Okno 1: Baza Główna -->
                         <div class="bg-slate-950/90 p-3 rounded-xl border border-cyber-border space-y-2">
                             <div class="flex items-center justify-between">
                                 <label class="text-[11px] font-semibold text-cyan-400">Baza Główna</label>
@@ -323,7 +323,7 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
-            // Mapowanie kolumn: A=0 (code), O=14 (complete/status), Q=16 (paCol/018 check)
+            // Mapowanie: A=0 (code), O=14 (complete/status), Q=16 (paCol / 018 check)
             colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
@@ -412,14 +412,36 @@
             loadDataFromCloud();
         });
 
+        // Pobieranie danych paczkami z Supabase omijające limit 100 wierszy
         async function loadDataFromCloud() {
             try {
-                // Pobieranie wszystkich rekordów bez limitu 100 wierszy
-                const { data: opData, error: opError } = await supabaseClient.from('wms_operations').select('*').range(0, 9999);
-                if (opError) throw opError;
+                let allOpData = [];
+                let from = 0;
+                let step = 1000;
+                let fetchMore = true;
+
+                while (fetchMore) {
+                    const { data: opData, error: opError } = await supabaseClient
+                        .from('wms_operations')
+                        .select('*')
+                        .range(from, from + step - 1);
+                    
+                    if (opError) throw opError;
+                    
+                    if (opData && opData.length > 0) {
+                        allOpData.push(...opData);
+                        if (opData.length < step) {
+                            fetchMore = false;
+                        } else {
+                            from += step;
+                        }
+                    } else {
+                        fetchMore = false;
+                    }
+                }
                 
-                if (opData && opData.length > 0) {
-                    state.parsedData = opData.map(d => ({
+                if (allOpData.length > 0) {
+                    state.parsedData = allOpData.map(d => ({
                         id: d.id,
                         code: d.code,
                         sku: d.sku,
@@ -577,23 +599,24 @@
             });
         }
 
+        // Pobieramy dane z Bazy Głównej oraz dopisane ze Świeżych Danych i scalamy je w jedną całość
         function processBothAreas() {
             const baseText = document.getElementById('pasteBaseArea').value;
             const freshText = document.getElementById('pasteFreshArea').value;
 
-            let combined = [], header = null;
+            let combinedMatrix = [];
             if (baseText.trim()) {
                 const lines = baseText.split('\n').map(l => l.split('\t'));
-                header = lines[0]; combined.push(...lines);
+                combinedMatrix.push(...lines);
             }
             if (freshText.trim()) {
                 const lines = freshText.split('\n').map(l => l.split('\t'));
-                if (!header) header = lines[0];
-                combined.push(...lines.slice(cleanRawString(lines[0][0]).toUpperCase().includes('CODE') ? 1 : 0));
+                const startIdx = cleanRawString(lines[0][0]).toUpperCase().includes('CODE') ? 1 : 0;
+                combinedMatrix.push(...lines.slice(startIdx));
             }
-            document.getElementById('countBase').textContent = baseText.trim() ? `${baseText.split('\n').length} w.` : '0 w.';
-            document.getElementById('countFresh').textContent = freshText.trim() ? `${freshText.split('\n').length} w.` : '0 w.';
-            if (combined.length) processMatrixData(combined);
+            if (combinedMatrix.length) {
+                processMatrixData(combinedMatrix);
+            }
         }
 
         function processMatrixData(matrix) {
@@ -628,7 +651,7 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
-                // Wykrywanie Zamkniętych PA: Kolumna O zawiera "complete" oraz Kolumna Q sprawdza 018 vs reszta
+                // Precyzyjna logika Zamkniętych PA: Kolumna O zawiera "complete", a Kolumna Q sprawdza czy zaczyna się od "018"
                 const statusStr = completeStatus.toLowerCase();
                 let closedPAType = 'NONE';
                 if (statusStr.includes('complete') || statusStr.includes('zamknięte')) {
@@ -649,7 +672,7 @@
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
             
-            // Czyszczenie drugiego okienka po scaleniu i zapis całości w bazie
+            // Czyszczymy drugie okienko po pomyślnym scaleniu i dopisaniu
             document.getElementById('pasteFreshArea').value = '';
             document.getElementById('countFresh').textContent = '0 w.';
 
