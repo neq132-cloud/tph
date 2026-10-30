@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.4.0-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.4.1-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.4.0-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.4.1-STABLE</span>
                 </div>
             </div>
 
@@ -437,6 +437,7 @@
                     document.getElementById('countBase').textContent = `${state.parsedData.length} w.`;
                 }
 
+                // Pobieranie zapisanego stanu okienka "Świeże dane" z bazy chmurowej
                 const { data: freshData, error: freshError } = await supabaseClient.from('wms_meta').select('*').eq('key', 'fresh_buffer').single();
                 if (!freshError && freshData && freshData.value) {
                     document.getElementById('pasteFreshArea').value = freshData.value;
@@ -577,6 +578,7 @@
         function initDualPaste() {
             document.getElementById('processPasteBtn').addEventListener('click', processBothAreas);
             
+            // Automatyczny zapis drugiego okienka do bazy w tle podczas pisania/wklejania
             let saveTimeout;
             document.getElementById('pasteFreshArea').addEventListener('input', (e) => {
                 const text = e.target.value;
@@ -645,13 +647,13 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
-                // Poprawiona, bardziej elastyczna logika wykrywania zamkniętych PA
-                const isComplete = completeStatus.toLowerCase().includes('complete') || completeStatus.toLowerCase().includes('zamknięte') || paValue !== '';
+                // Precyzyjne wykrywanie zamkniętych PA oparte m.in. o kolumnę Q (indeks 16) i statusy Complete
+                const statusStr = (completeStatus + ' ' + paValue).toLowerCase();
                 let closedPAType = 'NONE';
-                if (isComplete || code.toUpperCase().includes('PUTAWAY')) {
+                if (statusStr.includes('complete') || statusStr.includes('zamknięte') || paValue !== '') {
                     if (paValue.startsWith('018') || target.startsWith('018')) {
                         closedPAType = 'PA_018';
-                    } else if (completeStatus.toLowerCase().includes('complete') || paValue.length > 0) {
+                    } else {
                         closedPAType = paValue.startsWith('018') ? 'PA_018' : 'PA_OTHER';
                     }
                 }
@@ -666,7 +668,7 @@
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
             
-            // Po scaleniu czyszczymy drugie okienko i zapisujemy całość w bazie chmurowej
+            // Po scaleniu czyszczymy drugie okienko i aktualizujemy bazę w chmurze
             document.getElementById('pasteFreshArea').value = '';
             document.getElementById('countFresh').textContent = '0 w.';
 
