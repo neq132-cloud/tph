@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.4.5-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.4.6-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.4.5-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.4.6-STABLE</span>
                 </div>
             </div>
 
@@ -323,7 +323,6 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
-            // Mapowanie: A=0 (code), O=14 (complete), Q=16 (paCol / numery PA)
             colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
@@ -412,7 +411,6 @@
             loadDataFromCloud();
         });
 
-        // Pobieranie danych paczkami z Supabase omijające limit 100 wierszy
         async function loadDataFromCloud() {
             try {
                 let allOpData = [];
@@ -638,9 +636,16 @@
                 const time = cleanRawString(r[state.colMap.time]);
                 const date = cleanRawString(r[state.colMap.date]);
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
-                const completeStatus = cleanRawString(r[state.colMap.complete]); // Kolumna O (14)
-                const paValue = cleanRawString(r[state.colMap.paCol]); // Kolumna Q (16)
                 const activity = cleanRawString(r[state.colMap.activity]);
+
+                // Elastyczne wyszukiwanie "complete" w całym wierszu oraz pobranie numeru PA
+                let fullRowText = r.join(' ').toLowerCase();
+                let foundComplete = fullRowText.includes('complete');
+                
+                const paValue = cleanRawString(r[state.colMap.paCol]) || r.find(cell => {
+                    let s = cleanRawString(cell);
+                    return s.length > 3 && !isNaN(s);
+                }) || '';
 
                 if (!code && !sku && !user && !activity) continue;
                 const key = `${code}|${sku}|${target}|${time}|${date}|${user}`;
@@ -650,14 +655,10 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
-                // Elastyczna, niezawodna logika Zamkniętych PA:
-                // Kolumna O zawiera "complete", a Kolumna Q posiada jakikolwiek numer
-                const statusO = completeStatus.trim().toLowerCase();
-                const valQ = paValue.trim();
                 let closedPAType = 'NONE';
-
-                if (statusO.includes('complete') && valQ !== '') {
-                    if (valQ.startsWith('018')) {
+                if (foundComplete && paValue !== '') {
+                    let valQStr = String(paValue).trim();
+                    if (valQStr.startsWith('018')) {
                         closedPAType = 'PA_018';
                     } else {
                         closedPAType = 'PA_OTHER';
@@ -674,7 +675,6 @@
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
             
-            // Czyszczymy drugie okienko po pomyślnym scaleniu i dopisaniu
             document.getElementById('pasteFreshArea').value = '';
             document.getElementById('countFresh').textContent = '0 w.';
 
