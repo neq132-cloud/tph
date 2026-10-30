@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.4.7-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.4.8-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.4.7-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.4.8-STABLE</span>
                 </div>
             </div>
 
@@ -323,8 +323,7 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
-            // Precyzyjne mapowanie: Q=16 (complete), S=18 (paCol / numery PA)
-            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 16, paCol: 18, activity: 42 },
+            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, activity: 42 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
             sortDir: 'desc'
@@ -637,9 +636,26 @@
                 const time = cleanRawString(r[state.colMap.time]);
                 const date = cleanRawString(r[state.colMap.date]);
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
-                const completeStatus = cleanRawString(r[state.colMap.complete]); // Kolumna Q (16)
-                const paValue = cleanRawString(r[state.colMap.paCol]); // Kolumna S (18)
                 const activity = cleanRawString(r[state.colMap.activity]);
+
+                // ULTRA-ELASTYCZNE WYSZUKIWANIE W CAŁYM WIERSZU:
+                // Sprawdzamy czy w ogóle w komórkach wiersza znajduje się "complete" oraz numer PA
+                const fullRowText = r.join(' | ').toLowerCase();
+                const hasComplete = fullRowText.includes('complete');
+                
+                let paValue = '';
+                // Szukamy w kolumnie S (indeks 18) lub w dowolnej innej komórce numeru PA
+                for (let cIdx = 0; cIdx < r.length; cIdx++) {
+                    let valStr = cleanRawString(r[cIdx]);
+                    if (valStr.length >= 3 && !isNaN(valStr)) {
+                        paValue = valStr;
+                        break;
+                    }
+                }
+                // Jeśli w kolumnie S jest konkretna wartość, bierzemy ją priorytetowo
+                if (r[18] && cleanRawString(r[18]) !== '') {
+                    paValue = cleanRawString(r[18]);
+                }
 
                 if (!code && !sku && !user && !activity) continue;
                 const key = `${code}|${sku}|${target}|${time}|${date}|${user}`;
@@ -649,13 +665,10 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
-                // Precyzyjna logika dla Kolumny Q (status complete) i Kolumny S (numery PA)
-                const statusO = completeStatus.trim().toLowerCase();
-                const valQ = paValue.trim();
                 let closedPAType = 'NONE';
-
-                if (statusO.includes('complete') && valQ !== '') {
-                    if (valQ.startsWith('018')) {
+                if (hasComplete && paValue !== '') {
+                    let valStr = String(paValue).trim();
+                    if (valStr.startsWith('018')) {
                         closedPAType = 'PA_018';
                     } else {
                         closedPAType = 'PA_OTHER';
@@ -949,7 +962,7 @@
                         <th class="py-3 px-3">SKU</th>
                         <th class="py-3 px-3 text-right cursor-pointer hover:text-cyan-400" onclick="sortBy('qty')">Sztuk ${state.sortField==='qty'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
                         <th class="py-3 px-3">Docelowa</th>
-                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('user')">Pracownik ${state.sortField==='user'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('user')">Pracownik ${state.sortField==='user'?(state.sortDir==='asc'?(state.sortDir==='asc'?'▲':'▼'):'')}</th>
                     </tr>`;
 
                 if (!pageData.length) {
