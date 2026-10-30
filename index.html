@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.3.3-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.4.0-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.3.3-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.4.0-STABLE</span>
                 </div>
             </div>
 
@@ -413,7 +413,6 @@
 
         async function loadDataFromCloud() {
             try {
-                // Pobieramy główne operacje
                 const { data: opData, error: opError } = await supabaseClient.from('wms_operations').select('*');
                 if (opError) throw opError;
                 
@@ -438,7 +437,6 @@
                     document.getElementById('countBase').textContent = `${state.parsedData.length} w.`;
                 }
 
-                // Pobieramy zawartość okienka "Świeże dane" z bazy chmurowej
                 const { data: freshData, error: freshError } = await supabaseClient.from('wms_meta').select('*').eq('key', 'fresh_buffer').single();
                 if (!freshError && freshData && freshData.value) {
                     document.getElementById('pasteFreshArea').value = freshData.value;
@@ -457,7 +455,6 @@
 
         async function saveDataToCloud(records, freshBufferText = '') {
             try {
-                // Zapisujemy operacje
                 await supabaseClient.from('wms_operations').delete().neq('id', 0);
                 const batchSize = 500;
                 for (let i = 0; i < records.length; i += batchSize) {
@@ -478,7 +475,6 @@
                     if (error) console.error('Błąd zapisu batcha:', error);
                 }
 
-                // Zapisujemy bufor świeżych danych w bazie w chmurze
                 await supabaseClient.from('wms_meta').upsert({ key: 'fresh_buffer', value: freshBufferText });
 
                 document.getElementById('systemStatusLabel').textContent = `Zapisano ${records.length} wierszy`;
@@ -581,7 +577,6 @@
         function initDualPaste() {
             document.getElementById('processPasteBtn').addEventListener('click', processBothAreas);
             
-            // Debounced input watcher for fresh buffer to save in database automatically as you type
             let saveTimeout;
             document.getElementById('pasteFreshArea').addEventListener('input', (e) => {
                 const text = e.target.value;
@@ -593,7 +588,7 @@
                     try {
                         await supabaseClient.from('wms_meta').upsert({ key: 'fresh_buffer', value: text });
                     } catch(err) {
-                        console.error('Błąd zapisu bufora świeżych danych:', err);
+                        console.error('Błąd zapisu bufora:', err);
                     }
                 }, 500);
             });
@@ -649,9 +644,17 @@
 
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
-                const isComplete = completeStatus.toLowerCase().includes('complete');
+                
+                // Poprawiona, bardziej elastyczna logika wykrywania zamkniętych PA
+                const isComplete = completeStatus.toLowerCase().includes('complete') || completeStatus.toLowerCase().includes('zamknięte') || paValue !== '';
                 let closedPAType = 'NONE';
-                if (isComplete) closedPAType = paValue.startsWith('018') ? 'PA_018' : 'PA_OTHER';
+                if (isComplete || code.toUpperCase().includes('PUTAWAY')) {
+                    if (paValue.startsWith('018') || target.startsWith('018')) {
+                        closedPAType = 'PA_018';
+                    } else if (completeStatus.toLowerCase().includes('complete') || paValue.length > 0) {
+                        closedPAType = paValue.startsWith('018') ? 'PA_018' : 'PA_OTHER';
+                    }
+                }
 
                 records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone, closedPAType, activity });
             }
@@ -663,7 +666,7 @@
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
             
-            // Po przetworzeniu/scaleniu czyszczymy pole świeżych danych oraz aktualizujemy bazę w chmurze
+            // Po scaleniu czyszczymy drugie okienko i zapisujemy całość w bazie chmurowej
             document.getElementById('pasteFreshArea').value = '';
             document.getElementById('countFresh').textContent = '0 w.';
 
