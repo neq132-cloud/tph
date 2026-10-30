@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.2.5-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.2.6-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -25,8 +25,6 @@
     </script>
     <!-- SheetJS (xlsx) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -61,10 +59,10 @@
     <!-- Pływający komunikat (Toast) -->
     <div id="toastNotification" class="fixed top-5 right-5 z-50 hidden bg-slate-900/95 border border-cyan-500/50 backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl shadow-cyan-500/10 flex items-center gap-3 text-xs text-slate-200">
         <div class="p-1.5 bg-cyan-500/20 text-cyan-400 rounded-xl">
-            <i data-lucide="cloud-check" class="w-4 h-4"></i>
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Zsynchronizowano z chmurą</div>
+            <div class="font-bold text-white">Przetworzono pomyślnie</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -78,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.2.5-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.2.6-STABLE</span>
                 </div>
             </div>
 
@@ -142,7 +140,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="cloudStatus" class="text-[10px] text-cyan-400 font-mono">Status: Gotowy do pracy</span>
+                        <span id="dataStatusLabel" class="text-[10px] text-cyan-400 font-mono">Baza danych gotowa</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -170,7 +168,7 @@
 
                         <div class="sm:col-span-2 flex justify-end">
                             <button id="processPasteBtn" class="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center gap-2">
-                                <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i> Przetwarzaj i Wyślij do Chmury
+                                <i data-lucide="cpu" class="w-3.5 h-3.5"></i> Przetwarzaj Dane
                             </button>
                         </div>
                     </div>
@@ -179,7 +177,7 @@
                     <div id="tabFileContent" class="hidden space-y-3">
                         <div id="dropZone" class="border-2 border-dashed border-cyber-border hover:border-cyan-500 bg-slate-950/70 rounded-xl p-6 text-center cursor-pointer transition">
                             <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
-                            <p class="text-xs text-slate-300">Przeciągnij plik Excel/CSV do chmury lub kliknij</p>
+                            <p class="text-xs text-slate-300">Przeciągnij plik Excel/CSV lub kliknij tutaj</p>
                         </div>
                     </div>
                 </div>
@@ -319,10 +317,6 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://kopwsxkfscnhaoocdxzk.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvcHdzeGtmc2NuaGFvb2NkeHprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzMTE4MTYsImV4cCI6MjEwODg4NzgxNn0.Vb01SXWqE0pqPpUV0rExs834M580_imz4Y5d-alCEN4';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         const state = {
             rawRows: [],
             parsedData: [],
@@ -415,68 +409,32 @@
             initExport();
             initPresenceModule();
 
-            loadDataFromCloud();
+            // Ładowanie lokalne (z pamięci przeglądarki)
+            loadDataFromLocal();
         });
 
-        async function loadDataFromCloud() {
-            document.getElementById('cloudStatus').textContent = 'Pobieranie z chmury...';
+        function loadDataFromLocal() {
             try {
-                const { data, error } = await supabaseClient.from('wms_operations').select('*');
-                if (error) throw error;
-                if (data && data.length > 0) {
-                    state.parsedData = data.map(d => ({
-                        id: d.id,
-                        code: d.code,
-                        sku: d.sku,
-                        qty: d.qty,
-                        target: d.target,
-                        time: d.time,
-                        date: d.date,
-                        user: d.user,
-                        taskType: d.task_type,
-                        putawayZone: d.putaway_zone,
-                        closedPAType: d.closed_pa_type,
-                        activity: d.activity || ''
-                    }));
-                    document.getElementById('cloudStatus').textContent = `Załadowano ${state.parsedData.length} w. z chmury`;
-                    showToast(`Pobrano dane z godziny ${new Date().toLocaleTimeString().slice(0,5)}`);
+                const saved = localStorage.getItem('wms_cyber_local_records');
+                if (saved) {
+                    state.parsedData = JSON.parse(saved);
+                    document.getElementById('dataStatusLabel').textContent = `Załadowano ${state.parsedData.length} wierszy`;
                     renderAll();
                 } else {
-                    document.getElementById('cloudStatus').textContent = 'Chmura pusta - wklej dane';
+                    document.getElementById('dataStatusLabel').textContent = 'Baza gotowa - wklej dane';
                 }
-            } catch (err) {
-                console.error('Błąd pobierania:', err);
-                document.getElementById('cloudStatus').textContent = 'Błąd połączenia z chmurą (użyj wklejania)';
+            } catch(e) {
+                console.error(e);
             }
         }
 
-        async function saveDataToCloud(records) {
-            document.getElementById('cloudStatus').textContent = 'Zapisywanie w chmurze...';
+        function saveDataLocally(records) {
             try {
-                await supabaseClient.from('wms_operations').delete().neq('id', 0);
-                const batchSize = 500;
-                for (let i = 0; i < records.length; i += batchSize) {
-                    const batch = records.slice(i, i + batchSize).map(r => ({
-                        code: r.code,
-                        sku: r.sku,
-                        qty: r.qty,
-                        target: r.target,
-                        time: r.time,
-                        date: r.date,
-                        user: r.user,
-                        task_type: r.taskType,
-                        putaway_zone: r.putawayZone,
-                        closed_pa_type: r.closedPAType,
-                        activity: r.activity
-                    }));
-                    const { error } = await supabaseClient.from('wms_operations').insert(batch);
-                    if (error) console.error('Błąd zapisu batcha:', error);
-                }
-                document.getElementById('cloudStatus').textContent = `Zapisano ${records.length} w. w chmurze`;
+                localStorage.setItem('wms_cyber_local_records', JSON.stringify(records));
+                document.getElementById('dataStatusLabel').textContent = `Zapisano ${records.length} wierszy`;
                 showToast(`Zaktualizowano pomyślnie o ${new Date().toLocaleTimeString().slice(0,5)}`);
             } catch(e) {
-                console.error('Supabase error:', e);
-                document.getElementById('cloudStatus').textContent = 'Zapisano lokalnie (błąd chmury)';
+                console.error(e);
             }
         }
 
@@ -600,7 +558,7 @@
             parseDataset();
         }
 
-        async function parseDataset() {
+        function parseDataset() {
             if (!state.rawRows.length) return;
             const records = [];
             const start = cleanRawString(state.rawRows[0][state.colMap.code]).toUpperCase().includes('CODE') ? 1 : 0;
@@ -636,7 +594,7 @@
             state.selectedUser = null;
             state.selectedOdbiciaUser = null;
             
-            await saveDataToCloud(records);
+            saveDataLocally(records);
             renderAll();
         }
 
@@ -660,14 +618,12 @@
                 if (state.selectedOdbiciaUser) {
                     data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
                 } else {
-                    // BEZPIECZNE POBIERANIE Z UWZGLĘDNIENIEM PRIORYTETU STARTU PRZY REMISIE CZASOWYM:
-                    // Sortujemy rosnąco po dacie i czasie, a jeśli czas jest identyczny, to JOB START (zawierający 'START') idzie po JOB END.
+                    // POBIERANIE Z UWZGLĘDNIENIEM PRIORYTETU STARTU PRZY REMISIE CZASOWYM:
                     const sortedOdbicia = [...odbiciaRows].sort((a, b) => {
                         const tA = `${a.date || ''} ${a.time || ''}`.trim();
                         const tB = `${b.date || ''} ${b.time || ''}`.trim();
                         if (tA !== tB) return tA.localeCompare(tB);
                         
-                        // Remis czasowy: Job Start ma wyższy priorytet (jest "nowszy" w tej samej sekundzie)
                         const aIsStart = (a.code || '').toUpperCase().includes('START') ? 1 : 0;
                         const bIsStart = (b.code || '').toUpperCase().includes('START') ? 1 : 0;
                         return aIsStart - bIsStart;
