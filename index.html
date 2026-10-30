@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.2.4-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.2.5-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.2.4-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.2.5-STABLE</span>
                 </div>
             </div>
 
@@ -660,11 +660,17 @@
                 if (state.selectedOdbiciaUser) {
                     data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
                 } else {
-                    // BEZPIECZNE POBIERANIE NAJNOWSZEGO WPISU: sortujemy rosnąco i nadpisujemy wpisami z najwyższym czasem
+                    // BEZPIECZNE POBIERANIE Z UWZGLĘDNIENIEM PRIORYTETU STARTU PRZY REMISIE CZASOWYM:
+                    // Sortujemy rosnąco po dacie i czasie, a jeśli czas jest identyczny, to JOB START (zawierający 'START') idzie po JOB END.
                     const sortedOdbicia = [...odbiciaRows].sort((a, b) => {
                         const tA = `${a.date || ''} ${a.time || ''}`.trim();
                         const tB = `${b.date || ''} ${b.time || ''}`.trim();
-                        return tA.localeCompare(tB);
+                        if (tA !== tB) return tA.localeCompare(tB);
+                        
+                        // Remis czasowy: Job Start ma wyższy priorytet (jest "nowszy" w tej samej sekundzie)
+                        const aIsStart = (a.code || '').toUpperCase().includes('START') ? 1 : 0;
+                        const bIsStart = (b.code || '').toUpperCase().includes('START') ? 1 : 0;
+                        return aIsStart - bIsStart;
                     });
 
                     const userLatestMap = {};
