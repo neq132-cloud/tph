@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.4.2-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.4.3-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.4.2-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.4.3-STABLE</span>
                 </div>
             </div>
 
@@ -323,6 +323,7 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
+            // Mapowanie kolumn: A=0 (code), O=14 (complete/status), Q=16 (paCol/018 check)
             colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
@@ -413,7 +414,8 @@
 
         async function loadDataFromCloud() {
             try {
-                const { data: opData, error: opError } = await supabaseClient.from('wms_operations').select('*');
+                // Pobieranie wszystkich rekordów bez limitu 100 wierszy
+                const { data: opData, error: opError } = await supabaseClient.from('wms_operations').select('*').range(0, 9999);
                 if (opError) throw opError;
                 
                 if (opData && opData.length > 0) {
@@ -614,8 +616,8 @@
                 const time = cleanRawString(r[state.colMap.time]);
                 const date = cleanRawString(r[state.colMap.date]);
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
-                const completeStatus = cleanRawString(r[state.colMap.complete]);
-                const paValue = cleanRawString(r[state.colMap.paCol]);
+                const completeStatus = cleanRawString(r[state.colMap.complete]); // Kolumna O (14)
+                const paValue = cleanRawString(r[state.colMap.paCol]); // Kolumna Q (16)
                 const activity = cleanRawString(r[state.colMap.activity]);
 
                 if (!code && !sku && !user && !activity) continue;
@@ -626,11 +628,11 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
-                // Wykrywanie zamkniętych PA z uwzględnieniem kolumny Q (indeks 16)
-                const statusStr = (completeStatus + ' ' + paValue).toLowerCase();
+                // Wykrywanie Zamkniętych PA: Kolumna O zawiera "complete" oraz Kolumna Q sprawdza 018 vs reszta
+                const statusStr = completeStatus.toLowerCase();
                 let closedPAType = 'NONE';
-                if (statusStr.includes('complete') || statusStr.includes('zamknięte') || paValue !== '' || completeStatus !== '') {
-                    if (paValue.startsWith('018') || target.startsWith('018') || completeStatus.startsWith('018')) {
+                if (statusStr.includes('complete') || statusStr.includes('zamknięte')) {
+                    if (paValue.startsWith('018')) {
                         closedPAType = 'PA_018';
                     } else {
                         closedPAType = 'PA_OTHER';
@@ -647,7 +649,7 @@
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
             
-            // Po udanym scaleniu czyszczymy drugie okienko i zapisujemy całość w bazie chmurowej
+            // Czyszczenie drugiego okienka po scaleniu i zapis całości w bazie
             document.getElementById('pasteFreshArea').value = '';
             document.getElementById('countFresh').textContent = '0 w.';
 
