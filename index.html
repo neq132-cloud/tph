@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.1.3-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.1.4-TEST</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -56,7 +56,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.1.3-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.1.4-TEST-PERF</span>
                 </div>
             </div>
 
@@ -177,8 +177,8 @@
 
             </div>
 
-            <!-- KPI DASHBOARD TILES -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+            <!-- KPI DASHBOARD TILES (Z nowym kafelkiem wydajności tempa pracy) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-emerald-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-lg font-black text-white mt-1">0</span></div>
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-amber-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-lg font-black text-white mt-1">0</span></div>
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-sky-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-sky-400 uppercase">Putaway VIN</span><span id="dashVinOps" class="text-lg font-black text-white mt-1">0</span></div>
@@ -202,6 +202,18 @@
                         <span id="dashPa018Ops" class="text-teal-300">0</span>
                         <span class="text-slate-500 font-normal">/</span>
                         <span id="dashPaOtherOps" class="text-orange-400">0</span>
+                    </div>
+                </div>
+
+                <!-- NOWY KAFELEK: Wydajność / Tempo Pracy -->
+                <div class="bg-cyber-card/90 backdrop-blur-md border border-cyan-400/60 rounded-xl p-3 flex flex-col justify-between cyber-glow">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[9px] font-bold text-cyan-400 uppercase">Tempo (Ops/h/os)</span>
+                        <i data-lucide="zap" class="w-3.5 h-3.5 text-cyan-400"></i>
+                    </div>
+                    <div class="mt-1">
+                        <span id="dashPerformanceVal" class="text-lg font-black text-cyan-300 font-mono">0.0</span>
+                        <span class="text-[9px] text-slate-400 ml-1">ops/h</span>
                     </div>
                 </div>
             </div>
@@ -433,6 +445,7 @@
                 el.addEventListener('input', () => {
                     localStorage.setItem(`wms_cyber_${id}`, el.value);
                     updateTotalPresence();
+                    renderDashboardCards(); // przelicz wydajność przy zmianie kadr
                 });
             });
             updateTotalPresence();
@@ -443,6 +456,7 @@
                           (parseInt(document.getElementById('presenceServices').value) || 0) +
                           (parseInt(document.getElementById('presenceQlevel').value) || 0);
             document.getElementById('totalPresenceCount').textContent = total;
+            return total;
         }
 
         function switchCategory(cat) {
@@ -633,6 +647,49 @@
             document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((s, d) => s + d.qty, 0);
             document.getElementById('dashPa018Ops').textContent = pa018;
             document.getElementById('dashPaOtherOps').textContent = paOther;
+
+            // Obliczanie wydajności (tempo pracy na godzinę na pracownika)
+            calculatePerformance(totalSum + receiptItems.length);
+        }
+
+        function calculatePerformance(totalOps) {
+            const workersCount = updateTotalPresence();
+            const perfEl = document.getElementById('dashPerformanceVal');
+
+            if (!state.parsedData.length || workersCount <= 0 || totalOps <= 0) {
+                perfEl.textContent = '0.0';
+                return;
+            }
+
+            // Szukanie rozpiętości czasowej w danych (w minutach)
+            let minMinutes = Infinity;
+            let maxMinutes = -Infinity;
+
+            state.parsedData.forEach(d => {
+                if (d.time) {
+                    const parts = d.time.split(':');
+                    if (parts.length >= 2) {
+                        const mins = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+                        if (mins < minMinutes) minMinutes = mins;
+                        if (mins > maxMinutes) maxMinutes = mins;
+                    }
+                }
+            });
+
+            if (minMinutes === Infinity || maxMinutes === -Infinity || maxMinutes <= minMinutes) {
+                perfEl.textContent = '0.0';
+                return;
+            }
+
+            const diffHours = (maxMinutes - minMinutes) / 60;
+            if (diffHours <= 0) {
+                perfEl.textContent = '0.0';
+                return;
+            }
+
+            // Wydajność = Całkowite operacje / (Godziny * Liczba pracowników)
+            const opsPerHourPerWorker = totalOps / (diffHours * workersCount);
+            perfEl.textContent = opsPerHourPerWorker.toFixed(1);
         }
 
         function renderZonesCounts() {
@@ -733,7 +790,7 @@
                 data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_STABLE_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_PERF_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
