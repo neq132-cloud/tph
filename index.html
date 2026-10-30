@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.1.6-TEST</title>
+    <title>WMS Cyberpunk Hub v0.1.7-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.1.6-TEST</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.1.7-STABLE</span>
                 </div>
             </div>
 
@@ -96,9 +96,8 @@
                 <button onclick="switchCategory('ClosedPA')" id="navClosedPA" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                     <i data-lucide="check-circle-2" class="w-4 h-4"></i> Zamknięte PA
                 </button>
-                <!-- NOWA ZAKŁADKA ODBICIA -->
                 <button onclick="switchCategory('Odbicia')" id="navOdbicia" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
-                    <i data-lucide="clock" class="w-4 h-4"></i> Odbicia
+                    <i data-lucide="clock" class="w-4 h-4"></i> Odbicia i Statusy
                 </button>
             </nav>
         </div>
@@ -322,12 +321,11 @@
         const state = {
             rawRows: [],
             parsedData: [],
-            odbiciaData: [],
             activeCategory: 'Putaway',
             activeZone: 'ALL',
             selectedUser: null,
-            // Mapowanie kolumn: A=0 (Job Start), B=1 (Job Stop), AQ=42 (Activity) oraz standardowe
-            colMap: { jobStart: 0, jobStop: 1, activity: 42, code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16 },
+            // Precyzyjne mapowanie kolumn: A=0 (Job Start), B=1 (Job Stop), K=10 (Time), M=12 (Date), AQ=42 (Activity)
+            colMap: { jobStart: 0, jobStop: 1, code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
             pagination: { page: 1, pageSize: 50 }
         };
 
@@ -439,7 +437,7 @@
                     activity: d.activity || ''
                 }));
                 document.getElementById('cloudStatus').textContent = `Załadowano ${state.parsedData.length} w. z chmury`;
-                showToast(`Pobrano dane o godzinie ${new Date().toLocaleTimeString().slice(0,5)}`);
+                showToast(`Pobrano dane z godziny ${new Date().toLocaleTimeString().slice(0,5)}`);
                 renderAll();
             } else {
                 document.getElementById('cloudStatus').textContent = 'Chmura pusta - wklej dane';
@@ -513,7 +511,6 @@
             document.getElementById('activeCatLabel').textContent = labels[cat];
             document.getElementById('putawayZonesSection').classList.toggle('hidden', cat !== 'Putaway');
             
-            // Ukrywanie / pokazywanie sekcji KPI w zakładce Odbicia dla czystości widoku
             document.getElementById('kpiContainer').style.display = (cat === 'Odbicia') ? 'none' : 'grid';
             document.getElementById('workersSection').style.display = (cat === 'Odbicia') ? 'none' : 'grid';
 
@@ -606,18 +603,17 @@
                 const sku = cleanRawString(r[state.colMap.sku]);
                 const qty = parseQty(r[state.colMap.qty]);
                 const target = cleanRawString(r[state.colMap.target]);
-                const time = cleanRawString(r[state.colMap.time]);
-                const date = cleanRawString(r[state.colMap.date]);
+                const time = cleanRawString(r[state.colMap.time]); // Kolumna K
+                const date = cleanRawString(r[state.colMap.date]); // Kolumna M
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
                 const completeStatus = cleanRawString(r[state.colMap.complete]);
                 const paValue = cleanRawString(r[state.colMap.paCol]);
                 
-                // Nowe pola dla odbić i aktywności (A, B, AQ)
-                const jobStart = cleanRawString(r[state.colMap.jobStart]);
-                const jobStop = cleanRawString(r[state.colMap.jobStop]);
-                const activity = cleanRawString(r[state.colMap.activity]);
+                const jobStart = cleanRawString(r[state.colMap.jobStart]); // Kolumna A
+                const jobStop = cleanRawString(r[state.colMap.jobStop]);   // Kolumna B
+                const activity = cleanRawString(r[state.colMap.activity]); // Kolumna AQ
 
-                if (!code && !sku && !user && !activity) continue;
+                if (!code && !sku && !user && !activity && !jobStart) continue;
                 const key = `${code}|${sku}|${target}|${time}|${date}|${user}|${jobStart}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
@@ -724,8 +720,6 @@
 
             sorted.forEach(([user, count]) => {
                 const isSelected = state.selectedUser === user;
-                
-                // Stały przelicznik tempa na 8 godzin (ops / 8h)
                 const ratePer8h = (count / 8).toFixed(1);
                 const rateText = `${ratePer8h} /8h`;
 
@@ -780,7 +774,6 @@
             const start = (page - 1) * pageSize;
             const pageData = filtered.slice(start, start + pageSize);
 
-            // Specjalny widok dla zakładki Odbicia
             if (state.activeCategory === 'Odbicia') {
                 titleEl.textContent = 'Rejestr Odbić i Aktywności (Job Start / Stop & AQ)';
                 thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Pracownik</th><th class="py-3 px-3">Job Start</th><th class="py-3 px-3">Job Stop</th><th class="py-3 px-3">Aktywność (AQ)</th></tr>`;
@@ -839,7 +832,7 @@
                 data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}";"${r.jobStart}";"${r.jobStop}";"${r.activity}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_ODBICIA_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_STABLE_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
