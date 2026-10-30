@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.3.2-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.3.3-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.3.2-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.3.3-STABLE</span>
                 </div>
             </div>
 
@@ -478,7 +478,7 @@
                     if (error) console.error('Błąd zapisu batcha:', error);
                 }
 
-                // Zapisujemy bufor świeżych danych w tabeli w chmurze
+                // Zapisujemy bufor świeżych danych w bazie w chmurze
                 await supabaseClient.from('wms_meta').upsert({ key: 'fresh_buffer', value: freshBufferText });
 
                 document.getElementById('systemStatusLabel').textContent = `Zapisano ${records.length} wierszy`;
@@ -580,16 +580,22 @@
 
         function initDualPaste() {
             document.getElementById('processPasteBtn').addEventListener('click', processBothAreas);
-            document.getElementById('pasteFreshArea').addEventListener('input', async (e) => {
+            
+            // Debounced input watcher for fresh buffer to save in database automatically as you type
+            let saveTimeout;
+            document.getElementById('pasteFreshArea').addEventListener('input', (e) => {
                 const text = e.target.value;
                 const lines = text.trim() ? text.split('\n').length : 0;
                 document.getElementById('countFresh').textContent = `${lines} w.`;
-                // Automatycznie zapisujemy bufor świeżych danych w bazie w tle
-                try {
-                    await supabaseClient.from('wms_meta').upsert({ key: 'fresh_buffer', value: text });
-                } catch(err) {
-                    console.error(err);
-                }
+                
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(async () => {
+                    try {
+                        await supabaseClient.from('wms_meta').upsert({ key: 'fresh_buffer', value: text });
+                    } catch(err) {
+                        console.error('Błąd zapisu bufora świeżych danych:', err);
+                    }
+                }, 500);
             });
         }
 
@@ -657,7 +663,7 @@
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
             
-            // Po scaleniu czyszczymy świeże dane i aktualizujemy bazę w chmurze
+            // Po przetworzeniu/scaleniu czyszczymy pole świeżych danych oraz aktualizujemy bazę w chmurze
             document.getElementById('pasteFreshArea').value = '';
             document.getElementById('countFresh').textContent = '0 w.';
 
