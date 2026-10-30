@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.1.5-TEST</title>
+    <title>WMS Cyberpunk Hub v0.1.6-TEST</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -44,7 +44,6 @@
             background-attachment: fixed;
         }
 
-        /* Animacja dla pływającego powiadomienia (toast) */
         @keyframes slideIn {
             from { transform: translateY(-20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
@@ -59,7 +58,7 @@
 </head>
 <body class="text-slate-100 min-h-screen font-sans antialiased flex">
 
-    <!-- Pływający komunikat (Toast) o aktualizacji z chmury -->
+    <!-- Pływający komunikat (Toast) -->
     <div id="toastNotification" class="fixed top-5 right-5 z-50 hidden bg-slate-900/95 border border-cyan-500/50 backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl shadow-cyan-500/10 flex items-center gap-3 text-xs text-slate-200">
         <div class="p-1.5 bg-cyan-500/20 text-cyan-400 rounded-xl">
             <i data-lucide="cloud-check" class="w-4 h-4"></i>
@@ -79,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.1.5-TEST</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.1.6-TEST</span>
                 </div>
             </div>
 
@@ -96,6 +95,10 @@
                 </button>
                 <button onclick="switchCategory('ClosedPA')" id="navClosedPA" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                     <i data-lucide="check-circle-2" class="w-4 h-4"></i> Zamknięte PA
+                </button>
+                <!-- NOWA ZAKŁADKA ODBICIA -->
+                <button onclick="switchCategory('Odbicia')" id="navOdbicia" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <i data-lucide="clock" class="w-4 h-4"></i> Odbicia
                 </button>
             </nav>
         </div>
@@ -201,7 +204,7 @@
             </div>
 
             <!-- KPI DASHBOARD TILES -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+            <div id="kpiContainer" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-emerald-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-lg font-black text-white mt-1">0</span></div>
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-amber-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-lg font-black text-white mt-1">0</span></div>
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-sky-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-sky-400 uppercase">Putaway VIN</span><span id="dashVinOps" class="text-lg font-black text-white mt-1">0</span></div>
@@ -240,10 +243,10 @@
 
             <!-- WORKERS & DRILLDOWN SECTION -->
             <section id="workersSection" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Workers List with individual performance info -->
+                <!-- Workers List with 8h rate -->
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-3">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Pracownicy (Tempo ops/h)</h3>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Pracownicy (Tempo / 8h)</h3>
                         <div class="flex items-center gap-2">
                             <span id="catTotalOps" class="text-[10px] text-cyan-400 font-mono bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">0 ops</span>
                             <span id="catWorkersCount" class="text-xs text-slate-400">0 osób</span>
@@ -252,7 +255,7 @@
                     <div class="overflow-y-auto max-h-[320px] custom-scrollbar border border-cyber-border rounded-xl">
                         <table class="w-full text-left text-xs text-slate-300">
                             <thead class="bg-slate-950 text-slate-400 font-medium sticky top-0 z-10 border-b border-cyber-border">
-                                <tr><th class="py-2.5 px-3">Pracownik</th><th class="py-2.5 px-3 text-right">Ops</th><th class="py-2.5 px-3 text-right">Tempo</th></tr>
+                                <tr><th class="py-2.5 px-3">Pracownik</th><th class="py-2.5 px-3 text-right">Ops</th><th class="py-2.5 px-3 text-right">Tempo / 8h</th></tr>
                             </thead>
                             <tbody id="categoryWorkersBody" class="divide-y divide-cyber-border">
                                 <tr><td colspan="3" class="py-6 text-center text-slate-500">Brak danych</td></tr>
@@ -281,17 +284,17 @@
             </section>
 
             <!-- DETAILED OPERATIONS TABLE -->
-            <section class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
+            <section id="detailsSection" class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Szczegółowa Tabela Operacji</h3>
+                    <h3 id="tableSectionTitle" class="text-xs font-bold uppercase tracking-wider text-slate-300">Szczegółowa Tabela Operacji</h3>
                     <div class="relative">
                         <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400"></i>
-                        <input type="text" id="searchInput" placeholder="Szukaj SKU / User / Lok..." class="bg-slate-950 border border-cyber-border text-xs rounded-xl pl-9 pr-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500">
+                        <input type="text" id="searchInput" placeholder="Szukaj..." class="bg-slate-950 border border-cyber-border text-xs rounded-xl pl-9 pr-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500">
                     </div>
                 </div>
                 <div class="overflow-x-auto custom-scrollbar border border-cyber-border rounded-xl">
                     <table class="w-full text-left text-xs text-slate-300">
-                        <thead class="bg-slate-950 text-slate-400 font-medium uppercase tracking-wider border-b border-cyber-border">
+                        <thead id="tableHead" class="bg-slate-950 text-slate-400 font-medium uppercase tracking-wider border-b border-cyber-border">
                             <tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>
                         </thead>
                         <tbody id="detailsTableBody" class="divide-y divide-cyber-border">
@@ -319,12 +322,13 @@
         const state = {
             rawRows: [],
             parsedData: [],
+            odbiciaData: [],
             activeCategory: 'Putaway',
             activeZone: 'ALL',
             selectedUser: null,
-            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16 },
-            pagination: { page: 1, pageSize: 50 },
-            lastCloudUpdate: null
+            // Mapowanie kolumn: A=0 (Job Start), B=1 (Job Stop), AQ=42 (Activity) oraz standardowe
+            colMap: { jobStart: 0, jobStop: 1, activity: 42, code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16 },
+            pagination: { page: 1, pageSize: 50 }
         };
 
         let isBaseLocked = true;
@@ -429,14 +433,13 @@
                     user: d.user,
                     taskType: d.task_type,
                     putawayZone: d.putaway_zone,
-                    closedPAType: d.closed_pa_type
+                    closedPAType: d.closed_pa_type,
+                    jobStart: d.job_start || '',
+                    jobStop: d.job_stop || '',
+                    activity: d.activity || ''
                 }));
                 document.getElementById('cloudStatus').textContent = `Załadowano ${state.parsedData.length} w. z chmury`;
-                
-                // Pobierz przybliżoną godzinę z najnowszego wpisu dla powiadomienia
-                const sampleTime = state.parsedData[0]?.time || new Date().toLocaleTimeString().slice(0,5);
-                showToast(`Pobrano dane z godziny ${sampleTime}`);
-                
+                showToast(`Pobrano dane o godzinie ${new Date().toLocaleTimeString().slice(0,5)}`);
                 renderAll();
             } else {
                 document.getElementById('cloudStatus').textContent = 'Chmura pusta - wklej dane';
@@ -459,7 +462,10 @@
                     user: r.user,
                     task_type: r.taskType,
                     putaway_zone: r.putawayZone,
-                    closed_pa_type: r.closedPAType
+                    closed_pa_type: r.closedPAType,
+                    job_start: r.jobStart,
+                    job_stop: r.jobStop,
+                    activity: r.activity
                 }));
                 const { error } = await supabaseClient.from('wms_operations').insert(batch);
                 if (error) console.error('Błąd zapisu batcha:', error);
@@ -494,7 +500,7 @@
             state.activeZone = 'ALL';
             state.selectedUser = null;
 
-            ['Putaway', 'Relocate', 'Receipt', 'ClosedPA'].forEach(c => {
+            ['Putaway', 'Relocate', 'Receipt', 'ClosedPA', 'Odbicia'].forEach(c => {
                 const btn = document.getElementById(`nav${c}`);
                 if (c === cat) {
                     btn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 transition';
@@ -503,9 +509,13 @@
                 }
             });
 
-            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA' };
+            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA', 'Odbicia': 'Odbicia i Aktywności' };
             document.getElementById('activeCatLabel').textContent = labels[cat];
             document.getElementById('putawayZonesSection').classList.toggle('hidden', cat !== 'Putaway');
+            
+            // Ukrywanie / pokazywanie sekcji KPI w zakładce Odbicia dla czystości widoku
+            document.getElementById('kpiContainer').style.display = (cat === 'Odbicia') ? 'none' : 'grid';
+            document.getElementById('workersSection').style.display = (cat === 'Odbicia') ? 'none' : 'grid';
 
             state.pagination.page = 1;
             renderAll();
@@ -580,7 +590,7 @@
         }
 
         function processMatrixData(matrix) {
-            state.rawRows = matrix.map(r => { const row = [...r]; while(row.length < 18) row.push(''); return row; });
+            state.rawRows = matrix.map(r => { const row = [...r]; while(row.length < 45) row.push(''); return row; });
             parseDataset();
         }
 
@@ -601,9 +611,14 @@
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
                 const completeStatus = cleanRawString(r[state.colMap.complete]);
                 const paValue = cleanRawString(r[state.colMap.paCol]);
+                
+                // Nowe pola dla odbić i aktywności (A, B, AQ)
+                const jobStart = cleanRawString(r[state.colMap.jobStart]);
+                const jobStop = cleanRawString(r[state.colMap.jobStop]);
+                const activity = cleanRawString(r[state.colMap.activity]);
 
-                if (!code && !sku && !user) continue;
-                const key = `${code}|${sku}|${target}|${time}|${date}|${user}`;
+                if (!code && !sku && !user && !activity) continue;
+                const key = `${code}|${sku}|${target}|${time}|${date}|${user}|${jobStart}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
 
@@ -613,7 +628,7 @@
                 let closedPAType = 'NONE';
                 if (isComplete) closedPAType = paValue.startsWith('018') ? 'PA_018' : 'PA_OTHER';
 
-                records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone, closedPAType });
+                records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone, closedPAType, jobStart, jobStop, activity });
             }
             state.parsedData = records;
             state.selectedUser = null;
@@ -637,6 +652,8 @@
                 data = state.parsedData.filter(d => d.taskType === 'Relocate');
             } else if (state.activeCategory === 'ClosedPA') {
                 data = state.parsedData.filter(d => d.closedPAType !== 'NONE');
+            } else if (state.activeCategory === 'Odbicia') {
+                data = state.parsedData.filter(d => d.jobStart || d.jobStop || d.activity);
             }
             return data;
         }
@@ -651,6 +668,7 @@
         }
 
         function renderDashboardCards() {
+            if (state.activeCategory === 'Odbicia') return;
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
             const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
@@ -687,28 +705,11 @@
         }
 
         function renderWorkers() {
+            if (state.activeCategory === 'Odbicia') return;
             const activeData = getActiveFilteredData();
             const userMap = {};
-            const userTimes = {};
 
-            // Zliczanie operacji oraz znajdowanie min/max czasu dla każdego pracownika osobno
-            activeData.forEach(d => {
-                if (!userMap[d.user]) {
-                    userMap[d.user] = 0;
-                    userTimes[d.user] = { min: Infinity, max: -Infinity };
-                }
-                userMap[d.user]++;
-
-                if (d.time) {
-                    const parts = d.time.split(':');
-                    if (parts.length >= 2) {
-                        const mins = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-                        if (mins < userTimes[d.user].min) userTimes[d.user].min = mins;
-                        if (mins > userTimes[d.user].max) userTimes[d.user].max = mins;
-                    }
-                }
-            });
-
+            activeData.forEach(d => userMap[d.user] = (userMap[d.user] || 0) + 1);
             const sorted = Object.entries(userMap).sort((a,b) => b[1] - a[1]);
 
             document.getElementById('catWorkersCount').textContent = `${sorted.length} osób`;
@@ -724,28 +725,14 @@
             sorted.forEach(([user, count]) => {
                 const isSelected = state.selectedUser === user;
                 
-                // Indywidualne tempo operatora (ops / h)
-                let rateText = '-';
-                const t = userTimes[user];
-                if (t && t.min !== Infinity && t.max !== -Infinity && t.max > t.min) {
-                    const hours = (t.max - t.min) / 60;
-                    if (hours > 0) {
-                        const rate = count / hours;
-                        rateText = `${rate.toFixed(1)} /h`;
-                    } else {
-                        rateText = `${count} (1 zajście)`;
-                    }
-                } else {
-                    rateText = `${count} ops`;
-                }
+                // Stały przelicznik tempa na 8 godzin (ops / 8h)
+                const ratePer8h = (count / 8).toFixed(1);
+                const rateText = `${ratePer8h} /8h`;
 
                 const tr = document.createElement('tr');
                 tr.className = `hover:bg-slate-800/50 transition cursor-pointer ${isSelected ? 'bg-cyan-500/20 border-l-4 border-cyan-400' : ''}`;
                 tr.onclick = () => { state.selectedUser = user; renderWorkers(); renderDrilldown(); };
                 
-                // Dodanie tytułu (tooltip) po najechaniu myszką z dokładniejszym tempem
-                tr.title = `Kliknij, aby przefiltrować ruchy użytkownika ${user}`;
-
                 tr.innerHTML = `
                     <td class="py-2.5 px-3 font-semibold text-white">${user}</td>
                     <td class="py-2.5 px-3 text-right font-bold text-cyan-400">${count}</td>
@@ -758,6 +745,7 @@
         function clearUserSelection() { state.selectedUser = null; renderWorkers(); renderDrilldown(); }
 
         function renderDrilldown() {
+            if (state.activeCategory === 'Odbicia') return;
             const nameEl = document.getElementById('selectedUserName');
             const tbody = document.getElementById('drilldownTableBody');
             tbody.innerHTML = '';
@@ -779,29 +767,59 @@
 
         function renderDetailsTable() {
             const tbody = document.getElementById('detailsTableBody');
+            const thead = document.getElementById('tableHead');
+            const titleEl = document.getElementById('tableSectionTitle');
             tbody.innerHTML = '';
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
             let data = getActiveFilteredData();
-            if (state.selectedUser) data = data.filter(d => d.user === state.selectedUser);
+            if (state.selectedUser && state.activeCategory !== 'Odbicia') data = data.filter(d => d.user === state.selectedUser);
 
-            const filtered = data.filter(item => !search || item.sku.toLowerCase().includes(search) || item.user.toLowerCase().includes(search) || item.target.toLowerCase().includes(search) || item.code.toLowerCase().includes(search));
+            const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
             const total = filtered.length;
             const { page, pageSize } = state.pagination;
             const start = (page - 1) * pageSize;
             const pageData = filtered.slice(start, start + pageSize);
 
-            if (!pageData.length) {
-                tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Brak wierszy spełniających kryteria.</td></tr>';
-                document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
-                return;
-            }
+            // Specjalny widok dla zakładki Odbicia
+            if (state.activeCategory === 'Odbicia') {
+                titleEl.textContent = 'Rejestr Odbić i Aktywności (Job Start / Stop & AQ)';
+                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Pracownik</th><th class="py-3 px-3">Job Start</th><th class="py-3 px-3">Job Stop</th><th class="py-3 px-3">Aktywność (AQ)</th></tr>`;
+                
+                if (!pageData.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych o odbiciach w wklejonym pliku.</td></tr>';
+                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    return;
+                }
 
-            pageData.forEach((row, i) => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-800/40 transition';
-                tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date} ${row.time}</td><td class="py-2.5 px-3 text-slate-300">${row.code}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${row.putawayZone}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user}</td>`;
-                tbody.appendChild(tr);
-            });
+                pageData.forEach((row, i) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-800/40 transition';
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
+                        <td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user}</td>
+                        <td class="py-2.5 px-3 text-emerald-400 font-mono">${row.jobStart || '-'}</td>
+                        <td class="py-2.5 px-3 text-rose-400 font-mono">${row.jobStop || '-'}</td>
+                        <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                titleEl.textContent = 'Szczegółowa Tabela Operacji';
+                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>`;
+
+                if (!pageData.length) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Brak wierszy spełniających kryteria.</td></tr>';
+                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    return;
+                }
+
+                pageData.forEach((row, i) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-800/40 transition';
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date} ${row.time}</td><td class="py-2.5 px-3 text-slate-300">${row.code}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${row.putawayZone}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user}</td>`;
+                    tbody.appendChild(tr);
+                });
+            }
 
             document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} wierszy`;
             document.getElementById('prevPageBtn').disabled = page === 1;
@@ -817,11 +835,11 @@
             document.getElementById('exportCsvBtn').addEventListener('click', () => {
                 const data = getActiveFilteredData();
                 if (!data.length) return;
-                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User\n';
-                data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`);
+                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;JobStart;JobStop;Activity\n';
+                data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}";"${r.jobStart}";"${r.jobStop}";"${r.activity}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_USERPERF_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_ODBICIA_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
