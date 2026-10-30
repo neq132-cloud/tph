@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.2.0-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.2.1-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,26 +78,31 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.2.0-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.2.1-STABLE</span>
                 </div>
             </div>
 
             <!-- Menu Links -->
             <nav class="space-y-1.5">
-                <button onclick="switchCategory('Putaway')" id="navPutaway" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 transition">
-                    <i data-lucide="arrow-up-right" class="w-4 h-4"></i> Putaway & SHELF
+                <button onclick="switchCategory('Putaway')" id="navPutaway" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="arrow-up-right" class="w-4 h-4"></i> Putaway & SHELF</span>
+                    <span id="badgePutaway" class="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-300 rounded font-mono text-[10px]">0</span>
                 </button>
-                <button onclick="switchCategory('Relocate')" id="navRelocate" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
-                    <i data-lucide="repeat" class="w-4 h-4"></i> Relokacje
+                <button onclick="switchCategory('Relocate')" id="navRelocate" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="repeat" class="w-4 h-4"></i> Relokacje</span>
+                    <span id="badgeRelocate" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
                 </button>
-                <button onclick="switchCategory('Receipt')" id="navReceipt" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
-                    <i data-lucide="arrow-down-left" class="w-4 h-4"></i> Przyjęcia
+                <button onclick="switchCategory('Receipt')" id="navReceipt" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="arrow-down-left" class="w-4 h-4"></i> Przyjęcia</span>
+                    <span id="badgeReceipt" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
                 </button>
-                <button onclick="switchCategory('ClosedPA')" id="navClosedPA" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
-                    <i data-lucide="check-circle-2" class="w-4 h-4"></i> Zamknięte PA
+                <button onclick="switchCategory('ClosedPA')" id="navClosedPA" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="check-circle-2" class="w-4 h-4"></i> Zamknięte PA</span>
+                    <span id="badgeClosedPA" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
                 </button>
-                <button onclick="switchCategory('Odbicia')" id="navOdbicia" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
-                    <i data-lucide="user-check" class="w-4 h-4"></i> Odbicia (Live Status)
+                <button onclick="switchCategory('Odbicia')" id="navOdbicia" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="user-check" class="w-4 h-4"></i> Odbicia (Live)</span>
+                    <span id="badgeOdbicia" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
                 </button>
             </nav>
         </div>
@@ -324,9 +329,11 @@
             activeCategory: 'Putaway',
             activeZone: 'ALL',
             selectedUser: null,
-            selectedOdbiciaUser: null, // Do rozwijania historii konkretnego pracownika w Odbiciach
+            selectedOdbiciaUser: null,
             colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
-            pagination: { page: 1, pageSize: 50 }
+            pagination: { page: 1, pageSize: 50 },
+            sortField: 'dateTime', // Domyślne sortowanie
+            sortDir: 'desc'        // Najnowsze na górze
         };
 
         let isBaseLocked = true;
@@ -432,8 +439,6 @@
                     taskType: d.task_type,
                     putawayZone: d.putaway_zone,
                     closedPAType: d.closed_pa_type,
-                    jobStart: d.job_start || '',
-                    jobStop: d.job_stop || '',
                     activity: d.activity || ''
                 }));
                 document.getElementById('cloudStatus').textContent = `Załadowano ${state.parsedData.length} w. z chmury`;
@@ -461,8 +466,6 @@
                     task_type: r.taskType,
                     putaway_zone: r.putawayZone,
                     closed_pa_type: r.closedPAType,
-                    job_start: r.jobStart,
-                    job_stop: r.jobStop,
                     activity: r.activity
                 }));
                 const { error } = await supabaseClient.from('wms_operations').insert(batch);
@@ -497,18 +500,18 @@
             state.activeCategory = cat;
             state.activeZone = 'ALL';
             state.selectedUser = null;
-            state.selectedOdbiciaUser = null; // reset rozwiniecia w odbiciach
+            state.selectedOdbiciaUser = null;
 
             ['Putaway', 'Relocate', 'Receipt', 'ClosedPA', 'Odbicia'].forEach(c => {
                 const btn = document.getElementById(`nav${c}`);
                 if (c === cat) {
-                    btn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 transition';
+                    btn.className = 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 transition';
                 } else {
-                    btn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+                    btn.className = 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
                 }
             });
 
-            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA', 'Odbicia': 'Odbicia (Live Status)' };
+            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA', 'Odbicia': 'Odbicia (Live)' };
             document.getElementById('activeCatLabel').textContent = labels[cat];
             document.getElementById('putawayZonesSection').classList.toggle('hidden', cat !== 'Putaway');
             
@@ -644,21 +647,17 @@
             } else if (state.activeCategory === 'ClosedPA') {
                 data = state.parsedData.filter(d => d.closedPAType !== 'NONE');
             } else if (state.activeCategory === 'Odbicia') {
-                // Tylko Job Start / End
                 const odbiciaRows = state.parsedData.filter(d => {
                     const up = d.code.toUpperCase();
                     return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
                 });
 
                 if (state.selectedOdbiciaUser) {
-                    // Jeśli wybrano pracownika do rozwinięcia historii, zwracamy jego całą historię odbić
                     data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
                 } else {
-                    // W przeciwnym razie zwracamy po jednym najświeższym wpisie na każdego pracownika (Live Status)
                     const userMap = {};
                     odbiciaRows.forEach(d => {
                         if (d.user && d.user !== 'BRAK_USERA') {
-                            // Zapisujemy lub nadpisujemy, ponieważ wklejone dane zazwyczaj rosną chronologicznie
                             userMap[d.user] = d;
                         }
                     });
@@ -673,12 +672,32 @@
         }
 
         function renderAll() {
+            renderSidebarBadges();
             renderDashboardCards();
             renderZonesCounts();
             renderWorkers();
             renderDrilldown();
             renderDetailsTable();
             document.getElementById('exportCsvBtn').disabled = !state.parsedData.length;
+        }
+
+        function renderSidebarBadges() {
+            const putawayCount = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF').length;
+            const relocateCount = state.parsedData.filter(d => d.taskType === 'Relocate').length;
+            const receiptCount = state.parsedData.filter(d => d.taskType === 'Receipt').length;
+            const closedPACount = state.parsedData.filter(d => d.closedPAType !== 'NONE').length;
+            const odbiciaCount = Object.keys(state.parsedData.reduce((acc, d) => {
+                if (d.code.toUpperCase().includes('JOB START') || d.code.toUpperCase().includes('JOB END') || d.code.toUpperCase().includes('JOB STOP')) {
+                    acc[d.user] = true;
+                }
+                return acc;
+            }, {})).length;
+
+            document.getElementById('badgePutaway').textContent = putawayCount;
+            document.getElementById('badgeRelocate').textContent = relocateCount;
+            document.getElementById('badgeReceipt').textContent = receiptCount;
+            document.getElementById('badgeClosedPA').textContent = closedPACount;
+            document.getElementById('badgeOdbicia').textContent = odbiciaCount;
         }
 
         function renderDashboardCards() {
@@ -777,6 +796,16 @@
             });
         }
 
+        function sortBy(field) {
+            if (state.sortField === field) {
+                state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                state.sortField = field;
+                state.sortDir = 'asc';
+            }
+            renderDetailsTable();
+        }
+
         function renderDetailsTable() {
             const tbody = document.getElementById('detailsTableBody');
             const thead = document.getElementById('tableHead');
@@ -787,6 +816,29 @@
             if (state.selectedUser && state.activeCategory !== 'Odbicia') data = data.filter(d => d.user === state.selectedUser);
 
             const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+
+            // Sortowanie
+            filtered.sort((a, b) => {
+                let valA, valB;
+                if (state.sortField === 'date') {
+                    valA = `${a.date} ${a.time}`;
+                    valB = `${b.date} ${b.time}`;
+                } else if (state.sortField === 'code') {
+                    valA = a.code; valB = b.code;
+                } else if (state.sortField === 'user') {
+                    valA = a.user; valB = b.user;
+                } else if (state.sortField === 'qty') {
+                    valA = a.qty; valB = b.qty;
+                } else {
+                    valA = `${a.date} ${a.time}`;
+                    valB = `${b.date} ${b.time}`;
+                }
+
+                if (valA < valB) return state.sortDir === 'asc' ? -1 : 1;
+                if (valA > valB) return state.sortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+
             const total = filtered.length;
             const { page, pageSize } = state.pagination;
             const start = (page - 1) * pageSize;
@@ -796,10 +848,17 @@
                 if (state.selectedOdbiciaUser) {
                     titleEl.innerHTML = `Historia odbić pracownika: <strong class="text-cyan-400">${state.selectedOdbiciaUser}</strong> <button onclick="state.selectedOdbiciaUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-xs rounded text-slate-300">Powrót do listy</button>`;
                 } else {
-                    titleEl.textContent = 'Aktualny Stan Wbić Pracowników (Kliknij w wiersz, aby zobaczyć historię)';
+                    titleEl.innerHTML = `Aktualny Stan Wbić Pracowników <span class="ml-2 px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded text-[10px] font-mono">${total} osób</span>`;
                 }
 
-                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie</th><th class="py-3 px-3">Aktywność (AQ)</th><th class="py-3 px-3">Pracownik</th></tr>`;
+                thead.innerHTML = `
+                    <tr>
+                        <th class="py-3 px-3">Lp.</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('date')">Data / Czas ${state.sortField==='date'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('code')">Zdarzenie ${state.sortField==='code'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3">Aktywność (AQ)</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('user')">Pracownik ${state.sortField==='user'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                    </tr>`;
                 
                 if (!pageData.length) {
                     tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych o odbiciach.</td></tr>';
@@ -816,7 +875,6 @@
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
                     
-                    // Jeśli jesteśmy na głównym widoku (bez wybranego usera), kliknięcie rozwija jego historię odbić
                     if (!state.selectedOdbiciaUser) {
                         tr.title = `Kliknij, aby zobaczyć pełną historię odbić użytkownika ${row.user}`;
                         tr.onclick = () => {
@@ -835,8 +893,19 @@
                     tbody.appendChild(tr);
                 });
             } else {
-                titleEl.textContent = 'Szczegółowa Tabela Operacji';
-                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>`;
+                titleEl.innerHTML = `Szczegółowa Tabela Operacji <span class="ml-2 px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded text-[10px] font-mono">${total} ops</span>`;
+                
+                thead.innerHTML = `
+                    <tr>
+                        <th class="py-3 px-3">Lp.</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('date')">Data / Czas ${state.sortField==='date'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('code')">Kod ${state.sortField==='code'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3">Typ / Strefa</th>
+                        <th class="py-3 px-3">SKU</th>
+                        <th class="py-3 px-3 text-right cursor-pointer hover:text-cyan-400" onclick="sortBy('qty')">Sztuk ${state.sortField==='qty'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3">Docelowa</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('user')">Pracownik ${state.sortField==='user'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                    </tr>`;
 
                 if (!pageData.length) {
                     tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Brak wierszy spełniających kryteria.</td></tr>';
@@ -866,11 +935,11 @@
             document.getElementById('exportCsvBtn').addEventListener('click', () => {
                 const data = getActiveFilteredData();
                 if (!data.length) return;
-                let csv = 'Lp;Data;Czas;Kod;Aktywnosc;User\n';
-                data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.activity}";"${r.user}"\n`);
+                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;Activity\n';
+                data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}";"${r.activity}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_ODBICA_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_EXPORT_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
