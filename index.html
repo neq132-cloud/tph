@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.4.1-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.4.2-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.4.1-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.4.2-STABLE</span>
                 </div>
             </div>
 
@@ -150,7 +150,7 @@
                         <!-- Okno 1: Baza / 1000 rekordów -->
                         <div class="bg-slate-950/90 p-3 rounded-xl border border-cyber-border space-y-2">
                             <div class="flex items-center justify-between">
-                                <label class="text-[11px] font-semibold text-cyan-400">Baza (np. 1000 rekordów)</label>
+                                <label class="text-[11px] font-semibold text-cyan-400">Baza Główna</label>
                                 <div class="flex items-center gap-2">
                                     <button id="toggleLockBtn" onclick="toggleBaseLock()" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[9px] flex items-center gap-1">
                                         <i id="lockIcon" data-lucide="lock" class="w-2.5 h-2.5"></i> <span id="lockText">Zablokowane</span>
@@ -158,7 +158,7 @@
                                     <span id="countBase" class="text-[9px] font-mono text-slate-400">0 w.</span>
                                 </div>
                             </div>
-                            <textarea id="pasteBaseArea" readonly rows="3" placeholder="Wklej główną bazę..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-300 custom-scrollbar resize-y cursor-not-allowed focus:outline-none focus:border-cyan-500"></textarea>
+                            <textarea id="pasteBaseArea" readonly rows="3" placeholder="Główna baza operacji..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-300 custom-scrollbar resize-y cursor-not-allowed focus:outline-none focus:border-cyan-500"></textarea>
                         </div>
 
                         <!-- Okno 2: Świeże dane -->
@@ -437,14 +437,6 @@
                     document.getElementById('countBase').textContent = `${state.parsedData.length} w.`;
                 }
 
-                // Pobieranie zapisanego stanu okienka "Świeże dane" z bazy chmurowej
-                const { data: freshData, error: freshError } = await supabaseClient.from('wms_meta').select('*').eq('key', 'fresh_buffer').single();
-                if (!freshError && freshData && freshData.value) {
-                    document.getElementById('pasteFreshArea').value = freshData.value;
-                    const linesCount = freshData.value.trim() ? freshData.value.split('\n').length : 0;
-                    document.getElementById('countFresh').textContent = `${linesCount} w.`;
-                }
-
                 document.getElementById('systemStatusLabel').textContent = `Załadowano pomyślnie`;
                 showToast(`Załadowano dane z bazy (${new Date().toLocaleTimeString().slice(0,5)})`);
                 renderAll();
@@ -454,7 +446,7 @@
             }
         }
 
-        async function saveDataToCloud(records, freshBufferText = '') {
+        async function saveDataToCloud(records) {
             try {
                 await supabaseClient.from('wms_operations').delete().neq('id', 0);
                 const batchSize = 500;
@@ -475,8 +467,6 @@
                     const { error } = await supabaseClient.from('wms_operations').insert(batch);
                     if (error) console.error('Błąd zapisu batcha:', error);
                 }
-
-                await supabaseClient.from('wms_meta').upsert({ key: 'fresh_buffer', value: freshBufferText });
 
                 document.getElementById('systemStatusLabel').textContent = `Zapisano ${records.length} wierszy`;
                 showToast(`Zaktualizowano pomyślnie o ${new Date().toLocaleTimeString().slice(0,5)}`);
@@ -578,21 +568,10 @@
         function initDualPaste() {
             document.getElementById('processPasteBtn').addEventListener('click', processBothAreas);
             
-            // Automatyczny zapis drugiego okienka do bazy w tle podczas pisania/wklejania
-            let saveTimeout;
             document.getElementById('pasteFreshArea').addEventListener('input', (e) => {
                 const text = e.target.value;
                 const lines = text.trim() ? text.split('\n').length : 0;
                 document.getElementById('countFresh').textContent = `${lines} w.`;
-                
-                clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(async () => {
-                    try {
-                        await supabaseClient.from('wms_meta').upsert({ key: 'fresh_buffer', value: text });
-                    } catch(err) {
-                        console.error('Błąd zapisu bufora:', err);
-                    }
-                }, 500);
             });
         }
 
@@ -647,14 +626,14 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
-                // Precyzyjne wykrywanie zamkniętych PA oparte m.in. o kolumnę Q (indeks 16) i statusy Complete
+                // Wykrywanie zamkniętych PA z uwzględnieniem kolumny Q (indeks 16)
                 const statusStr = (completeStatus + ' ' + paValue).toLowerCase();
                 let closedPAType = 'NONE';
-                if (statusStr.includes('complete') || statusStr.includes('zamknięte') || paValue !== '') {
-                    if (paValue.startsWith('018') || target.startsWith('018')) {
+                if (statusStr.includes('complete') || statusStr.includes('zamknięte') || paValue !== '' || completeStatus !== '') {
+                    if (paValue.startsWith('018') || target.startsWith('018') || completeStatus.startsWith('018')) {
                         closedPAType = 'PA_018';
                     } else {
-                        closedPAType = paValue.startsWith('018') ? 'PA_018' : 'PA_OTHER';
+                        closedPAType = 'PA_OTHER';
                     }
                 }
 
@@ -668,11 +647,11 @@
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
             
-            // Po scaleniu czyszczymy drugie okienko i aktualizujemy bazę w chmurze
+            // Po udanym scaleniu czyszczymy drugie okienko i zapisujemy całość w bazie chmurowej
             document.getElementById('pasteFreshArea').value = '';
             document.getElementById('countFresh').textContent = '0 w.';
 
-            await saveDataToCloud(records, '');
+            await saveDataToCloud(records);
             renderAll();
         }
 
