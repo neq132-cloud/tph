@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.2.2-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.2.3-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.2.2-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.2.3-STABLE</span>
                 </div>
             </div>
 
@@ -320,7 +320,7 @@
 
     <script>
         const SUPABASE_URL = 'https://kopwsxkfscnhaoocdxzk.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvcHdzeGtmc2NuaGFvb2NkeHprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzMTE4MTYsImV4cCI6MjEwODg4NzgxNn0.Vb01SXWqE0pqPpUV0rExs834M580_imz4Y5d-alCEN4';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvcHdzeGtmc2NuaGFvb2NkeHprIiwicm9sZSI6ImFub24iOjE3OTMzMTE4MTYsImV4cCI6MjEwODg4NzgxNn0.Vb01SXWqE0pqPpUV0rExs834M580_imz4Y5d-alCEN4';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const state = {
@@ -653,36 +653,22 @@
                 });
 
                 if (state.selectedOdbiciaUser) {
-                    // Pełna historia wybranego pracownika (posortowana chronologicznie)
                     data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
                 } else {
-                    // LIVE STATUS: Dla każdego pracownika szukamy jego AKTYWNEGO zdarzenia (ostatni Job Start, lub odpowiednik)
-                    // Najpierw sortujemy wszystkie odbicia rosnąco po dacie/czasie
+                    // LIVE STATUS: Dla każdego pracownika bierzemy ABSOLUTNIE NAJNOWSZY wpis (zarówno Job Start jak i Job End) wg daty i czasu
                     const sortedOdbicia = [...odbiciaRows].sort((a, b) => {
                         const tA = `${a.date} ${a.time}`;
                         const tB = `${b.date} ${b.time}`;
-                        return tA.localeCompare(tB);
+                        return tA.localeCompare(tB); // od najstarszego do najnowszego, dzięki czemu ostatni nadpisze poprzednie
                     });
 
-                    const userStatusMap = {};
+                    const userLatestMap = {};
                     sortedOdbicia.forEach(d => {
                         if (d.user && d.user !== 'BRAK_USERA') {
-                            const upCode = d.code.toUpperCase();
-                            if (upCode.includes('JOB START')) {
-                                // Otwieramy/aktualizujemy aktywną sesję
-                                userStatusMap[d.user] = { ...d, statusType: 'ACTIVE' };
-                            } else if (upCode.includes('JOB END') || upCode.includes('JOB STOP')) {
-                                // Jeśli zrobił Job End, oznaczamy jako zakończone lub zachowujemy stan zatrzymany
-                                if (userStatusMap[d.user]) {
-                                    userStatusMap[d.user] = { ...d, statusType: 'STOPPED' };
-                                } else {
-                                    userStatusMap[d.user] = { ...d, statusType: 'STOPPED' };
-                                }
-                            }
+                            userLatestMap[d.user] = d; // każdy kolejny wpis nadpisuje wcześniejszy, zostawiając najświeższy
                         }
                     });
-                    // Zwracamy listę unikalnych pracowników i ich stan
-                    data = Object.values(userStatusMap);
+                    data = Object.values(userLatestMap);
                 }
             }
             return data;
@@ -888,12 +874,9 @@
 
                 pageData.forEach((row, i) => {
                     const isStart = row.code.toUpperCase().includes('START');
-                    let badge = '';
-                    if (isStart) {
-                        badge = '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">JOB START</span>';
-                    } else {
-                        badge = '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded font-bold">JOB END</span>';
-                    }
+                    let badge = isStart 
+                        ? '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">JOB START</span>'
+                        : '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded font-bold">JOB END</span>';
 
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
