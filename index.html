@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.4.3-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.4.5-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.4.3-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.4.5-STABLE</span>
                 </div>
             </div>
 
@@ -323,7 +323,7 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
-            // Mapowanie: A=0 (PreAdv Status / code), O=14 (In Progress --> Complete), Q=16 (paCol / numery PA)
+            // Mapowanie: A=0 (code), O=14 (complete), Q=16 (paCol / numery PA)
             colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
@@ -650,13 +650,13 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
-                // Precyzyjna logika Zamkniętych PA:
-                // Kolumna O musi zawierać "In Progress --> Complete", a Kolumna Q musi posiadać numer
+                // Elastyczna, niezawodna logika Zamkniętych PA:
+                // Kolumna O zawiera "complete", a Kolumna Q posiada jakikolwiek numer
                 const statusO = completeStatus.trim().toLowerCase();
                 const valQ = paValue.trim();
                 let closedPAType = 'NONE';
 
-                if (statusO.includes('in progress --> complete') && valQ !== '') {
+                if (statusO.includes('complete') && valQ !== '') {
                     if (valQ.startsWith('018')) {
                         closedPAType = 'PA_018';
                     } else {
