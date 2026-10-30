@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.1.3-TEST</title>
+    <title>WMS Cyberpunk Hub v0.1.3-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -56,7 +56,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.1.3-TEST</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.1.3-STABLE</span>
                 </div>
             </div>
 
@@ -79,9 +79,6 @@
 
         <!-- Sidebar Footer Action -->
         <div class="p-5 border-t border-cyber-border space-y-3">
-            <button id="clearMemoryBtn" class="w-full py-2 px-3 bg-red-950/30 hover:bg-red-900/40 text-red-400 border border-red-900/50 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Wyczyść Chmurę
-            </button>
             <button id="exportCsvBtn" disabled class="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i> Eksport CSV
             </button>
@@ -180,7 +177,7 @@
 
             </div>
 
-            <!-- KPI DASHBOARD TILES (Zredukowane do 7 kolumn z połączonym PA 018 / Inne) -->
+            <!-- KPI DASHBOARD TILES -->
             <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-emerald-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-lg font-black text-white mt-1">0</span></div>
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-amber-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-lg font-black text-white mt-1">0</span></div>
@@ -188,7 +185,6 @@
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-purple-500/30 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-purple-400 uppercase">Putaway SHELF</span><span id="dashShelfOps" class="text-lg font-black text-white mt-1">0</span></div>
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-cyan-500/40 rounded-xl p-3 flex flex-col justify-between"><span class="text-[9px] font-bold text-cyan-400 uppercase">Suma Put.+Rel.</span><span id="dashPutawayRelocateSum" class="text-lg font-black text-white mt-1">0</span></div>
                 
-                <!-- Receipt z ilością sztuk -->
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-indigo-500/50 rounded-xl p-3 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <span class="text-[9px] font-bold text-indigo-300 uppercase">Receipt (Ops)</span>
@@ -200,7 +196,6 @@
                     </div>
                 </div>
 
-                <!-- Połączony kafelek Zamknięte PA (018 / Inne) -->
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-teal-500/50 rounded-xl p-3 flex flex-col justify-between">
                     <span class="text-[9px] font-bold text-teal-400 uppercase">Zamknięte PA (018 / Inne)</span>
                     <div class="text-base font-black text-white mt-1 flex items-baseline gap-1">
@@ -294,7 +289,6 @@
     </div>
 
     <script>
-        // Konfiguracja Supabase
         const SUPABASE_URL = 'https://kopwsxkfscnhaoocdxzk.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvcHdzeGtmc2NuaGFvb2NkeHprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzMTE4MTYsImV4cCI6MjEwODg4NzgxNn0.Vb01SXWqE0pqPpUV0rExs834M580_imz4Y5d-alCEN4';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -520,17 +514,6 @@
 
         function initDualPaste() {
             document.getElementById('processPasteBtn').addEventListener('click', processBothAreas);
-            document.getElementById('clearMemoryBtn').addEventListener('click', async () => {
-                if (confirm('Wyczyścić całą chmurę Supabase?')) {
-                    await supabaseClient.from('wms_operations').delete().neq('id', 0);
-                    document.getElementById('pasteBaseArea').value = '';
-                    document.getElementById('pasteFreshArea').value = '';
-                    state.rawRows = [];
-                    state.parsedData = [];
-                    renderAll();
-                    document.getElementById('cloudStatus').textContent = 'Chmura wyczyszczona';
-                }
-            });
         }
 
         function processBothAreas() {
@@ -750,7 +733,7 @@
                 data.forEach((r, idx) => csv += `${idx+1};"${r.date}";"${r.time}";"${r.code}";"${r.putawayZone}";"${r.sku}";${r.qty};"${r.target}";"${r.user}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_TEST_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_STABLE_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
