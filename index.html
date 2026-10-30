@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.2.1-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.2.2-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.2.1-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.2.2-STABLE</span>
                 </div>
             </div>
 
@@ -332,8 +332,8 @@
             selectedOdbiciaUser: null,
             colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
             pagination: { page: 1, pageSize: 50 },
-            sortField: 'dateTime', // Domyślne sortowanie
-            sortDir: 'desc'        // Najnowsze na górze
+            sortField: 'date',
+            sortDir: 'desc'
         };
 
         let isBaseLocked = true;
@@ -653,15 +653,36 @@
                 });
 
                 if (state.selectedOdbiciaUser) {
+                    // Pełna historia wybranego pracownika (posortowana chronologicznie)
                     data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
                 } else {
-                    const userMap = {};
-                    odbiciaRows.forEach(d => {
+                    // LIVE STATUS: Dla każdego pracownika szukamy jego AKTYWNEGO zdarzenia (ostatni Job Start, lub odpowiednik)
+                    // Najpierw sortujemy wszystkie odbicia rosnąco po dacie/czasie
+                    const sortedOdbicia = [...odbiciaRows].sort((a, b) => {
+                        const tA = `${a.date} ${a.time}`;
+                        const tB = `${b.date} ${b.time}`;
+                        return tA.localeCompare(tB);
+                    });
+
+                    const userStatusMap = {};
+                    sortedOdbicia.forEach(d => {
                         if (d.user && d.user !== 'BRAK_USERA') {
-                            userMap[d.user] = d;
+                            const upCode = d.code.toUpperCase();
+                            if (upCode.includes('JOB START')) {
+                                // Otwieramy/aktualizujemy aktywną sesję
+                                userStatusMap[d.user] = { ...d, statusType: 'ACTIVE' };
+                            } else if (upCode.includes('JOB END') || upCode.includes('JOB STOP')) {
+                                // Jeśli zrobił Job End, oznaczamy jako zakończone lub zachowujemy stan zatrzymany
+                                if (userStatusMap[d.user]) {
+                                    userStatusMap[d.user] = { ...d, statusType: 'STOPPED' };
+                                } else {
+                                    userStatusMap[d.user] = { ...d, statusType: 'STOPPED' };
+                                }
+                            }
                         }
                     });
-                    data = Object.values(userMap);
+                    // Zwracamy listę unikalnych pracowników i ich stan
+                    data = Object.values(userStatusMap);
                 }
             }
             return data;
@@ -686,18 +707,18 @@
             const relocateCount = state.parsedData.filter(d => d.taskType === 'Relocate').length;
             const receiptCount = state.parsedData.filter(d => d.taskType === 'Receipt').length;
             const closedPACount = state.parsedData.filter(d => d.closedPAType !== 'NONE').length;
-            const odbiciaCount = Object.keys(state.parsedData.reduce((acc, d) => {
-                if (d.code.toUpperCase().includes('JOB START') || d.code.toUpperCase().includes('JOB END') || d.code.toUpperCase().includes('JOB STOP')) {
-                    acc[d.user] = true;
-                }
-                return acc;
-            }, {})).length;
+            
+            const odbiciaRows = state.parsedData.filter(d => {
+                const up = d.code.toUpperCase();
+                return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
+            });
+            const uniqueWorkers = new Set(odbiciaRows.map(d => d.user).filter(u => u && u !== 'BRAK_USERA'));
 
             document.getElementById('badgePutaway').textContent = putawayCount;
             document.getElementById('badgeRelocate').textContent = relocateCount;
             document.getElementById('badgeReceipt').textContent = receiptCount;
             document.getElementById('badgeClosedPA').textContent = closedPACount;
-            document.getElementById('badgeOdbicia').textContent = odbiciaCount;
+            document.getElementById('badgeOdbicia').textContent = uniqueWorkers.size;
         }
 
         function renderDashboardCards() {
@@ -817,7 +838,6 @@
 
             const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
 
-            // Sortowanie
             filtered.sort((a, b) => {
                 let valA, valB;
                 if (state.sortField === 'date') {
@@ -868,9 +888,12 @@
 
                 pageData.forEach((row, i) => {
                     const isStart = row.code.toUpperCase().includes('START');
-                    const badge = isStart 
-                        ? '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">JOB START</span>'
-                        : '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded font-bold">JOB END</span>';
+                    let badge = '';
+                    if (isStart) {
+                        badge = '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">JOB START</span>';
+                    } else {
+                        badge = '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded font-bold">JOB END</span>';
+                    }
 
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
