@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.2-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.5.3-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.2-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.3-STABLE</span>
                 </div>
             </div>
 
@@ -640,13 +640,15 @@
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
                 const activity = cleanRawString(r[state.colMap.activity]);
 
-                // Bezpośrednie pobranie statusu z kolumny O (indeks 14) oraz numeru PA z kolumny Q (indeks 16)
+                // Kolumna O (indeks 14) – status, Kolumna Q (indeks 16) – numer PA
                 let statusFound = cleanRawString(r[14]);
                 let paValue = cleanRawString(r[16]);
 
-                let isPreAdvRow = paValue !== '' || statusFound !== '';
+                let upperStatus = statusFound.toUpperCase();
+                // WARUNEK: Tylko wpisy z numerem PA ORAZ statusem zakończenia (Complete / strzałka)
+                let isCompletePA = paValue !== '' && (upperStatus.includes('COMPLETE') || upperStatus.includes('-->') || upperStatus.includes('ZAMKNIĘTE') || upperStatus.includes('CLOSED'));
 
-                if (!code && !sku && !user && !activity && !isPreAdvRow) continue;
+                if (!code && !sku && !user && !activity && !isCompletePA) continue;
                 
                 const key = `${code}|${sku}|${target}|${time}|${date}|${user}|${paValue}`;
                 if (seen.has(key)) continue;
@@ -656,7 +658,7 @@
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
                 let closedPAType = 'NONE';
-                if (isPreAdvRow && paValue !== '') {
+                if (isCompletePA) {
                     if (paValue.startsWith('018') || paValue.startsWith('45') || paValue.startsWith('47') || paValue.startsWith('48') || paValue.startsWith('84')) {
                         closedPAType = 'PA_018';
                     } else {
