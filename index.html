@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.4.7-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.4.7-STABLE (Dynamic PA)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.4.7-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.4.7-STABLE (Dynamic PA)</span>
                 </div>
             </div>
 
@@ -323,8 +323,7 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
-            // Precyzyjne mapowanie: Q=16 (complete), S=18 (paCol / numery PA)
-            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 16, paCol: 18, activity: 42 },
+            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, activity: 42 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
             sortDir: 'desc'
@@ -637,9 +636,23 @@
                 const time = cleanRawString(r[state.colMap.time]);
                 const date = cleanRawString(r[state.colMap.date]);
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
-                const completeStatus = cleanRawString(r[state.colMap.complete]); // Kolumna Q (16)
-                const paValue = cleanRawString(r[state.colMap.paCol]); // Kolumna S (18)
                 const activity = cleanRawString(r[state.colMap.activity]);
+
+                // -------------------------------------------------------------
+                // DYNAMICZNE WYKRYWANIE ZAMKNIĘTYCH PA W CAŁYM WIERSZU
+                // -------------------------------------------------------------
+                const fullRowText = r.join(' | ').toLowerCase();
+                const hasComplete = fullRowText.includes('complete') || fullRowText.includes('zamknięte') || fullRowText.includes('closed');
+                
+                let paValue = '';
+                // Skanujemy każdą komórkę wiersza w poszukiwaniu numeru PA (np. zaczynającego się od 018 lub numerycznego ciągu)
+                for (let c = 0; c < r.length; c++) {
+                    let cellVal = cleanRawString(r[c]);
+                    if (cellVal.startsWith('018') || (cellVal.length >= 4 && !isNaN(cellVal))) {
+                        paValue = cellVal;
+                        break;
+                    }
+                }
 
                 if (!code && !sku && !user && !activity) continue;
                 const key = `${code}|${sku}|${target}|${time}|${date}|${user}`;
@@ -649,13 +662,9 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
-                // Precyzyjna logika dla Kolumny Q (status complete) i Kolumny S (numery PA)
-                const statusO = completeStatus.trim().toLowerCase();
-                const valQ = paValue.trim();
                 let closedPAType = 'NONE';
-
-                if (statusO.includes('complete') && valQ !== '') {
-                    if (valQ.startsWith('018')) {
+                if (hasComplete && paValue !== '') {
+                    if (paValue.startsWith('018')) {
                         closedPAType = 'PA_018';
                     } else {
                         closedPAType = 'PA_OTHER';
