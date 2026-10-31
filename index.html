@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.1-BLOCK</title>
+    <title>WMS Cyberpunk Hub v0.5.0-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.1-BLOCK</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.0-STABLE</span>
                 </div>
             </div>
 
@@ -609,36 +609,9 @@
                 combinedMatrix.push(...lines);
             }
             if (freshText.trim()) {
-                const rawFreshLines = freshText.split('\n').map(l => l.trim()).filter(Boolean);
-                
-                // -------------------------------------------------------------
-                // BLOKOWY PARSER PRE-ADVICE DLA ŚWIEŻYCH DANYCH
-                // -------------------------------------------------------------
-                let blockText = rawFreshLines.join(' ');
-                // Szukamy wszystkich wystąpień PreAdv Status oraz towarzyszących dat, godzin i numerów PA
-                // Wzorzec dopasowuje strukturę z PreAdv Status i wyciąga numer PA oraz czas
-                const preAdvRegex = /PreAdv Status.*?(\d{1,2}\/\d{1,2}\/\d{4})?\s*(\d{2}:\d{2}:\d{2})?.*?((?:In Progress --> Complete|Released --> In Progress|Complete)).*?(\b(?:018\d{6,}|45\d{6,}|47\d{6,}|48\d{6,}|\d{9,10})\b)/gi;
-                
-                let match;
-                let foundPreAdv = false;
-                while ((match = preAdvRegex.exec(blockText)) !== null) {
-                    foundPreAdv = true;
-                    const dateVal = match[1] || '';
-                    const timeVal = match[2] || '';
-                    const statusVal = match[3] || 'In Progress --> Complete';
-                    const paVal = match[4] || '';
-                    
-                    if (paVal) {
-                        combinedMatrix.push([statusVal, '', '', '', '', '', '', '', paVal, '', timeVal, '', dateVal, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'PreAdv']);
-                    }
-                }
-
-                // Jeśli to zwykłe wiersze tabelaryczne (standardowe Putaway/Receipt), parsujemy tradycyjnie
-                if (!foundPreAdv) {
-                    const lines = freshText.split('\n').map(l => l.split('\t'));
-                    const startIdx = cleanRawString(lines[0][0]).toUpperCase().includes('CODE') ? 1 : 0;
-                    combinedMatrix.push(...lines.slice(startIdx));
-                }
+                const lines = freshText.split('\n').map(l => l.split('\t'));
+                const startIdx = cleanRawString(lines[0][0]).toUpperCase().includes('CODE') ? 1 : 0;
+                combinedMatrix.push(...lines.slice(startIdx));
             }
             if (combinedMatrix.length) {
                 processMatrixData(combinedMatrix);
@@ -667,19 +640,27 @@
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
                 const activity = cleanRawString(r[state.colMap.activity]);
 
-                // Dodatkowa kolumna PA wyłapana w procesie blokowym
-                let paValue = cleanRawString(r[8]); // kolumna 8 w naszym wstrzyknięciu blokowym to paVal
-                if (!paValue) {
-                    const fullRowText = r.join(' ').replace(/\s+/g, ' ');
-                    const paMatch = fullRowText.match(/\b(018\d{6,}|45\d{6,}|47\d{6,}|48\d{6,}|\d{9,10})\b/);
-                    if (paMatch) paValue = paMatch[1];
+                const fullRowText = r.join(' ').replace(/\s+/g, ' ');
+                const dateMatch = fullRowText.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/);
+                const timeMatch = fullRowText.match(/\b\d{2}:\d{2}:\d{2}\b/);
+                const paMatch = fullRowText.match(/\b(018\d{6,}|45\d{6,}|47\d{6,}|48\d{6,}|\d{9})\b/);
+                
+                let statusFound = 'In Progress';
+                if (fullRowText.includes('-->')) {
+                    const parts = fullRowText.split('-->');
+                    statusFound = parts[0].split(' ').pop() + ' --> ' + parts[1].trim().split(' ')[0];
+                } else if (fullRowText.toLowerCase().includes('complete') || fullRowText.toLowerCase().includes('closed')) {
+                    statusFound = 'Complete';
                 }
 
-                const isPreAdvRow = paValue !== '' || code.includes('PreAdv') || code.includes('-->');
+                let paValue = paMatch ? paMatch[1] : '';
+                let rowDate = dateMatch ? dateMatch[0] : (date || '');
+                let rowTime = timeMatch ? timeMatch[0] : (time || '');
+                let isPreAdvRow = paValue !== '' || fullRowText.includes('PreAdv') || fullRowText.includes('Released');
 
                 if (!code && !sku && !user && !activity && !isPreAdvRow) continue;
                 
-                const key = `${code}|${sku}|${target}|${time}|${date}|${user}|${paValue}`;
+                const key = `${code}|${sku}|${target}|${rowTime}|${rowDate}|${user}|${paValue}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
 
@@ -697,12 +678,12 @@
 
                 records.push({ 
                     id: records.length + 1, 
-                    code: isPreAdvRow && !code.includes('-->') ? 'In Progress --> Complete' : code, 
+                    code: isPreAdvRow ? statusFound : code, 
                     sku, 
                     qty, 
                     target, 
-                    time, 
-                    date, 
+                    time: rowTime, 
+                    date: rowDate, 
                     user, 
                     taskType, 
                     putawayZone, 
@@ -962,7 +943,7 @@
                     tr.innerHTML = `
                         <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
                         <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
-                        <td class="py-2.5 px-3 text-slate-300">${row.code || 'In Progress --> Complete'}</td>
+                        <td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td>
                         <td class="py-2.5 px-3"><span class="px-2.5 py-1 text-xs font-mono font-bold border rounded-lg ${badgeClass}">${row.paValue || '-'}</span></td>
                     `;
                     tbody.appendChild(tr);
