@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.4.6-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.4.7-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.4.6-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.4.7-STABLE</span>
                 </div>
             </div>
 
@@ -323,7 +323,7 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
-            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
+            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, activity: 42 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
             sortDir: 'desc'
@@ -638,14 +638,17 @@
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
                 const activity = cleanRawString(r[state.colMap.activity]);
 
-                // Elastyczne wyszukiwanie "complete" w całym wierszu oraz pobranie numeru PA
-                let fullRowText = r.join(' ').toLowerCase();
-                let foundComplete = fullRowText.includes('complete');
+                const fullRowText = r.join(' | ').toLowerCase();
+                const hasComplete = fullRowText.includes('complete') || fullRowText.includes('zamknięte') || fullRowText.includes('closed');
                 
-                const paValue = cleanRawString(r[state.colMap.paCol]) || r.find(cell => {
-                    let s = cleanRawString(cell);
-                    return s.length > 3 && !isNaN(s);
-                }) || '';
+                let paValue = '';
+                for (let c = 0; c < r.length; c++) {
+                    let cellVal = cleanRawString(r[c]);
+                    if (cellVal.startsWith('018') || (cellVal.length >= 4 && !isNaN(cellVal))) {
+                        paValue = cellVal;
+                        break;
+                    }
+                }
 
                 if (!code && !sku && !user && !activity) continue;
                 const key = `${code}|${sku}|${target}|${time}|${date}|${user}`;
@@ -656,9 +659,8 @@
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
                 let closedPAType = 'NONE';
-                if (foundComplete && paValue !== '') {
-                    let valQStr = String(paValue).trim();
-                    if (valQStr.startsWith('018')) {
+                if (hasComplete && paValue !== '') {
+                    if (paValue.startsWith('018')) {
                         closedPAType = 'PA_018';
                     } else {
                         closedPAType = 'PA_OTHER';
