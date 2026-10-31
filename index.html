@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.4.7-STABLE (Dynamic PA)</title>
+    <title>WMS Cyberpunk Hub v0.4.7-STABLE (ClosedPA Clean)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.4.7-STABLE (Dynamic PA)</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.4.7-STABLE (ClosedPA Clean)</span>
                 </div>
             </div>
 
@@ -639,23 +639,23 @@
                 const activity = cleanRawString(r[state.colMap.activity]);
 
                 // -------------------------------------------------------------
-                // DYNAMICZNE WYKRYWANIE ZAMKNIĘTYCH PA W CAŁYM WIERSZU
+                // DYNAMICZNE WYKRYWANIE ZAMKNIĘTYCH PA Z PREFIKSAMI 018, 45, 47, 48
                 // -------------------------------------------------------------
                 const fullRowText = r.join(' | ').toLowerCase();
                 const hasComplete = fullRowText.includes('complete') || fullRowText.includes('zamknięte') || fullRowText.includes('closed');
                 
                 let paValue = '';
-                // Skanujemy każdą komórkę wiersza w poszukiwaniu numeru PA (np. zaczynającego się od 018 lub numerycznego ciągu)
                 for (let c = 0; c < r.length; c++) {
                     let cellVal = cleanRawString(r[c]);
-                    if (cellVal.startsWith('018') || (cellVal.length >= 4 && !isNaN(cellVal))) {
+                    // Sprawdzamy czy numer zaczyna się na zdefiniowane prefiksy lub jest prawidłowym numerem PA
+                    if (cellVal.startsWith('018') || cellVal.startsWith('45') || cellVal.startsWith('47') || cellVal.startsWith('48') || (cellVal.length >= 4 && !isNaN(cellVal))) {
                         paValue = cellVal;
                         break;
                     }
                 }
 
-                if (!code && !sku && !user && !activity) continue;
-                const key = `${code}|${sku}|${target}|${time}|${date}|${user}`;
+                if (!code && !sku && !user && !activity && !paValue) continue;
+                const key = `${code}|${sku}|${target}|${time}|${date}|${user}|${paValue}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
 
@@ -671,7 +671,7 @@
                     }
                 }
 
-                records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone, closedPAType, activity });
+                records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone, closedPAType, activity, paValue });
             }
             state.parsedData = records;
             state.selectedUser = null;
@@ -898,7 +898,43 @@
             const start = (page - 1) * pageSize;
             const pageData = filtered.slice(start, start + pageSize);
 
-            if (state.activeCategory === 'Odbicia') {
+            if (state.activeCategory === 'ClosedPA') {
+                // -------------------------------------------------------------
+                // DEDYKOWANY, ZWARTY WIDOK DLA ZAMKNIĘTYCH PA (BEZ SKU, SZTUK, DOCELOWEJ, PRACOWNIKA)
+                // -------------------------------------------------------------
+                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">${total} poz.</span>`;
+                
+                thead.innerHTML = `
+                    <tr>
+                        <th class="py-3 px-3">Lp.</th>
+                        <th class="py-3 px-3">Data / Czas</th>
+                        <th class="py-3 px-3">PreAdv Status</th>
+                        <th class="py-3 px-3">Numer PA / Dokumentu</th>
+                    </tr>`;
+
+                if (!pageData.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">Brak zamkniętych PA spełniających kryteria.</td></tr>';
+                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    return;
+                }
+
+                pageData.forEach((row, i) => {
+                    const is018 = (row.paValue || '').startsWith('018');
+                    const badgeClass = is018 ? 'bg-teal-500/20 text-teal-300 border-teal-500/30' : 'bg-orange-500/20 text-orange-300 border-orange-500/30';
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-800/40 transition';
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
+                        <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
+                        <td class="py-2.5 px-3 text-slate-300">${row.code || 'Complete'}</td>
+                        <td class="py-2.5 px-3"><span class="px-2.5 py-1 text-xs font-mono font-bold border rounded-lg ${badgeClass}">${row.paValue || '-'}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } else if (state.activeCategory === 'Odbicia') {
+                // ... (obsługa odbić bez zmian)
                 if (state.selectedOdbiciaUser) {
                     titleEl.innerHTML = `Historia odbić pracownika: <strong class="text-cyan-400">${state.selectedOdbiciaUser}</strong> <button onclick="state.selectedOdbiciaUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-xs rounded text-slate-300">Powrót do listy</button>`;
                 } else {
