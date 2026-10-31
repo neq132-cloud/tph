@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.3-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.5.4-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.3-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.4-STABLE</span>
                 </div>
             </div>
 
@@ -95,6 +95,10 @@
                 <button onclick="switchCategory('Receipt')" id="navReceipt" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                     <span class="flex items-center gap-3"><i data-lucide="arrow-down-left" class="w-4 h-4"></i> Przyjęcia</span>
                     <span id="badgeReceipt" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <button onclick="switchCategory('Adjustment')" id="navAdjustment" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="sliders" class="w-4 h-4"></i> Adjustment</span>
+                    <span id="badgeAdjustment" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
                 </button>
                 <button onclick="switchCategory('ClosedPA')" id="navClosedPA" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                     <span class="flex items-center gap-3"><i data-lucide="check-circle-2" class="w-4 h-4"></i> Zamknięte PA</span>
@@ -384,6 +388,7 @@
 
         function classifyTaskType(codeStr) {
             const upper = codeStr.toUpperCase().trim();
+            if (upper.includes('ADJUSTMENT') || upper.includes('KOREKTA')) return 'Adjustment';
             if (upper.includes('RECEIPT') || upper.includes('PRZYJECIE') || upper.includes('PRZYJĘCIE')) return 'Receipt';
             if (upper.includes('RELOCATE') || upper.includes('RELOKACJA') || upper.includes('PRZEMIESZCZ')) return 'Relocate';
             return 'Putaway';
@@ -392,7 +397,7 @@
         function classifyPutawayZone(targetStr, taskType) {
             const up = targetStr.toUpperCase().trim();
             if (up.startsWith('AS')) return 'SHELF';
-            if (taskType === 'Relocate') return 'RELOCATE_OTHER';
+            if (taskType === 'Relocate' || taskType === 'Adjustment') return 'RELOCATE_OTHER';
             if (up.startsWith('V1-IN') || up.startsWith('V2-IN') || up.startsWith('V1IN') || up.startsWith('V2IN')) return 'VIN';
             if (up.startsWith('V1') || up.startsWith('V2')) return 'VNA';
             return 'BULK';
@@ -526,7 +531,7 @@
             state.selectedUser = null;
             state.selectedOdbiciaUser = null;
 
-            ['Putaway', 'Relocate', 'Receipt', 'ClosedPA', 'Odbicia'].forEach(c => {
+            ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'Odbicia'].forEach(c => {
                 const btn = document.getElementById(`nav${c}`);
                 if (btn) {
                     if (c === cat) {
@@ -537,7 +542,7 @@
                 }
             });
 
-            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'ClosedPA': 'Zamknięte PA', 'Odbicia': 'Odbicia (Live)' };
+            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'Adjustment': 'Adjustment', 'ClosedPA': 'Zamknięte PA', 'Odbicia': 'Odbicia (Live)' };
             document.getElementById('activeCatLabel').textContent = labels[cat];
             
             document.getElementById('kpiContainer').style.display = (cat === 'Odbicia') ? 'none' : 'grid';
@@ -645,7 +650,6 @@
                 let paValue = cleanRawString(r[16]);
 
                 let upperStatus = statusFound.toUpperCase();
-                // WARUNEK: Tylko wpisy z numerem PA ORAZ statusem zakończenia (Complete / strzałka)
                 let isCompletePA = paValue !== '' && (upperStatus.includes('COMPLETE') || upperStatus.includes('-->') || upperStatus.includes('ZAMKNIĘTE') || upperStatus.includes('CLOSED'));
 
                 if (!code && !sku && !user && !activity && !isCompletePA) continue;
@@ -704,6 +708,8 @@
                 if (state.activeZone !== 'ALL') data = data.filter(d => d.putawayZone === state.activeZone);
             } else if (state.activeCategory === 'Receipt') {
                 data = state.parsedData.filter(d => d.taskType === 'Receipt');
+            } else if (state.activeCategory === 'Adjustment') {
+                data = state.parsedData.filter(d => d.taskType === 'Adjustment');
             } else if (state.activeCategory === 'Relocate') {
                 data = state.parsedData.filter(d => d.taskType === 'Relocate');
             } else if (state.activeCategory === 'ClosedPA') {
@@ -756,6 +762,7 @@
             const putawayCount = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF').length;
             const relocateCount = state.parsedData.filter(d => d.taskType === 'Relocate').length;
             const receiptCount = state.parsedData.filter(d => d.taskType === 'Receipt').length;
+            const adjustmentCount = state.parsedData.filter(d => d.taskType === 'Adjustment').length;
             const closedPACount = state.parsedData.filter(d => d.closedPAType !== 'NONE').length;
             
             const odbiciaRows = state.parsedData.filter(d => {
@@ -767,6 +774,7 @@
             document.getElementById('badgePutaway').textContent = putawayCount;
             document.getElementById('badgeRelocate').textContent = relocateCount;
             document.getElementById('badgeReceipt').textContent = receiptCount;
+            document.getElementById('badgeAdjustment').textContent = adjustmentCount;
             document.getElementById('badgeClosedPA').textContent = closedPACount;
             document.getElementById('badgeOdbicia').textContent = uniqueWorkers.size;
         }
