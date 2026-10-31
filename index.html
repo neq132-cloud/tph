@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.0-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.4.6-STABLE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.0-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.4.6-STABLE</span>
                 </div>
             </div>
 
@@ -323,7 +323,7 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
-            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, activity: 42 },
+            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, complete: 14, paCol: 16, activity: 42 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
             sortDir: 'desc'
@@ -451,8 +451,7 @@
                         taskType: d.task_type,
                         putawayZone: d.putaway_zone,
                         closedPAType: d.closed_pa_type,
-                        activity: d.activity || '',
-                        paValue: d.pa_value || ''
+                        activity: d.activity || ''
                     }));
                     
                     const textRows = state.parsedData.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity || ''}`).join('\n');
@@ -485,8 +484,7 @@
                         task_type: r.taskType,
                         putaway_zone: r.putawayZone,
                         closed_pa_type: r.closedPAType,
-                        activity: r.activity,
-                        pa_value: r.paValue
+                        activity: r.activity
                     }));
                     const { error } = await supabaseClient.from('wms_operations').insert(batch);
                     if (error) console.error('Błąd zapisu batcha:', error);
@@ -640,27 +638,17 @@
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
                 const activity = cleanRawString(r[state.colMap.activity]);
 
-                const fullRowText = r.join(' ').replace(/\s+/g, ' ');
-                const dateMatch = fullRowText.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/);
-                const timeMatch = fullRowText.match(/\b\d{2}:\d{2}:\d{2}\b/);
-                const paMatch = fullRowText.match(/\b(018\d{6,}|45\d{6,}|47\d{6,}|48\d{6,}|\d{9})\b/);
+                // Elastyczne wyszukiwanie "complete" w całym wierszu oraz pobranie numeru PA
+                let fullRowText = r.join(' ').toLowerCase();
+                let foundComplete = fullRowText.includes('complete');
                 
-                let statusFound = 'In Progress';
-                if (fullRowText.includes('-->')) {
-                    const parts = fullRowText.split('-->');
-                    statusFound = parts[0].split(' ').pop() + ' --> ' + parts[1].trim().split(' ')[0];
-                } else if (fullRowText.toLowerCase().includes('complete') || fullRowText.toLowerCase().includes('closed')) {
-                    statusFound = 'Complete';
-                }
+                const paValue = cleanRawString(r[state.colMap.paCol]) || r.find(cell => {
+                    let s = cleanRawString(cell);
+                    return s.length > 3 && !isNaN(s);
+                }) || '';
 
-                let paValue = paMatch ? paMatch[1] : '';
-                let rowDate = dateMatch ? dateMatch[0] : (date || '');
-                let rowTime = timeMatch ? timeMatch[0] : (time || '');
-                let isPreAdvRow = paValue !== '' || fullRowText.includes('PreAdv') || fullRowText.includes('Released');
-
-                if (!code && !sku && !user && !activity && !isPreAdvRow) continue;
-                
-                const key = `${code}|${sku}|${target}|${rowTime}|${rowDate}|${user}|${paValue}`;
+                if (!code && !sku && !user && !activity) continue;
+                const key = `${code}|${sku}|${target}|${time}|${date}|${user}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
 
@@ -668,29 +656,16 @@
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
                 let closedPAType = 'NONE';
-                if (isPreAdvRow && paValue !== '') {
-                    if (paValue.startsWith('018')) {
+                if (foundComplete && paValue !== '') {
+                    let valQStr = String(paValue).trim();
+                    if (valQStr.startsWith('018')) {
                         closedPAType = 'PA_018';
                     } else {
                         closedPAType = 'PA_OTHER';
                     }
                 }
 
-                records.push({ 
-                    id: records.length + 1, 
-                    code: isPreAdvRow ? statusFound : code, 
-                    sku, 
-                    qty, 
-                    target, 
-                    time: rowTime, 
-                    date: rowDate, 
-                    user, 
-                    taskType, 
-                    putawayZone, 
-                    closedPAType, 
-                    activity, 
-                    paValue 
-                });
+                records.push({ id: records.length + 1, code, sku, qty, target, time, date, user, taskType, putawayZone, closedPAType, activity });
             }
             state.parsedData = records;
             state.selectedUser = null;
@@ -917,39 +892,7 @@
             const start = (page - 1) * pageSize;
             const pageData = filtered.slice(start, start + pageSize);
 
-            if (state.activeCategory === 'ClosedPA') {
-                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">${total} poz.</span>`;
-                
-                thead.innerHTML = `
-                    <tr>
-                        <th class="py-3 px-3">Lp.</th>
-                        <th class="py-3 px-3">Data / Czas</th>
-                        <th class="py-3 px-3">PreAdv Status</th>
-                        <th class="py-3 px-3">Numer PA / Dokumentu</th>
-                    </tr>`;
-
-                if (!pageData.length) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">Brak zamkniętych PA spełniających kryteria.</td></tr>';
-                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
-                    return;
-                }
-
-                pageData.forEach((row, i) => {
-                    const is018 = (row.paValue || '').startsWith('018');
-                    const badgeClass = is018 ? 'bg-teal-500/20 text-teal-300 border-teal-500/30' : 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-
-                    const tr = document.createElement('tr');
-                    tr.className = 'hover:bg-slate-800/40 transition';
-                    tr.innerHTML = `
-                        <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
-                        <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
-                        <td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td>
-                        <td class="py-2.5 px-3"><span class="px-2.5 py-1 text-xs font-mono font-bold border rounded-lg ${badgeClass}">${row.paValue || '-'}</span></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-
-            } else if (state.activeCategory === 'Odbicia') {
+            if (state.activeCategory === 'Odbicia') {
                 if (state.selectedOdbiciaUser) {
                     titleEl.innerHTML = `Historia odbić pracownika: <strong class="text-cyan-400">${state.selectedOdbiciaUser}</strong> <button onclick="state.selectedOdbiciaUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-xs rounded text-slate-300">Powrót do listy</button>`;
                 } else {
