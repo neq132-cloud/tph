@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.13-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.14-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -54,7 +54,7 @@
         .toast-exit { animation: fadeOut 0.5s ease forwards; }
     </style>
 </head>
-<body class="text-slate-100 min-h-screen font-sans antialiased flex">
+<body class="text-slate-100 min-h-screen font-sans antialiased flex" onclick="handleGlobalClick(event)" ondblclick="handleGlobalDblClick(event)">
 
     <!-- Dyskretny powiadomiacz -->
     <div id="toastNotification" class="fixed top-5 right-5 z-50 hidden bg-slate-900/95 border border-cyan-500/50 backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl shadow-cyan-500/10 flex items-center gap-3 text-xs text-slate-200">
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.13-LOCAL</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.14-LOCAL</span>
                 </div>
             </div>
 
@@ -328,6 +328,17 @@
         };
 
         let isBaseLocked = true;
+
+        function handleGlobalClick(e) {
+            // Zabezpieczenie przed niechcianymi akcjami globalnymi
+        }
+
+        function handleGlobalDblClick(e) {
+            // Ignorujemy dwukrotne kliknięcie w sekcjach specjalnych, aby zapobiec resetowaniu widoku
+            if (state.activeCategory === 'ClosedPA' || state.activeCategory === 'Odbicia') {
+                e.stopPropagation();
+            }
+        }
 
         function toggleBaseLock() {
             isBaseLocked = !isBaseLocked;
