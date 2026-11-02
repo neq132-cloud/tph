@@ -154,6 +154,9 @@
                             <div class="flex items-center justify-between">
                                 <label class="text-[11px] font-semibold text-amber-400">Baza Główna</label>
                                 <div class="flex items-center gap-2">
+                                    <button onclick="clearAllData()" class="px-2 py-0.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded text-[9px] flex items-center gap-1 transition" title="Wyczyść całą bazę danych">
+                                        <i data-lucide="trash-2" class="w-2.5 h-2.5"></i> Wyczyść
+                                    </button>
                                     <button id="toggleLockBtn" onclick="toggleBaseLock()" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[9px] flex items-center gap-1">
                                         <i id="lockIcon" data-lucide="lock" class="w-2.5 h-2.5"></i> <span id="lockText">Zablokowane</span>
                                     </button>
@@ -345,6 +348,19 @@
                 lockIcon.setAttribute('data-lucide', 'unlock');
             }
             lucide.createIcons();
+        }
+
+        function clearAllData() {
+            if (confirm("Czy na pewno chcesz wyczyścić całą bazę danych i zapamiętane wpisy?")) {
+                state.parsedData = [];
+                localStorage.removeItem('wms_cyber_test_records_v32_pafix');
+                document.getElementById('pasteBaseArea').value = '';
+                document.getElementById('countBase').textContent = '0 w.';
+                document.getElementById('pasteFreshArea').value = '';
+                document.getElementById('countFresh').textContent = '0 w.';
+                renderAll();
+                showToast("Wyczyszczono całą bazę danych.");
+            }
         }
 
         function showToast(message) {
