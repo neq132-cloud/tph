@@ -62,7 +62,7 @@
             <i data-lucide="check-circle" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Przywrócono wersję v0.5.21</div>
+            <div class="font-bold text-white">Wersja v0.5.21 (Filtry PA)</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -231,12 +231,8 @@
                 </div>
 
                 <div class="bg-cyber-card/90 backdrop-blur-md border border-teal-500/50 rounded-xl p-3 flex flex-col justify-between">
-                    <span class="text-[9px] font-bold text-teal-400 uppercase">Zamknięte PA (018 / Inne)</span>
-                    <div class="text-base font-black text-white mt-1 flex items-baseline gap-1">
-                        <span id="dashPa018Ops" class="text-teal-300">0</span>
-                        <span class="text-slate-500 font-normal">/</span>
-                        <span id="dashPaOtherOps" class="text-orange-400">0</span>
-                    </div>
+                    <span class="text-[9px] font-bold text-teal-400 uppercase">Zamknięte PA</span>
+                    <div class="text-base font-black text-teal-300 mt-1" id="dashPa018Ops">0</div>
                 </div>
             </div>
 
@@ -407,11 +403,6 @@
             initExport();
             initPresenceModule();
 
-            // Czyszczenie starej pamięci wyższych wersji i start od v0.5.21
-            localStorage.removeItem('wms_cyber_local_records_v5');
-            localStorage.removeItem('wms_cyber_local_records_v6');
-            localStorage.removeItem('wms_cyber_local_records_v7');
-
             loadDataFromLocalStorage();
         });
 
@@ -427,7 +418,7 @@
                         document.getElementById('countBase').textContent = `${records.length} w.`;
                     }
                 }
-                showToast(`Wczytano czystą bazę v0.5.21`);
+                showToast(`Wczytano wersję v0.5.21`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -437,7 +428,6 @@
         function saveDataToLocalStorage(records) {
             try {
                 localStorage.setItem('wms_cyber_local_records', JSON.stringify(records));
-                showToast(`Zapisano lokalnie ${records.length} wierszy`);
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
             }
@@ -618,11 +608,11 @@
                     }
                 }
 
-                let statusFound = cleanRawString(r[14]) || cleanRawString(r[state.colMap.statusCol]) || 'In Progress --> Complete';
+                let statusFound = cleanRawString(r[14]) || cleanRawString(r[state.colMap.statusCol]) || '';
                 let paValue = cleanRawString(r[16]) || cleanRawString(r[state.colMap.paCol]) || '';
 
                 if (!paValue) {
-                    const foundNum = r.find(x => x && (x.startsWith('018') || x.startsWith('45') || x.startsWith('47') || x.startsWith('48') || x.startsWith('84') || /^\d{8,}/.test(x)));
+                    const foundNum = r.find(x => x && (x.startsWith('018') || x.startsWith('45') || x.startsWith('47') || x.startsWith('48') || x.startsWith('0084') || /^\d{8,}/.test(x)));
                     if (foundNum) paValue = foundNum;
                 }
 
@@ -631,8 +621,21 @@
                     if (potentialNum) paValue = potentialNum;
                 }
 
+                // Ścisłe sprawdzenie warunku Zamkniętego PA:
+                // Status musi zawierać "In Progress --> Complete" oraz numer PA musi zaczynać się od 018, 45, 47, 48 lub 0084
                 let upperStatus = statusFound.toUpperCase();
-                let isCompletePA = paValue !== '' && (upperStatus.includes('IN PROGRESS') || upperStatus.includes('COMPLETE') || upperStatus.includes('ZAMKNIĘTY') || true);
+                let isCompleteStatus = upperStatus.includes('IN PROGRESS') && upperStatus.includes('COMPLETE');
+                
+                let hasValidPrefix = false;
+                if (paValue) {
+                    hasValidPrefix = paValue.startsWith('018') || 
+                                     paValue.startsWith('45') || 
+                                     paValue.startsWith('47') || 
+                                     paValue.startsWith('48') || 
+                                     paValue.startsWith('0084');
+                }
+
+                const isClosedPAValid = isCompleteStatus && hasValidPrefix;
 
                 const key = `${code}|${sku}|${qty}|${target}|${time}|${date}|${user}|${paValue}`;
                 if (seen.has(key)) continue;
@@ -640,15 +643,6 @@
 
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
-                
-                let closedPAType = 'NONE';
-                if (isCompletePA && paValue) {
-                    if (paValue.startsWith('018') || paValue.startsWith('45') || paValue.startsWith('47') || paValue.startsWith('48') || paValue.startsWith('84')) {
-                        closedPAType = 'PA_018';
-                    } else {
-                        closedPAType = 'PA_OTHER';
-                    }
-                }
 
                 records.push({ 
                     id: records.length + 1, 
@@ -661,10 +655,10 @@
                     user, 
                     taskType, 
                     putawayZone, 
-                    closedPAType, 
+                    isClosedPAValid, 
                     activity: activity || '-', 
                     paValue,
-                    statusFound: statusFound || 'In Progress --> Complete'
+                    statusFound: statusFound || '-'
                 });
             }
             state.parsedData = records;
@@ -680,6 +674,7 @@
 
             saveDataToLocalStorage(records);
             renderAll();
+            showToast(`Przetworzono ${records.length} wierszy`);
         }
 
         function getActiveFilteredData() {
@@ -694,7 +689,8 @@
             } else if (state.activeCategory === 'Relocate') {
                 data = state.parsedData.filter(d => d.taskType === 'Relocate');
             } else if (state.activeCategory === 'ClosedPA') {
-                data = state.parsedData.filter(d => d.closedPAType !== 'NONE' || d.paValue !== '');
+                // Tylko rekordy spełniające rygorystyczny warunek ClosedPA
+                data = state.parsedData.filter(d => d.isClosedPAValid);
             } else if (state.activeCategory === 'Odbicia') {
                 const odbiciaRows = state.parsedData.filter(d => {
                     const up = d.code.toUpperCase();
@@ -741,7 +737,7 @@
             const relocateCount = state.parsedData.filter(d => d.taskType === 'Relocate').length;
             const receiptCount = state.parsedData.filter(d => d.taskType === 'Receipt').length;
             const adjustmentCount = state.parsedData.filter(d => d.taskType === 'Adjustment').length;
-            const closedPACount = state.parsedData.filter(d => d.closedPAType !== 'NONE' || d.paValue !== '').length;
+            const closedPACount = state.parsedData.filter(d => d.isClosedPAValid).length;
             
             const odbiciaRows = state.parsedData.filter(d => {
                 const up = d.code.toUpperCase();
@@ -762,8 +758,7 @@
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
             const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
-            const pa018 = state.parsedData.filter(d => d.closedPAType === 'PA_018' || (d.paValue && d.paValue.startsWith('018'))).length;
-            const paOther = state.parsedData.filter(d => (d.closedPAType === 'PA_OTHER' || d.closedPAType === 'NONE') && d.paValue && !d.paValue.startsWith('018')).length;
+            const closedPACount = state.parsedData.filter(d => d.isClosedPAValid).length;
 
             let vna = 0, bulk = 0, vin = 0, shelf = 0;
             putawayItems.forEach(d => {
@@ -783,8 +778,7 @@
             document.getElementById('dashPutawayRelocateSum').textContent = totalSum;
             document.getElementById('dashReceiptOps').textContent = receiptItems.length;
             document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((s, d) => s + d.qty, 0);
-            document.getElementById('dashPa018Ops').textContent = pa018;
-            document.getElementById('dashPaOtherOps').textContent = paOther;
+            document.getElementById('dashPa018Ops').textContent = closedPACount;
         }
 
         function renderWorkers() {
@@ -905,23 +899,20 @@
                     </tr>`;
 
                 if (!pageData.length) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">Brak zamkniętych PA spełniających kryteria.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">Brak zamkniętych PA spełniających kryteria (wymagany status In Progress --> Complete oraz prefiks 018, 45, 47, 48, 0084).</td></tr>';
                     document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                     return;
                 }
 
                 pageData.forEach((row, i) => {
                     const pVal = row.paValue || 'N/A';
-                    const isMainSeries = pVal.startsWith('018') || pVal.startsWith('45') || pVal.startsWith('47') || pVal.startsWith('48') || pVal.startsWith('84');
-                    const badgeClass = isMainSeries ? 'bg-teal-500/20 text-teal-300 border-teal-500/30' : 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition';
                     tr.innerHTML = `
                         <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
                         <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
-                        <td class="py-2.5 px-3 text-teal-400 font-semibold">In Progress --> Complete</td>
-                        <td class="py-2.5 px-3"><span class="px-2.5 py-1 text-xs font-mono font-bold border rounded-lg ${badgeClass}">${pVal}</span></td>
+                        <td class="py-2.5 px-3 text-teal-400 font-semibold">${row.statusFound}</td>
+                        <td class="py-2.5 px-3"><span class="px-2.5 py-1 text-xs font-mono font-bold border rounded-lg bg-teal-500/20 text-teal-300 border-teal-500/30">${pVal}</span></td>
                     `;
                     tbody.appendChild(tr);
                 });
