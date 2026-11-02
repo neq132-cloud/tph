@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.22-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.24-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.22-LOCAL</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.24-LOCAL</span>
                 </div>
             </div>
 
@@ -379,7 +379,7 @@
         }
 
         function classifyTaskType(codeStr) {
-            const upper = codeStr.toUpperCase().trim();
+            const upper = String(codeStr || '').toUpperCase().trim();
             if (upper.includes('ADJUSTMENT') || upper.includes('KOREKTA')) return 'Adjustment';
             if (upper.includes('RECEIPT') || upper.includes('PRZYJECIE') || upper.includes('PRZYJĘCIE')) return 'Receipt';
             if (upper.includes('RELOCATE') || upper.includes('RELOKACJA') || upper.includes('PRZEMIESZCZ')) return 'Relocate';
@@ -387,7 +387,7 @@
         }
 
         function classifyPutawayZone(targetStr, taskType) {
-            const up = targetStr.toUpperCase().trim();
+            const up = String(targetStr || '').toUpperCase().trim();
             if (up.startsWith('AS')) return 'SHELF';
             if (taskType === 'Relocate' || taskType === 'Adjustment') return 'RELOCATE_OTHER';
             if (up.startsWith('V1-IN') || up.startsWith('V2-IN') || up.startsWith('V1IN') || up.startsWith('V2IN')) return 'VIN';
@@ -410,7 +410,7 @@
 
         function loadDataFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem('wms_cyber_local_records_v5');
+                const savedData = localStorage.getItem('wms_cyber_local_records_v7');
                 if (savedData) {
                     const records = JSON.parse(savedData);
                     if (records && records.length > 0) {
@@ -427,7 +427,7 @@
 
         function saveDataToLocalStorage(records) {
             try {
-                localStorage.setItem('wms_cyber_local_records_v5', JSON.stringify(records));
+                localStorage.setItem('wms_cyber_local_records_v7', JSON.stringify(records));
                 showToast(`Zapisano lokalnie ${records.length} wierszy`);
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
@@ -435,7 +435,7 @@
         }
 
         function updateBaseTextarea(records) {
-            const textRows = records.map(d => `${d.code}\t${d.sku}\t${d.qty}\t${d.target}\t${d.time}\t${d.date}\t${d.user}\t${d.activity}\t${d.statusFound}\t${d.paValue}`).join('\n');
+            const textRows = records.map(d => `${d.code}\t${d.sku}\t${d.qty}\t${d.target}\t${d.time}\t${d.date}\t${d.user}\t${d.statusFound}\t${d.paValue}`).join('\n');
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
         }
@@ -554,94 +554,34 @@
                 return true;
             });
 
-            // Inteligenta rekonstrukcja wierszy z wklejonego bloku pionowego
             const records = [];
-            let currentTokens = [];
-
-            rawLines.forEach(line => {
-                const parts = line.includes('\t') ? line.split('\t') : line.split(/\s+/);
-                if (parts.length >= 3 || line.includes(':') && line.includes('-')) {
-                    if (currentTokens.length > 0) {
-                        records.push(parseTokenGroup(currentTokens));
-                        currentTokens = [];
-                    }
-                }
-                currentTokens.push(...parts);
-                if (currentTokens.length >= 15) {
-                    records.push(parseTokenGroup(currentTokens));
-                    currentTokens = [];
+            rawLines.forEach((line, idx) => {
+                const cols = line.split('\t');
+                if (cols.length >= 2) {
+                    records.push({
+                        id: idx + 1,
+                        code: cols[0] || 'PUTAWAY',
+                        sku: cols[1] || '-',
+                        qty: parseQty(cols[2] || 1),
+                        target: cols[3] || 'BULK',
+                        time: cols[4] || '08:18:39',
+                        date: cols[5] || '02/11/2026',
+                        user: cols[6] || '657MAOR',
+                        statusFound: cols[7] || 'In Progress --> Complete',
+                        paValue: cols[8] || '4500256853'
+                    });
                 }
             });
-            if (currentTokens.length > 0) {
-                records.push(parseTokenGroup(currentTokens));
-            }
 
-            // Jeśli sparsowało bezpośrednio z bazy w formacie rozdzielonym
-            if (records.length === 0 || records.every(r => !r.code)) {
-                rawLines.forEach(line => {
-                    const cols = line.split('\t');
-                    if (cols.length >= 2) {
-                        records.push({
-                            id: records.length + 1,
-                            code: cols[0] || 'PUTAWAY',
-                            sku: cols[1] || '-',
-                            qty: parseQty(cols[2] || 1),
-                            target: cols[3] || 'BULK',
-                            time: cols[4] || '00:00:00',
-                            date: cols[5] || '2026-11-02',
-                            user: cols[6] || '657MAOR',
-                            activity: cols[7] || '-',
-                            statusFound: cols[8] || 'In Progress --> Complete',
-                            paValue: cols[9] || '4500256853'
-                        });
-                    }
-                });
-            }
-
-            const validRecords = records.filter(r => r.code && r.code !== '-');
-            if (validRecords.length > 0) {
-                state.parsedData = validRecords;
-                updateBaseTextarea(validRecords);
+            if (records.length > 0) {
+                state.parsedData = records;
+                updateBaseTextarea(records);
                 document.getElementById('pasteFreshArea').value = '';
                 document.getElementById('countFresh').textContent = '0 w.';
-                saveDataToLocalStorage(validRecords);
+                saveDataToLocalStorage(records);
                 renderAll();
-                showToast(`Scalono i przetworzono ${validRecords.length} wierszy`);
+                showToast(`Przetworzono i scalono ${records.length} wierszy`);
             }
-        }
-
-        function parseTokenGroup(tokens) {
-            const joined = tokens.join(' ');
-            let code = tokens.find(t => t === 'PICK' || t === 'KITTING' || t === 'PUTAWAY' || t === 'REPACK-') || 'PUTAWAY';
-            let sku = tokens.find(t => /^\d{8,12}$/.test(t)) || tokens[1] || '-';
-            let qty = parseQty(tokens.find(t => !isNaN(t) && Number(t) > 0 && Number(t) < 10000) || 1);
-            let target = tokens.find(t => t === 'BULK' || t === 'V1' || t === 'V2' || t.startsWith('AS')) || 'BULK';
-            let time = tokens.find(t => /^\d{2}:\d{2}:\d{2}$/.test(t)) || '08:18:39';
-            let date = tokens.find(t => /^\d{2}\/\d{2}\/\d{4}$/.test(t)) || '02/11/2026';
-            let user = tokens.find(t => /^657/.test(t)) || '657MAOR';
-            
-            let paValue = tokens.find(t => t.startsWith('018') || t.startsWith('45') || t.startsWith('SHP') || /^\d{8,}$/.test(t)) || '4500256853';
-
-            const taskType = classifyTaskType(code);
-            const putawayZone = classifyPutawayZone(target, taskType);
-            let closedPAType = (paValue.startsWith('018') || paValue.startsWith('45') || paValue.startsWith('47') || paValue.startsWith('48') || paValue.startsWith('84')) ? 'PA_018' : 'PA_OTHER';
-
-            return {
-                id: Math.random(),
-                code,
-                sku,
-                qty,
-                target,
-                time,
-                date,
-                user,
-                taskType,
-                putawayZone,
-                closedPAType,
-                activity: '-',
-                statusFound: 'In Progress --> Complete',
-                paValue
-            };
         }
 
         function processMatrixData(matrix) {
@@ -656,10 +596,6 @@
                 const user = cleanRawString(r[13]) || '657MAOR';
                 const paValue = cleanRawString(r[16]) || '4500256853';
 
-                const taskType = classifyTaskType(code);
-                const putawayZone = classifyPutawayZone(target, taskType);
-                let closedPAType = (paValue.startsWith('018') || paValue.startsWith('45') || paValue.startsWith('47')) ? 'PA_018' : 'PA_OTHER';
-
                 records.push({
                     id: idx + 1,
                     code,
@@ -669,10 +605,6 @@
                     time,
                     date,
                     user,
-                    taskType,
-                    putawayZone,
-                    closedPAType,
-                    activity: '-',
                     statusFound: 'In Progress --> Complete',
                     paValue
                 });
@@ -687,23 +619,25 @@
         function getActiveFilteredData() {
             let data = [];
             if (state.activeCategory === 'Putaway') {
-                data = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY' ) || d.putawayZone === 'SHELF' || d.code.toUpperCase().includes('PICK') || d.code.toUpperCase().includes('KITTING'));
-                if (state.activeZone !== 'ALL') data = data.filter(d => d.putawayZone === state.activeZone);
+                data = state.parsedData.filter(d => {
+                    const up = String(d.code || '').toUpperCase();
+                    return up.includes('PUTAWAY') || up.includes('PICK') || up.includes('KITTING') || up.includes('REPACK');
+                });
+                if (state.activeZone !== 'ALL') data = data.filter(d => classifyPutawayZone(d.target, classifyTaskType(d.code)) === state.activeZone);
             } else if (state.activeCategory === 'Receipt') {
-                data = state.parsedData.filter(d => d.taskType === 'Receipt');
+                data = state.parsedData.filter(d => classifyTaskType(d.code) === 'Receipt');
             } else if (state.activeCategory === 'Adjustment') {
-                data = state.parsedData.filter(d => d.taskType === 'Adjustment');
+                data = state.parsedData.filter(d => classifyTaskType(d.code) === 'Adjustment');
             } else if (state.activeCategory === 'Relocate') {
-                data = state.parsedData.filter(d => d.taskType === 'Relocate');
+                data = state.parsedData.filter(d => classifyTaskType(d.code) === 'Relocate');
             } else if (state.activeCategory === 'ClosedPA') {
                 data = state.parsedData.filter(d => d.paValue !== '');
             } else if (state.activeCategory === 'Odbicia') {
-                const odbiciaRows = state.parsedData;
                 if (state.selectedOdbiciaUser) {
-                    data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
+                    data = state.parsedData.filter(d => d.user === state.selectedOdbiciaUser);
                 } else {
                     const userLatestMap = {};
-                    odbiciaRows.forEach(d => { if (d.user) userLatestMap[d.user] = d; });
+                    state.parsedData.forEach(d => { if (d.user) userLatestMap[d.user] = d; });
                     data = Object.values(userLatestMap);
                 }
             }
@@ -725,9 +659,9 @@
 
         function renderSidebarBadges() {
             const putawayCount = state.parsedData.length;
-            const relocateCount = state.parsedData.filter(d => d.taskType === 'Relocate').length;
-            const receiptCount = state.parsedData.filter(d => d.taskType === 'Receipt').length;
-            const adjustmentCount = state.parsedData.filter(d => d.taskType === 'Adjustment').length;
+            const relocateCount = state.parsedData.filter(d => classifyTaskType(d.code) === 'Relocate').length;
+            const receiptCount = state.parsedData.filter(d => classifyTaskType(d.code) === 'Receipt').length;
+            const adjustmentCount = state.parsedData.filter(d => classifyTaskType(d.code) === 'Adjustment').length;
             const closedPACount = state.parsedData.filter(d => d.paValue !== '').length;
             const uniqueWorkers = new Set(state.parsedData.map(d => d.user));
 
@@ -742,21 +676,22 @@
         function renderDashboardCards() {
             if (state.activeCategory === 'Odbicia') return;
             const putawayItems = state.parsedData;
-            const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
+            const receiptItems = state.parsedData.filter(d => classifyTaskType(d.code) === 'Receipt');
             const pa018 = state.parsedData.filter(d => d.paValue && (d.paValue.startsWith('018') || d.paValue.startsWith('45') || d.paValue.startsWith('47'))).length;
             const paOther = state.parsedData.filter(d => d.paValue && !d.paValue.startsWith('018') && !d.paValue.startsWith('45') && !d.paValue.startsWith('47')).length;
 
             let vna = 0, bulk = 0, vin = 0, shelf = 0;
             putawayItems.forEach(d => {
-                if (d.putawayZone === 'VNA') vna++;
-                else if (d.putawayZone === 'BULK') bulk++;
-                else if (d.putawayZone === 'VIN') vin++;
-                else if (d.putawayZone === 'SHELF') shelf++;
-                else bulk++; // Domyślnie do bulk
+                const zone = classifyPutawayZone(d.target, classifyTaskType(d.code));
+                if (zone === 'VNA') vna++;
+                else if (zone === 'BULK') bulk++;
+                else if (zone === 'VIN') vin++;
+                else if (zone === 'SHELF') shelf++;
+                else bulk++;
             });
 
             document.getElementById('dashVnaOps').textContent = vna;
-            document.getElementById('dashBulkOps').textContent = bulk;
+            document.getElementById('dashBulkOps').textContent = bulk || putawayItems.length;
             document.getElementById('dashVinOps').textContent = vin;
             document.getElementById('dashShelfOps').textContent = shelf;
             document.getElementById('dashPutawayRelocateSum').textContent = putawayItems.length;
@@ -820,19 +755,9 @@
             movements.forEach((m, i) => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-800/40 transition';
-                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${i+1}</td><td class="py-2 px-3 text-slate-400">${m.date} ${m.time}</td><td class="py-2 px-3 text-slate-300">${m.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${m.putawayZone}</span></td><td class="py-2 px-3 text-emerald-400">${m.sku}</td><td class="py-2 px-3 text-slate-200">${m.target}</td>`;
+                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${i+1}</td><td class="py-2 px-3 text-slate-400">${m.date} ${m.time}</td><td class="py-2 px-3 text-slate-300">${m.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${classifyPutawayZone(m.target, classifyTaskType(m.code))}</span></td><td class="py-2 px-3 text-emerald-400">${m.sku}</td><td class="py-2 px-3 text-slate-200">${m.target}</td>`;
                 tbody.appendChild(tr);
             });
-        }
-
-        function sortBy(field) {
-            if (state.sortField === field) {
-                state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
-            } else {
-                state.sortField = field;
-                state.sortDir = 'asc';
-            }
-            renderDetailsTable();
         }
 
         function renderDetailsTable() {
@@ -906,9 +831,10 @@
                 }
 
                 pageData.forEach((row, i) => {
+                    const zone = classifyPutawayZone(row.target, classifyTaskType(row.code));
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition';
-                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${row.putawayZone || '-'}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku || '-'}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user || '-'}</td>`;
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${zone}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku || '-'}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user || '-'}</td>`;
                     tbody.appendChild(tr);
                 });
             }
@@ -927,8 +853,8 @@
             document.getElementById('exportCsvBtn').addEventListener('click', () => {
                 const data = getActiveFilteredData();
                 if (!data.length) return;
-                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;Activity\n';
-                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${r.putawayZone || ''}";"${r.sku || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.activity || ''}"\n`);
+                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;Status\n';
+                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${classifyPutawayZone(r.target, classifyTaskType(r.code))}";"${r.sku || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.paValue || ''}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_EXPORT_${new Date().toISOString().slice(0,10)}.csv`; a.click();
