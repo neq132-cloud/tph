@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.10-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.11-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.10-LOCAL</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.11-LOCAL</span>
                 </div>
             </div>
 
@@ -533,7 +533,7 @@
             
             document.getElementById('pasteFreshArea').addEventListener('input', (e) => {
                 const text = e.target.value;
-                const lines = text.trim() ? text.split('\n').length : 0;
+                const lines = text.trim() ? text.split('\n').filter(l => l.trim().length > 0).length : 0;
                 document.getElementById('countFresh').textContent = `${lines} w.`;
             });
         }
@@ -543,17 +543,29 @@
             const freshText = document.getElementById('pasteFreshArea').value;
 
             let combinedMatrix = [];
-            if (baseText.trim()) {
-                const lines = baseText.split('\n').map(l => l.split('\t'));
-                combinedMatrix.push(...lines);
-            }
-            if (freshText.trim()) {
-                const lines = freshText.split('\n').map(l => l.split('\t'));
-                const startIdx = cleanRawString(lines[0][0]).toUpperCase().includes('CODE') ? 1 : 0;
-                combinedMatrix.push(...lines.slice(startIdx));
-            }
-            if (combinedMatrix.length) {
-                processMatrixData(combinedMatrix);
+            
+            // Zbieramy wiersze z Bazy Głównej oraz Świeżych danych i eliminujemy duplikaty wklejeń na poziomie czystego tekstu
+            const rawLines = [];
+            if (baseText.trim()) rawLines.push(...baseText.split('\n'));
+            if (freshText.trim()) rawLines.push(...freshText.split('\n'));
+
+            const uniqueLineMap = new Set();
+            const cleanMatrixRows = [];
+
+            rawLines.forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+                // Ignorujemy nagłówki powtarzające się w środku wklejania
+                if (trimmed.toUpperCase().includes('CODE') && cleanMatrixRows.length > 0) return;
+                
+                if (!uniqueLineMap.has(trimmed)) {
+                    uniqueLineMap.add(trimmed);
+                    cleanMatrixRows.push(line.split('\t'));
+                }
+            });
+
+            if (cleanMatrixRows.length) {
+                processMatrixData(cleanMatrixRows);
             }
         }
 
@@ -587,7 +599,7 @@
 
                 if (!code && !sku && !user && !activity && !isCompletePA) continue;
                 
-                // Klucz deduplikacji uwzględniający kod, SKU, ilość, lokalizację docelową, czas, datę, usera oraz numer PA
+                // Rygorystyczny klucz unikający zdublowania operacji
                 const key = `${code}|${sku}|${qty}|${target}|${time}|${date}|${user}|${paValue}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
