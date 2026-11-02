@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.24-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.21-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="check-circle" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Zaktualizowano pomyślnie</div>
+            <div class="font-bold text-white">Przywrócono wersję v0.5.21</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.24-LOCAL</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.21-LOCAL</span>
                 </div>
             </div>
 
@@ -315,11 +315,13 @@
 
     <script>
         const state = {
+            rawRows: [],
             parsedData: [],
             activeCategory: 'Putaway',
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
+            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, activity: -1, statusCol: 14, paCol: 16 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
             sortDir: 'desc'
@@ -379,7 +381,7 @@
         }
 
         function classifyTaskType(codeStr) {
-            const upper = String(codeStr || '').toUpperCase().trim();
+            const upper = codeStr.toUpperCase().trim();
             if (upper.includes('ADJUSTMENT') || upper.includes('KOREKTA')) return 'Adjustment';
             if (upper.includes('RECEIPT') || upper.includes('PRZYJECIE') || upper.includes('PRZYJĘCIE')) return 'Receipt';
             if (upper.includes('RELOCATE') || upper.includes('RELOKACJA') || upper.includes('PRZEMIESZCZ')) return 'Relocate';
@@ -387,7 +389,7 @@
         }
 
         function classifyPutawayZone(targetStr, taskType) {
-            const up = String(targetStr || '').toUpperCase().trim();
+            const up = targetStr.toUpperCase().trim();
             if (up.startsWith('AS')) return 'SHELF';
             if (taskType === 'Relocate' || taskType === 'Adjustment') return 'RELOCATE_OTHER';
             if (up.startsWith('V1-IN') || up.startsWith('V2-IN') || up.startsWith('V1IN') || up.startsWith('V2IN')) return 'VIN';
@@ -405,21 +407,28 @@
             initExport();
             initPresenceModule();
 
+            // Czyszczenie starej pamięci wyższych wersji i start od v0.5.21
+            localStorage.removeItem('wms_cyber_local_records_v5');
+            localStorage.removeItem('wms_cyber_local_records_v6');
+            localStorage.removeItem('wms_cyber_local_records_v7');
+
             loadDataFromLocalStorage();
         });
 
         function loadDataFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem('wms_cyber_local_records_v7');
+                const savedData = localStorage.getItem('wms_cyber_local_records');
                 if (savedData) {
                     const records = JSON.parse(savedData);
                     if (records && records.length > 0) {
                         state.parsedData = records;
-                        updateBaseTextarea(records);
-                        renderAll();
-                        return;
+                        const textRows = records.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity || ''}`).join('\n');
+                        document.getElementById('pasteBaseArea').value = textRows;
+                        document.getElementById('countBase').textContent = `${records.length} w.`;
                     }
                 }
+                showToast(`Wczytano czystą bazę v0.5.21`);
+                renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
             }
@@ -427,17 +436,11 @@
 
         function saveDataToLocalStorage(records) {
             try {
-                localStorage.setItem('wms_cyber_local_records_v7', JSON.stringify(records));
+                localStorage.setItem('wms_cyber_local_records', JSON.stringify(records));
                 showToast(`Zapisano lokalnie ${records.length} wierszy`);
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
             }
-        }
-
-        function updateBaseTextarea(records) {
-            const textRows = records.map(d => `${d.code}\t${d.sku}\t${d.qty}\t${d.target}\t${d.time}\t${d.date}\t${d.user}\t${d.statusFound}\t${d.paValue}`).join('\n');
-            document.getElementById('pasteBaseArea').value = textRows;
-            document.getElementById('countBase').textContent = `${records.length} w.`;
         }
 
         function initPresenceModule() {
@@ -547,71 +550,134 @@
             const combinedRaw = (baseText.trim() + '\n' + freshText.trim()).trim();
             if (!combinedRaw) return;
 
-            const rawLines = combinedRaw.split('\n').map(l => l.trim()).filter(l => {
+            const lines = combinedRaw.split('\n').map(l => l.trim()).filter(l => {
                 if (!l) return false;
                 const up = l.toUpperCase();
                 if (up.includes('PREADV STATUS') || up.includes('ZAMKNIĘTE PRE-ADVICE') || up.includes('SZCZEGÓŁOWA TABELA')) return false;
                 return true;
             });
 
-            const records = [];
-            rawLines.forEach((line, idx) => {
-                const cols = line.split('\t');
-                if (cols.length >= 2) {
-                    records.push({
-                        id: idx + 1,
-                        code: cols[0] || 'PUTAWAY',
-                        sku: cols[1] || '-',
-                        qty: parseQty(cols[2] || 1),
-                        target: cols[3] || 'BULK',
-                        time: cols[4] || '08:18:39',
-                        date: cols[5] || '02/11/2026',
-                        user: cols[6] || '657MAOR',
-                        statusFound: cols[7] || 'In Progress --> Complete',
-                        paValue: cols[8] || '4500256853'
-                    });
-                }
-            });
-
-            if (records.length > 0) {
-                state.parsedData = records;
-                updateBaseTextarea(records);
-                document.getElementById('pasteFreshArea').value = '';
-                document.getElementById('countFresh').textContent = '0 w.';
-                saveDataToLocalStorage(records);
-                renderAll();
-                showToast(`Przetworzono i scalono ${records.length} wierszy`);
-            }
+            const matrixRows = lines.map(l => l.includes('\t') ? l.split('\t') : l.split(/\s+/));
+            processMatrixData(matrixRows);
         }
 
         function processMatrixData(matrix) {
+            state.rawRows = matrix.map(r => { const row = [...r]; while(row.length < 45) row.push(''); return row; });
+            
+            if (state.rawRows.length > 0) {
+                const headerRow = state.rawRows[0];
+                let actIdx = -1, statusIdx = -1, paIdx = -1;
+                for (let c = 0; c < headerRow.length; c++) {
+                    const hText = String(headerRow[c]).toUpperCase();
+                    if (hText.includes('AQ') || hText.includes('ACTIVITY') || hText.includes('AKTYWNOŚĆ') || hText.includes('AKTYWNOSC')) actIdx = c;
+                    if (hText.includes('PREADV') || hText.includes('STATUS')) statusIdx = c;
+                    if (hText.includes('018') || hText.includes('NUMER') || hText.includes('DOKUMENT')) paIdx = c;
+                }
+                if (actIdx !== -1) state.colMap.activity = actIdx;
+                if (statusIdx !== -1) state.colMap.statusCol = statusIdx;
+                if (paIdx !== -1) state.colMap.paCol = paIdx;
+            }
+
+            parseDataset();
+        }
+
+        function parseDataset() {
+            if (!state.rawRows.length) return;
             const records = [];
-            matrix.forEach((r, idx) => {
-                const code = cleanRawString(r[0]) || 'PUTAWAY';
-                const sku = cleanRawString(r[1]) || '-';
-                const qty = parseQty(r[6] || 1);
-                const target = cleanRawString(r[8]) || 'BULK';
-                const time = cleanRawString(r[10]) || '08:18:39';
-                const date = cleanRawString(r[12]) || '02/11/2026';
-                const user = cleanRawString(r[13]) || '657MAOR';
-                const paValue = cleanRawString(r[16]) || '4500256853';
+            const seen = new Set();
 
-                records.push({
-                    id: idx + 1,
-                    code,
-                    sku,
-                    qty,
-                    target,
-                    time,
-                    date,
-                    user,
-                    statusFound: 'In Progress --> Complete',
-                    paValue
+            for (let i = 0; i < state.rawRows.length; i++) {
+                const r = state.rawRows[i];
+                const fullLineText = r.join(' ');
+                const fullUp = fullLineText.toUpperCase();
+                
+                if (fullUp.includes('CODE') && i === 0) continue;
+                if (fullUp.includes('PREADV STATUS') || fullUp.includes('ZAMKNIĘTE PRE-ADVICE')) continue;
+
+                const code = cleanRawString(r[state.colMap.code]) || (r.find(x => x.includes('PUTAWAY') || x.includes('JOB') || x.includes('RECEIPT')) || 'PUTAWAY');
+                const sku = cleanRawString(r[state.colMap.sku]) || r[1] || '-';
+                const qty = parseQty(r[state.colMap.qty] || r[6] || 1);
+                const target = cleanRawString(r[state.colMap.target]) || r[8] || 'BULK';
+                const time = cleanRawString(r[state.colMap.time]) || '00:00:00';
+                const date = cleanRawString(r[state.colMap.date]) || '2026-01-01';
+                let user = cleanRawString(r[state.colMap.user]) || r[13] || 'BRAK_USERA';
+                
+                let activity = '';
+                if (state.colMap.activity >= 0 && r[state.colMap.activity]) {
+                    activity = cleanRawString(r[state.colMap.activity]);
+                }
+                if (!activity || activity === '-') {
+                    for (let c = 0; c < r.length; c++) {
+                        const val = cleanRawString(r[c]);
+                        if (val.toUpperCase().startsWith('AQ') || (val.length > 3 && !isNaN(val))) {
+                            if (val.toUpperCase().includes('AQ') || Number(val) > 1000) {
+                                activity = val;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                let statusFound = cleanRawString(r[14]) || cleanRawString(r[state.colMap.statusCol]) || 'In Progress --> Complete';
+                let paValue = cleanRawString(r[16]) || cleanRawString(r[state.colMap.paCol]) || '';
+
+                if (!paValue) {
+                    const foundNum = r.find(x => x && (x.startsWith('018') || x.startsWith('45') || x.startsWith('47') || x.startsWith('48') || x.startsWith('84') || /^\d{8,}/.test(x)));
+                    if (foundNum) paValue = foundNum;
+                }
+
+                if (!paValue) {
+                    const potentialNum = r.find(x => x && /^\d+$/.test(x) && x.length >= 5);
+                    if (potentialNum) paValue = potentialNum;
+                }
+
+                let upperStatus = statusFound.toUpperCase();
+                let isCompletePA = paValue !== '' && (upperStatus.includes('IN PROGRESS') || upperStatus.includes('COMPLETE') || upperStatus.includes('ZAMKNIĘTY') || true);
+
+                const key = `${code}|${sku}|${qty}|${target}|${time}|${date}|${user}|${paValue}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+
+                const taskType = classifyTaskType(code);
+                const putawayZone = classifyPutawayZone(target, taskType);
+                
+                let closedPAType = 'NONE';
+                if (isCompletePA && paValue) {
+                    if (paValue.startsWith('018') || paValue.startsWith('45') || paValue.startsWith('47') || paValue.startsWith('48') || paValue.startsWith('84')) {
+                        closedPAType = 'PA_018';
+                    } else {
+                        closedPAType = 'PA_OTHER';
+                    }
+                }
+
+                records.push({ 
+                    id: records.length + 1, 
+                    code: code, 
+                    sku, 
+                    qty, 
+                    target, 
+                    time, 
+                    date, 
+                    user, 
+                    taskType, 
+                    putawayZone, 
+                    closedPAType, 
+                    activity: activity || '-', 
+                    paValue,
+                    statusFound: statusFound || 'In Progress --> Complete'
                 });
-            });
-
+            }
             state.parsedData = records;
-            updateBaseTextarea(records);
+            state.selectedUser = null;
+            state.selectedOdbiciaUser = null;
+            
+            const textRows = records.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity || ''}`).join('\n');
+            document.getElementById('pasteBaseArea').value = textRows;
+            document.getElementById('countBase').textContent = `${records.length} w.`;
+            
+            document.getElementById('pasteFreshArea').value = '';
+            document.getElementById('countFresh').textContent = '0 w.';
+
             saveDataToLocalStorage(records);
             renderAll();
         }
@@ -619,25 +685,38 @@
         function getActiveFilteredData() {
             let data = [];
             if (state.activeCategory === 'Putaway') {
-                data = state.parsedData.filter(d => {
-                    const up = String(d.code || '').toUpperCase();
-                    return up.includes('PUTAWAY') || up.includes('PICK') || up.includes('KITTING') || up.includes('REPACK');
-                });
-                if (state.activeZone !== 'ALL') data = data.filter(d => classifyPutawayZone(d.target, classifyTaskType(d.code)) === state.activeZone);
+                data = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
+                if (state.activeZone !== 'ALL') data = data.filter(d => d.putawayZone === state.activeZone);
             } else if (state.activeCategory === 'Receipt') {
-                data = state.parsedData.filter(d => classifyTaskType(d.code) === 'Receipt');
+                data = state.parsedData.filter(d => d.taskType === 'Receipt');
             } else if (state.activeCategory === 'Adjustment') {
-                data = state.parsedData.filter(d => classifyTaskType(d.code) === 'Adjustment');
+                data = state.parsedData.filter(d => d.taskType === 'Adjustment');
             } else if (state.activeCategory === 'Relocate') {
-                data = state.parsedData.filter(d => classifyTaskType(d.code) === 'Relocate');
+                data = state.parsedData.filter(d => d.taskType === 'Relocate');
             } else if (state.activeCategory === 'ClosedPA') {
-                data = state.parsedData.filter(d => d.paValue !== '');
+                data = state.parsedData.filter(d => d.closedPAType !== 'NONE' || d.paValue !== '');
             } else if (state.activeCategory === 'Odbicia') {
+                const odbiciaRows = state.parsedData.filter(d => {
+                    const up = d.code.toUpperCase();
+                    return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('USER') || up.includes('PLTTI');
+                });
+
                 if (state.selectedOdbiciaUser) {
-                    data = state.parsedData.filter(d => d.user === state.selectedOdbiciaUser);
+                    data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
                 } else {
+                    const sortedOdbicia = [...odbiciaRows].sort((a, b) => {
+                        const tA = `${a.date || ''} ${a.time || ''}`.trim();
+                        const tB = `${b.date || ''} ${b.time || ''}`.trim();
+                        return tA.localeCompare(tB);
+                    });
+
                     const userLatestMap = {};
-                    state.parsedData.forEach(d => { if (d.user) userLatestMap[d.user] = d; });
+                    sortedOdbicia.forEach(d => {
+                        if (d.user && d.user !== 'BRAK_USERA') {
+                            userLatestMap[d.user] = d;
+                        }
+                    });
+                    
                     data = Object.values(userLatestMap);
                 }
             }
@@ -658,52 +737,59 @@
         }
 
         function renderSidebarBadges() {
-            const putawayCount = state.parsedData.length;
-            const relocateCount = state.parsedData.filter(d => classifyTaskType(d.code) === 'Relocate').length;
-            const receiptCount = state.parsedData.filter(d => classifyTaskType(d.code) === 'Receipt').length;
-            const adjustmentCount = state.parsedData.filter(d => classifyTaskType(d.code) === 'Adjustment').length;
-            const closedPACount = state.parsedData.filter(d => d.paValue !== '').length;
-            const uniqueWorkers = new Set(state.parsedData.map(d => d.user));
+            const putawayCount = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF').length;
+            const relocateCount = state.parsedData.filter(d => d.taskType === 'Relocate').length;
+            const receiptCount = state.parsedData.filter(d => d.taskType === 'Receipt').length;
+            const adjustmentCount = state.parsedData.filter(d => d.taskType === 'Adjustment').length;
+            const closedPACount = state.parsedData.filter(d => d.closedPAType !== 'NONE' || d.paValue !== '').length;
+            
+            const odbiciaRows = state.parsedData.filter(d => {
+                const up = d.code.toUpperCase();
+                return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('PLTTI');
+            });
+            const uniqueWorkers = new Set(odbiciaRows.map(d => d.user).filter(u => u && u !== 'BRAK_USERA'));
 
             document.getElementById('badgePutaway').textContent = putawayCount;
             document.getElementById('badgeRelocate').textContent = relocateCount;
             document.getElementById('badgeReceipt').textContent = receiptCount;
             document.getElementById('badgeAdjustment').textContent = adjustmentCount;
             document.getElementById('badgeClosedPA').textContent = closedPACount;
-            document.getElementById('badgeOdbicia').textContent = uniqueWorkers.size;
+            document.getElementById('badgeOdbicia').textContent = uniqueWorkers.size || state.parsedData.length;
         }
 
         function renderDashboardCards() {
             if (state.activeCategory === 'Odbicia') return;
-            const putawayItems = state.parsedData;
-            const receiptItems = state.parsedData.filter(d => classifyTaskType(d.code) === 'Receipt');
-            const pa018 = state.parsedData.filter(d => d.paValue && (d.paValue.startsWith('018') || d.paValue.startsWith('45') || d.paValue.startsWith('47'))).length;
-            const paOther = state.parsedData.filter(d => d.paValue && !d.paValue.startsWith('018') && !d.paValue.startsWith('45') && !d.paValue.startsWith('47')).length;
+            const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
+            const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
+            const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
+            const pa018 = state.parsedData.filter(d => d.closedPAType === 'PA_018' || (d.paValue && d.paValue.startsWith('018'))).length;
+            const paOther = state.parsedData.filter(d => (d.closedPAType === 'PA_OTHER' || d.closedPAType === 'NONE') && d.paValue && !d.paValue.startsWith('018')).length;
 
             let vna = 0, bulk = 0, vin = 0, shelf = 0;
             putawayItems.forEach(d => {
-                const zone = classifyPutawayZone(d.target, classifyTaskType(d.code));
-                if (zone === 'VNA') vna++;
-                else if (zone === 'BULK') bulk++;
-                else if (zone === 'VIN') vin++;
-                else if (zone === 'SHELF') shelf++;
-                else bulk++;
+                if (d.putawayZone === 'VNA') vna++;
+                else if (d.putawayZone === 'BULK') bulk++;
+                else if (d.putawayZone === 'VIN') vin++;
+                else if (d.putawayZone === 'SHELF') shelf++;
             });
 
+            const purePutaway = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY')).length;
+            const totalSum = purePutaway + relocateItems.length;
+
             document.getElementById('dashVnaOps').textContent = vna;
-            document.getElementById('dashBulkOps').textContent = bulk || putawayItems.length;
+            document.getElementById('dashBulkOps').textContent = bulk;
             document.getElementById('dashVinOps').textContent = vin;
             document.getElementById('dashShelfOps').textContent = shelf;
-            document.getElementById('dashPutawayRelocateSum').textContent = putawayItems.length;
-            document.getElementById('dashReceiptOps').textContent = receiptItems.length || 50;
-            document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((s, d) => s + d.qty, 0) || 6684;
-            document.getElementById('dashPa018Ops').textContent = pa018 || 23;
-            document.getElementById('dashPaOtherOps').textContent = paOther || 18;
+            document.getElementById('dashPutawayRelocateSum').textContent = totalSum;
+            document.getElementById('dashReceiptOps').textContent = receiptItems.length;
+            document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((s, d) => s + d.qty, 0);
+            document.getElementById('dashPa018Ops').textContent = pa018;
+            document.getElementById('dashPaOtherOps').textContent = paOther;
         }
 
         function renderWorkers() {
             if (state.activeCategory === 'Odbicia') return;
-            const activeData = state.parsedData;
+            const activeData = getActiveFilteredData();
             const userMap = {};
 
             activeData.forEach(d => userMap[d.user] = (userMap[d.user] || 0) + 1);
@@ -751,13 +837,23 @@
                 return;
             }
             nameEl.textContent = state.selectedUser;
-            const movements = state.parsedData.filter(d => d.user === state.selectedUser);
+            const movements = getActiveFilteredData().filter(d => d.user === state.selectedUser);
             movements.forEach((m, i) => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-800/40 transition';
-                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${i+1}</td><td class="py-2 px-3 text-slate-400">${m.date} ${m.time}</td><td class="py-2 px-3 text-slate-300">${m.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${classifyPutawayZone(m.target, classifyTaskType(m.code))}</span></td><td class="py-2 px-3 text-emerald-400">${m.sku}</td><td class="py-2 px-3 text-slate-200">${m.target}</td>`;
+                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${i+1}</td><td class="py-2 px-3 text-slate-400">${m.date} ${m.time}</td><td class="py-2 px-3 text-slate-300">${m.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${m.putawayZone}</span></td><td class="py-2 px-3 text-emerald-400">${m.sku}</td><td class="py-2 px-3 text-slate-200">${m.target}</td>`;
                 tbody.appendChild(tr);
             });
+        }
+
+        function sortBy(field) {
+            if (state.sortField === field) {
+                state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                state.sortField = field;
+                state.sortDir = 'asc';
+            }
+            renderDetailsTable();
         }
 
         function renderDetailsTable() {
@@ -770,6 +866,27 @@
             if (state.selectedUser && state.activeCategory !== 'Odbicia') data = data.filter(d => d.user === state.selectedUser);
 
             const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+
+            filtered.sort((a, b) => {
+                let valA, valB;
+                if (state.sortField === 'date') {
+                    valA = `${a.date || ''} ${a.time || ''}`;
+                    valB = `${b.date || ''} ${b.time || ''}`;
+                } else if (state.sortField === 'code') {
+                    valA = a.code || ''; valB = b.code || '';
+                } else if (state.sortField === 'user') {
+                    valA = a.user || ''; valB = b.user || '';
+                } else if (state.sortField === 'qty') {
+                    valA = a.qty || 0; valB = b.qty || 0;
+                } else {
+                    valA = `${a.date || ''} ${a.time || ''}`;
+                    valB = `${b.date || ''} ${b.time || ''}`;
+                }
+
+                if (valA < valB) return state.sortDir === 'asc' ? -1 : 1;
+                if (valA > valB) return state.sortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
 
             const total = filtered.length;
             const { page, pageSize } = state.pagination;
@@ -809,19 +926,68 @@
                     tbody.appendChild(tr);
                 });
 
+            } else if (state.activeCategory === 'Odbicia') {
+                if (state.selectedOdbiciaUser) {
+                    titleEl.innerHTML = `Historia odbić pracownika: <strong class="text-cyan-400">${state.selectedOdbiciaUser}</strong> <button onclick="state.selectedOdbiciaUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-xs rounded text-slate-300">Powrót do listy</button>`;
+                } else {
+                    titleEl.innerHTML = `Aktualny Stan Wbić Pracowników <span class="ml-2 px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded text-[10px] font-mono">${total} osób</span>`;
+                }
+
+                thead.innerHTML = `
+                    <tr>
+                        <th class="py-3 px-3">Lp.</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('date')">Data / Czas ${state.sortField==='date'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('code')">Zdarzenie ${state.sortField==='code'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3">Aktywność (AQ)</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('user')">Pracownik ${state.sortField==='user'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                    </tr>`;
+                
+                if (!pageData.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych o odbiciach.</td></tr>';
+                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    return;
+                }
+
+                pageData.forEach((row, i) => {
+                    const isStart = (row.code || '').toUpperCase().includes('START') || !row.code.toUpperCase().includes('END');
+                    let badge = isStart 
+                        ? '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">AKTYWNY</span>'
+                        : '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded font-bold">ZAMKNIĘTY</span>';
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
+                    
+                    if (!state.selectedOdbiciaUser) {
+                        tr.title = `Kliknij, aby zobaczyć szczegóły użytkownika ${row.user}`;
+                        tr.onclick = (e) => {
+                            e.stopPropagation();
+                            state.selectedOdbiciaUser = row.user;
+                            renderDetailsTable();
+                        };
+                    }
+
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
+                        <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
+                        <td class="py-2.5 px-3">${badge}</td>
+                        <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || '-'}</td>
+                        <td class="py-2.5 px-3 text-cyan-300 font-semibold underline">${row.user || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
             } else {
                 titleEl.innerHTML = `Szczegółowa Tabela Operacji <span class="ml-2 px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded text-[10px] font-mono">${total} ops</span>`;
                 
                 thead.innerHTML = `
                     <tr>
                         <th class="py-3 px-3">Lp.</th>
-                        <th class="py-3 px-3">Data / Czas</th>
-                        <th class="py-3 px-3">Kod</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('date')">Data / Czas ${state.sortField==='date'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('code')">Kod ${state.sortField==='code'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
                         <th class="py-3 px-3">Typ / Strefa</th>
                         <th class="py-3 px-3">SKU</th>
-                        <th class="py-3 px-3 text-right">Sztuk</th>
+                        <th class="py-3 px-3 text-right cursor-pointer hover:text-cyan-400" onclick="sortBy('qty')">Sztuk ${state.sortField==='qty'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
                         <th class="py-3 px-3">Docelowa</th>
-                        <th class="py-3 px-3">Pracownik</th>
+                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('user')">Pracownik ${state.sortField==='user'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
                     </tr>`;
 
                 if (!pageData.length) {
@@ -831,10 +997,9 @@
                 }
 
                 pageData.forEach((row, i) => {
-                    const zone = classifyPutawayZone(row.target, classifyTaskType(row.code));
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition';
-                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${zone}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku || '-'}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user || '-'}</td>`;
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${row.putawayZone || '-'}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku || '-'}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user || '-'}</td>`;
                     tbody.appendChild(tr);
                 });
             }
@@ -853,8 +1018,8 @@
             document.getElementById('exportCsvBtn').addEventListener('click', () => {
                 const data = getActiveFilteredData();
                 if (!data.length) return;
-                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;Status\n';
-                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${classifyPutawayZone(r.target, classifyTaskType(r.code))}";"${r.sku || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.paValue || ''}"\n`);
+                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;Activity\n';
+                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${r.putawayZone || ''}";"${r.sku || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.activity || ''}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_EXPORT_${new Date().toISOString().slice(0,10)}.csv`; a.click();
