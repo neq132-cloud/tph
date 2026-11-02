@@ -412,8 +412,10 @@
             const rawClosed = state.parsedData.filter(d => d.isClosedPAValid && d.paValue);
             const paMap = {};
             rawClosed.forEach(r => {
-                if (!paMap[r.paValue]) {
-                    paMap[r.paValue] = {
+                // Kluczem unikalności i sumowania jest wyłącznie numer PA/dokumentu
+                const uniqueKey = r.paValue;
+                if (!paMap[uniqueKey]) {
+                    paMap[uniqueKey] = {
                         paValue: r.paValue,
                         paType: r.paType,
                         statusFound: r.statusVal || r.preAdvStatusCol || 'In Progress --> Complete',
@@ -423,8 +425,8 @@
                         totalQty: r.qty || 0
                     };
                 } else {
-                    paMap[r.paValue].lineCount++;
-                    paMap[r.paValue].totalQty += (r.qty || 0);
+                    paMap[uniqueKey].lineCount++;
+                    paMap[uniqueKey].totalQty += (r.qty || 0);
                 }
             });
             return Object.values(paMap);
