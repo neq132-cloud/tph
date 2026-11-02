@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.25-TEST</title>
+    <title>WMS Cyberpunk Hub v0.5.26-TEST</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja Testowa v0.5.25-TEST</div>
+            <div class="font-bold text-white">Wersja Testowa v0.5.26-TEST</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.25-TEST</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.26-TEST</span>
                 </div>
             </div>
 
@@ -144,7 +144,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">Zoptymalizowane PA & Odbicia (v0.5.25)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">Mapowanie: Q (PA) & AQ (Aktywność)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -392,7 +392,6 @@
             return 'BULK';
         }
 
-        // Pomocnicza funkcja do pobierania unikalnych dokumentów Zamkniętych PA
         function getUniqueClosedPAs() {
             const rawClosed = state.parsedData.filter(d => d.isClosedPAValid && d.paValue);
             const paMap = {};
@@ -429,17 +428,17 @@
 
         function loadDataFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem('wms_cyber_test_records_v25');
+                const savedData = localStorage.getItem('wms_cyber_test_records_v26');
                 if (savedData) {
                     const records = JSON.parse(savedData);
                     if (records && records.length > 0) {
                         state.parsedData = records;
-                        const textRows = records.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusFound}\t\t${d.paValue}`).join('\n');
+                        const textRows = records.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusFound}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}`).join('\n');
                         document.getElementById('pasteBaseArea').value = textRows;
                         document.getElementById('countBase').textContent = `${records.length} w.`;
                     }
                 }
-                showToast(`Wczytano wersję v0.5.25-TEST`);
+                showToast(`Wczytano wersję v0.5.26-TEST`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -448,7 +447,7 @@
 
         function saveDataToLocalStorage(records) {
             try {
-                localStorage.setItem('wms_cyber_test_records_v25', JSON.stringify(records));
+                localStorage.setItem('wms_cyber_test_records_v26', JSON.stringify(records));
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
             }
@@ -592,6 +591,7 @@
                 }
                 if (!statusFound) statusFound = 'In Progress --> Complete';
 
+                // Kolumna Q (index 16) - Ściśle Numer PA
                 let paValue = cleanRawString(r[16]) || '';
                 if (!paValue || !/^\d+$/.test(paValue)) {
                     const foundPa = r.find(c => {
@@ -599,6 +599,12 @@
                         return s.startsWith('018') || s.startsWith('45') || s.startsWith('47') || s.startsWith('48') || s.startsWith('0084');
                     });
                     if (foundPa) paValue = foundPa;
+                }
+
+                // Kolumna AQ (index 42) - Ściśle Aktywność
+                let activity = cleanRawString(r[42]) || '';
+                if (!activity) {
+                    activity = target; // Fallback do strefy, jeśli AQ jest pusta
                 }
 
                 const taskType = classifyTaskType(code);
@@ -632,7 +638,8 @@
                     putawayZone,
                     isClosedPAValid,
                     paValue,
-                    statusFound
+                    statusFound,
+                    activity
                 });
             });
 
@@ -640,7 +647,7 @@
             state.selectedUser = null;
             state.selectedOdbiciaUser = null;
 
-            const textRows = records.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusFound}\t\t${d.paValue}`).join('\n');
+            const textRows = records.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusFound}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}`).join('\n');
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
             document.getElementById('pasteFreshArea').value = '';
@@ -648,7 +655,7 @@
 
             saveDataToLocalStorage(records);
             renderAll();
-            showToast(`Przetworzono ${records.length} wierszy`);
+            showToast(`Przetworzono ${records.length} wierszy (Q & AQ)`);
         }
 
         function getActiveFilteredData() {
@@ -710,7 +717,6 @@
             const receiptCount = state.parsedData.filter(d => d.taskType === 'Receipt').length;
             const adjustmentCount = state.parsedData.filter(d => d.taskType === 'Adjustment').length;
             
-            // Agregacja unikalnych zamkniętych PA
             const closedPACount = getUniqueClosedPAs().length;
             
             const odbiciaRows = state.parsedData.filter(d => {
@@ -830,19 +836,19 @@
                 const start = (page - 1) * pageSize;
                 const pageData = filtered.slice(start, start + pageSize);
 
-                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) - Unikalne Dokumenty <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">${total} PA</span>`;
+                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) - Unikalne Dokumenty z Kolumny Q <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">${total} PA</span>`;
                 
                 thead.innerHTML = `
                     <tr>
                         <th class="py-3 px-3">Lp.</th>
                         <th class="py-3 px-3">Data / Czas</th>
                         <th class="py-3 px-3">PreAdv Status</th>
-                        <th class="py-3 px-3">Numer PA / Dokumentu</th>
+                        <th class="py-3 px-3">Numer PA / Dokumentu (Kol. Q)</th>
                         <th class="py-3 px-3 text-right">Pozycji / Sztuk</th>
                     </tr>`;
 
                 if (!pageData.length) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak zamkniętych PA spełniających warunki (In Progress --> Complete oraz prefiks 018, 45, 47, 48, 0084).</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak zamkniętych PA spełniających warunki (In Progress --> Complete oraz numer PA w kolumnie Q).</td></tr>';
                     document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                     return;
                 }
@@ -885,7 +891,7 @@
                         <th class="py-3 px-3">Lp.</th>
                         <th class="py-3 px-3">Data / Czas</th>
                         <th class="py-3 px-3">Zdarzenie / Status</th>
-                        <th class="py-3 px-3">Aktywność</th>
+                        <th class="py-3 px-3">Aktywność (Kol. AQ)</th>
                         <th class="py-3 px-3">Pracownik</th>
                     </tr>`;
                 
@@ -918,7 +924,7 @@
                         <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
                         <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
                         <td class="py-2.5 px-3">${badge} <span class="ml-2 text-[11px] text-slate-400">(${row.code})</span></td>
-                        <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.target || row.activity || '-'}</td>
+                        <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || row.target || '-'}</td>
                         <td class="py-2.5 px-3 text-cyan-300 font-semibold underline">${row.user || '-'}</td>
                     `;
                     tbody.appendChild(tr);
@@ -981,8 +987,8 @@
             document.getElementById('exportCsvBtn').addEventListener('click', () => {
                 const data = getActiveFilteredData();
                 if (!data.length) return;
-                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;PA\n';
-                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${r.putawayZone || ''}";"${r.sku || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.paValue || ''}"\n`);
+                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;PA;Aktywnosc\n';
+                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${r.putawayZone || ''}";"${r.sku || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.paValue || ''}";"${r.activity || ''}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_TEST_EXPORT_${new Date().toISOString().slice(0,10)}.csv`; a.click();
