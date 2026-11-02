@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.5-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.6-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.5-LOCAL</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.6-LOCAL</span>
                 </div>
             </div>
 
@@ -584,7 +584,8 @@
                 let paValue = cleanRawString(r[16]);
 
                 let upperStatus = statusFound.toUpperCase();
-                let isCompletePA = paValue !== '' && (upperStatus.includes('COMPLETE') || upperStatus.includes('-->') || upperStatus.includes('ZAMKNIĘTE') || upperStatus.includes('CLOSED'));
+                // Poprawiony warunek: wyłapuje tylko statusy zakończone zawierające "COMPLETE" (np. "In Progress --> Complete")
+                let isCompletePA = paValue !== '' && upperStatus.includes('COMPLETE');
 
                 if (!code && !sku && !user && !activity && !isCompletePA) continue;
                 
