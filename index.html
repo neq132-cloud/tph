@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.12-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.13-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.12-LOCAL</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.13-LOCAL</span>
                 </div>
             </div>
 
@@ -587,7 +587,6 @@
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
                 const activity = cleanRawString(r[state.colMap.activity]);
 
-                // Kolumna O (indeks 14) – status Pre-Advice, Kolumna Q (indeks 16) – numer PA
                 let statusFound = cleanRawString(r[14]);
                 let paValue = cleanRawString(r[16]);
 
