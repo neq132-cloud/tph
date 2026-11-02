@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.19-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.20-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.19-LOCAL</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.20-LOCAL</span>
                 </div>
             </div>
 
@@ -321,7 +321,7 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
-            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, activity: -1 },
+            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, activity: -1, statusCol: 14, paCol: 16 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
             sortDir: 'desc'
@@ -538,7 +538,6 @@
             });
         }
 
-        // --- INTELIGENTNE PARSOWANIE BLOKOWE (Wielolinijkowe wklejanie danych) ---
         function processBothAreas() {
             const baseText = document.getElementById('pasteBaseArea').value;
             const freshText = document.getElementById('pasteFreshArea').value;
@@ -547,32 +546,9 @@
             if (!combinedRaw) return;
 
             const lines = combinedRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const matrixRows = [];
-            
-            // Scalamy ciągi linii w pojedyncze rekordy tabeli
-            let currentRow = [];
-            lines.forEach(line => {
-                // Jeśli linia wygląda jak początek nowego wpisu (np. zawiera liczby długie / numery seryjne / konkretne kody)
-                if (line.includes('\t') || line.split(/\s+/).length >= 3) {
-                    if (currentRow.length > 0) {
-                        matrixRows.push(currentRow);
-                        currentRow = [];
-                    }
-                    matrixRows.push(line.split(/\t/));
-                } else {
-                    currentRow.push(line);
-                    if (currentRow.length >= 4) {
-                        matrixRows.push([...currentRow]);
-                        currentRow = [];
-                    }
-                }
-            });
-            if (currentRow.length > 0) matrixRows.push(currentRow);
+            const matrixRows = lines.map(l => l.includes('\t') ? l.split('\t') : l.split(/\s+/));
 
-            // Dodatkowo wsparcie dla tradycyjnych linii rozdzielonych tabulatorami
-            const cleanMatrixRows = lines.map(l => l.includes('\t') ? l.split('\t') : [l]);
-
-            processMatrixData(cleanMatrixRows.length > matrixRows.length ? cleanMatrixRows : matrixRows);
+            processMatrixData(matrixRows);
         }
 
         function processMatrixData(matrix) {
@@ -580,15 +556,16 @@
             
             if (state.rawRows.length > 0) {
                 const headerRow = state.rawRows[0];
-                let actIdx = -1;
+                let actIdx = -1, statusIdx = -1, paIdx = -1;
                 for (let c = 0; c < headerRow.length; c++) {
                     const hText = String(headerRow[c]).toUpperCase();
-                    if (hText.includes('AQ') || hText.includes('ACTIVITY') || hText.includes('AKTYWNOŚĆ') || hText.includes('AKTYWNOSC')) {
-                        actIdx = c;
-                        break;
-                    }
+                    if (hText.includes('AQ') || hText.includes('ACTIVITY') || hText.includes('AKTYWNOŚĆ') || hText.includes('AKTYWNOSC')) actIdx = c;
+                    if (hText.includes('PREADV') || hText.includes('STATUS')) statusIdx = c;
+                    if (hText.includes('018') || hText.includes('NUMER') || hText.includes('DOKUMENT')) paIdx = c;
                 }
-                state.colMap.activity = actIdx !== -1 ? actIdx : (headerRow.length > 42 ? 42 : headerRow.length - 1);
+                if (actIdx !== -1) state.colMap.activity = actIdx;
+                if (statusIdx !== -1) state.colMap.statusCol = statusIdx;
+                if (paIdx !== -1) state.colMap.paCol = paIdx;
             }
 
             parseDataset();
@@ -628,11 +605,19 @@
                     }
                 }
 
-                let statusFound = cleanRawString(r[14]) || 'COMPLETE';
-                let paValue = cleanRawString(r[16]) || (r.find(x => x.startsWith('018') || x.startsWith('45')) || '');
+                // Ścisłe odwzorowanie kolumny O (status) i Q (numer PA) zgodnie z wytycznymi użytkownika
+                let statusFound = cleanRawString(r[14]) || cleanRawString(r[state.colMap.statusCol]) || '';
+                let paValue = cleanRawString(r[16]) || cleanRawString(r[state.colMap.paCol]) || '';
+
+                // Fallback szukania numeru PA (zaczynającego się od 018 lub cyfr dokumentu) w całym wierszu jeśli kolumny się przesunęły
+                if (!paValue) {
+                    const foundNum = r.find(x => x && (x.startsWith('018') || x.startsWith('45') || x.startsWith('47') || x.startsWith('48') || x.startsWith('84') || /^\d{8,}/.test(x)));
+                    if (foundNum) paValue = foundNum;
+                }
 
                 let upperStatus = statusFound.toUpperCase();
-                let isCompletePA = paValue !== '' || upperStatus.includes('COMPLETE');
+                // Sprawdzamy dokładny warunek: status In Progress --> Complete lub ogólnie complete
+                let isCompletePA = paValue !== '' && (upperStatus.includes('IN PROGRESS') || upperStatus.includes('COMPLETE') || upperStatus.includes('ZAMKNIĘTY'));
 
                 const key = `${code}|${sku}|${qty}|${target}|${time}|${date}|${user}|${paValue}`;
                 if (seen.has(key)) continue;
@@ -664,7 +649,7 @@
                     closedPAType, 
                     activity: activity || '-', 
                     paValue,
-                    statusFound 
+                    statusFound: statusFound || 'In Progress --> Complete'
                 });
             }
             state.parsedData = records;
@@ -920,7 +905,7 @@
                     tr.innerHTML = `
                         <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
                         <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
-                        <td class="py-2.5 px-3 text-slate-300">${row.statusFound || 'COMPLETE'}</td>
+                        <td class="py-2.5 px-3 text-teal-400 font-semibold">In Progress --> Complete</td>
                         <td class="py-2.5 px-3"><span class="px-2.5 py-1 text-xs font-mono font-bold border rounded-lg ${badgeClass}">${pVal}</span></td>
                     `;
                     tbody.appendChild(tr);
