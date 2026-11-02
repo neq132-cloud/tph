@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.24-TEST</title>
+    <title>WMS Cyberpunk Hub v0.5.25-TEST</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja Testowa v0.5.24-TEST</div>
+            <div class="font-bold text-white">Wersja Testowa v0.5.25-TEST</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.24-TEST</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.25-TEST</span>
                 </div>
             </div>
 
@@ -144,7 +144,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">Precyzyjny Parser Tabulacji (v0.5.24)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">Zoptymalizowane PA & Odbicia (v0.5.25)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -392,6 +392,28 @@
             return 'BULK';
         }
 
+        // Pomocnicza funkcja do pobierania unikalnych dokumentów Zamkniętych PA
+        function getUniqueClosedPAs() {
+            const rawClosed = state.parsedData.filter(d => d.isClosedPAValid && d.paValue);
+            const paMap = {};
+            rawClosed.forEach(r => {
+                if (!paMap[r.paValue]) {
+                    paMap[r.paValue] = {
+                        paValue: r.paValue,
+                        statusFound: r.statusFound,
+                        date: r.date,
+                        time: r.time,
+                        lineCount: 1,
+                        totalQty: r.qty || 0
+                    };
+                } else {
+                    paMap[r.paValue].lineCount++;
+                    paMap[r.paValue].totalQty += (r.qty || 0);
+                }
+            });
+            return Object.values(paMap);
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             initTabs();
@@ -407,7 +429,7 @@
 
         function loadDataFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem('wms_cyber_test_records_v24');
+                const savedData = localStorage.getItem('wms_cyber_test_records_v25');
                 if (savedData) {
                     const records = JSON.parse(savedData);
                     if (records && records.length > 0) {
@@ -417,7 +439,7 @@
                         document.getElementById('countBase').textContent = `${records.length} w.`;
                     }
                 }
-                showToast(`Wczytano wersję v0.5.24-TEST`);
+                showToast(`Wczytano wersję v0.5.25-TEST`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -426,7 +448,7 @@
 
         function saveDataToLocalStorage(records) {
             try {
-                localStorage.setItem('wms_cyber_test_records_v24', JSON.stringify(records));
+                localStorage.setItem('wms_cyber_test_records_v25', JSON.stringify(records));
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
             }
@@ -507,7 +529,7 @@
             const fileInput = document.getElementById('fileInput');
             dropZone.addEventListener('click', () => fileInput.click());
             dropZone.addEventListener('dragover', e => e.preventDefault());
-            dropZone.addEventListener('drop', e => { e.preventDefault(); if (e.target.files.length) handleFile(e.target.files[0]); });
+            dropZone.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
             fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
         }
 
@@ -555,7 +577,6 @@
                 const fullUp = r.join(' ').toUpperCase();
                 if (fullUp.includes('PREADV STATUS') || fullUp.includes('SZCZEGÓŁOWA TABELA') || (fullUp.includes('CODE') && idx === 0)) return;
 
-                // Sztywne i bezpieczne przypisanie kolumn tabulacji
                 const code = cleanRawString(r[0]) || 'Putaway';
                 const sku = cleanRawString(r[1]) || '-';
                 const qty = parseQty(r[6]);
@@ -564,7 +585,6 @@
                 const date = cleanRawString(r[12]) || '02/11/2026';
                 const user = cleanRawString(r[13]) || 'BRAK_USERA';
 
-                // Szukanie PreAdv Status w kolumnie O (index 14)
                 let statusFound = cleanRawString(r[14]) || '';
                 if (!statusFound) {
                     const statusCell = r.find(c => String(c).toUpperCase().includes('IN PROGRESS') || String(c).toUpperCase().includes('COMPLETE'));
@@ -572,7 +592,6 @@
                 }
                 if (!statusFound) statusFound = 'In Progress --> Complete';
 
-                // Szukanie PA w kolumnie Q (index 16) z fallbackiem do sąsiednich kolumn
                 let paValue = cleanRawString(r[16]) || '';
                 if (!paValue || !/^\d+$/.test(paValue)) {
                     const foundPa = r.find(c => {
@@ -582,11 +601,9 @@
                     if (foundPa) paValue = foundPa;
                 }
 
-                // Przypisanie strefy i operacji
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
 
-                // Walidacja Zamkniętego PA
                 let isCompleteStatus = statusFound.toUpperCase().includes('IN PROGRESS') && statusFound.toUpperCase().includes('COMPLETE');
                 let hasValidPrefix = false;
                 if (paValue) {
@@ -649,7 +666,7 @@
                 data = state.parsedData.filter(d => d.isClosedPAValid);
             } else if (state.activeCategory === 'Odbicia') {
                 const odbiciaRows = state.parsedData.filter(d => {
-                    const up = d.code.toUpperCase();
+                    const up = (d.code || '').toUpperCase();
                     return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('USER') || up.includes('PLTTI');
                 });
 
@@ -692,10 +709,12 @@
             const relocateCount = state.parsedData.filter(d => d.taskType === 'Relocate').length;
             const receiptCount = state.parsedData.filter(d => d.taskType === 'Receipt').length;
             const adjustmentCount = state.parsedData.filter(d => d.taskType === 'Adjustment').length;
-            const closedPACount = state.parsedData.filter(d => d.isClosedPAValid).length;
+            
+            // Agregacja unikalnych zamkniętych PA
+            const closedPACount = getUniqueClosedPAs().length;
             
             const odbiciaRows = state.parsedData.filter(d => {
-                const up = d.code.toUpperCase();
+                const up = (d.code || '').toUpperCase();
                 return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('PLTTI');
             });
             const uniqueWorkers = new Set(odbiciaRows.map(d => d.user).filter(u => u && u !== 'BRAK_USERA'));
@@ -705,7 +724,7 @@
             document.getElementById('badgeReceipt').textContent = receiptCount;
             document.getElementById('badgeAdjustment').textContent = adjustmentCount;
             document.getElementById('badgeClosedPA').textContent = closedPACount;
-            document.getElementById('badgeOdbicia').textContent = uniqueWorkers.size || state.parsedData.length;
+            document.getElementById('badgeOdbicia').textContent = uniqueWorkers.size || odbiciaRows.length;
         }
 
         function renderDashboardCards() {
@@ -713,7 +732,7 @@
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
             const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
-            const closedPACount = state.parsedData.filter(d => d.isClosedPAValid).length;
+            const closedPACount = getUniqueClosedPAs().length;
 
             let vna = 0, bulk = 0, vin = 0, shelf = 0;
             putawayItems.forEach(d => {
@@ -801,18 +820,17 @@
             const titleEl = document.getElementById('tableSectionTitle');
             tbody.innerHTML = '';
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
-            let data = getActiveFilteredData();
-            if (state.selectedUser && state.activeCategory !== 'Odbicia') data = data.filter(d => d.user === state.selectedUser);
-
-            const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
-
-            const total = filtered.length;
-            const { page, pageSize } = state.pagination;
-            const start = (page - 1) * pageSize;
-            const pageData = filtered.slice(start, start + pageSize);
 
             if (state.activeCategory === 'ClosedPA') {
-                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) - Test <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">${total} poz.</span>`;
+                let data = getUniqueClosedPAs();
+                const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+
+                const total = filtered.length;
+                const { page, pageSize } = state.pagination;
+                const start = (page - 1) * pageSize;
+                const pageData = filtered.slice(start, start + pageSize);
+
+                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) - Unikalne Dokumenty <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">${total} PA</span>`;
                 
                 thead.innerHTML = `
                     <tr>
@@ -820,10 +838,11 @@
                         <th class="py-3 px-3">Data / Czas</th>
                         <th class="py-3 px-3">PreAdv Status</th>
                         <th class="py-3 px-3">Numer PA / Dokumentu</th>
+                        <th class="py-3 px-3 text-right">Pozycji / Sztuk</th>
                     </tr>`;
 
                 if (!pageData.length) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">Brak zamkniętych PA spełniających warunki (In Progress --> Complete oraz prefiks 018, 45, 47, 48, 0084).</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak zamkniętych PA spełniających warunki (In Progress --> Complete oraz prefiks 018, 45, 47, 48, 0084).</td></tr>';
                     document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                     return;
                 }
@@ -837,11 +856,89 @@
                         <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
                         <td class="py-2.5 px-3 text-teal-400 font-semibold">${row.statusFound}</td>
                         <td class="py-2.5 px-3"><span class="px-2.5 py-1 text-xs font-mono font-bold border rounded-lg bg-teal-500/20 text-teal-300 border-teal-500/30">${pVal}</span></td>
+                        <td class="py-2.5 px-3 text-right font-mono text-slate-300"><strong class="text-amber-400">${row.lineCount}</strong> poz. / <strong class="text-emerald-400">${row.totalQty}</strong> szt.</td>
                     `;
                     tbody.appendChild(tr);
                 });
 
+                document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} unikalnych PA`;
+                document.getElementById('prevPageBtn').disabled = page === 1;
+                document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+            } else if (state.activeCategory === 'Odbicia') {
+                let data = getActiveFilteredData();
+                const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+
+                const total = filtered.length;
+                const { page, pageSize } = state.pagination;
+                const start = (page - 1) * pageSize;
+                const pageData = filtered.slice(start, start + pageSize);
+
+                if (state.selectedOdbiciaUser) {
+                    titleEl.innerHTML = `Historia odbić pracownika: <strong class="text-amber-400">${state.selectedOdbiciaUser}</strong> <button onclick="state.selectedOdbiciaUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-xs rounded text-slate-300">Powrót do listy</button>`;
+                } else {
+                    titleEl.innerHTML = `Aktualny Stan Wbić Pracowników (Live) <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób</span>`;
+                }
+
+                thead.innerHTML = `
+                    <tr>
+                        <th class="py-3 px-3">Lp.</th>
+                        <th class="py-3 px-3">Data / Czas</th>
+                        <th class="py-3 px-3">Zdarzenie / Status</th>
+                        <th class="py-3 px-3">Aktywność</th>
+                        <th class="py-3 px-3">Pracownik</th>
+                    </tr>`;
+                
+                if (!pageData.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych o odbiciach.</td></tr>';
+                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    return;
+                }
+
+                pageData.forEach((row, i) => {
+                    const codeUp = (row.code || '').toUpperCase();
+                    const isStart = codeUp.includes('START') || !codeUp.includes('END');
+                    let badge = isStart 
+                        ? '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">AKTYWNY</span>'
+                        : '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded font-bold">ZAMKNIĘTY</span>';
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
+                    
+                    if (!state.selectedOdbiciaUser) {
+                        tr.title = `Kliknij, aby zobaczyć szczegóły użytkownika ${row.user}`;
+                        tr.onclick = (e) => {
+                            e.stopPropagation();
+                            state.selectedOdbiciaUser = row.user;
+                            renderDetailsTable();
+                        };
+                    }
+
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
+                        <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
+                        <td class="py-2.5 px-3">${badge} <span class="ml-2 text-[11px] text-slate-400">(${row.code})</span></td>
+                        <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.target || row.activity || '-'}</td>
+                        <td class="py-2.5 px-3 text-cyan-300 font-semibold underline">${row.user || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
+                document.getElementById('prevPageBtn').disabled = page === 1;
+                document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
             } else {
+                let data = getActiveFilteredData();
+                if (state.selectedUser) data = data.filter(d => d.user === state.selectedUser);
+
+                const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+
+                const total = filtered.length;
+                const { page, pageSize } = state.pagination;
+                const start = (page - 1) * pageSize;
+                const pageData = filtered.slice(start, start + pageSize);
+
                 titleEl.innerHTML = `Szczegółowa Tabela Operacji - Test <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} ops</span>`;
                 
                 thead.innerHTML = `
@@ -868,11 +965,11 @@
                     tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-amber-500/10 text-amber-400 rounded">${row.putawayZone || '-'}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku || '-'}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user || '-'}</td>`;
                     tbody.appendChild(tr);
                 });
-            }
 
-            document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} wierszy`;
-            document.getElementById('prevPageBtn').disabled = page === 1;
-            document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+                document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} wierszy`;
+                document.getElementById('prevPageBtn').disabled = page === 1;
+                document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+            }
         }
 
         function initPaginationControls() {
