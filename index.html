@@ -588,9 +588,9 @@
                 return;
             }
 
-            // BEZPIECZNY HYBRYDOWY PARSER
+            // BEZPIECZNY HYBRYDOWY PARSER (luźniejsze klucze unikalności dla jednoczesnych procesów)
             let records = [...state.parsedData];
-            let existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}`));
+            let existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}|${r.paValue}`));
             
             let currentRecord = { code: 'PreAdv Status', sku: '-', qty: 1, target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: 'BULK' };
 
@@ -599,7 +599,7 @@
                 
                 if (line === 'PreAdv Status' || up.includes('PLTTI')) {
                     if (currentRecord.paValue) {
-                        const rowKey = `${currentRecord.date}|${currentRecord.time}|${currentRecord.user}|${currentRecord.sku}|${currentRecord.target}|${currentRecord.code}|${currentRecord.qty}`;
+                        const rowKey = `${currentRecord.date}|${currentRecord.time}|${currentRecord.user}|${currentRecord.sku}|${currentRecord.target}|${currentRecord.code}|${currentRecord.qty}|${currentRecord.paValue}`;
                         if (!existingKeys.has(rowKey)) {
                             existingKeys.add(rowKey);
                             records.push({ ...currentRecord, id: records.length + 1, isClosedPAValid: true, taskType: 'Putaway', putawayZone: 'BULK' });
@@ -625,7 +625,7 @@
             });
 
             if (currentRecord.paValue) {
-                const rowKey = `${currentRecord.date}|${currentRecord.time}|${currentRecord.user}|${currentRecord.sku}|${currentRecord.target}|${currentRecord.code}|${currentRecord.qty}`;
+                const rowKey = `${currentRecord.date}|${currentRecord.time}|${currentRecord.user}|${currentRecord.sku}|${currentRecord.target}|${currentRecord.code}|${currentRecord.qty}|${currentRecord.paValue}`;
                 if (!existingKeys.has(rowKey)) {
                     records.push({ ...currentRecord, id: records.length + 1, isClosedPAValid: true, taskType: 'Putaway', putawayZone: 'BULK' });
                 }
@@ -649,7 +649,8 @@
 
         function processMatrix(matrix) {
             const records = [...state.parsedData];
-            const existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}`));
+            // Klucz uwzględniający także paValue, żeby wiersze z tej samej sekundy nie były odrzucane jako duplikaty
+            const existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}|${r.paValue}`));
 
             matrix.forEach((r, idx) => {
                 if (!r || !r.length) return;
@@ -690,7 +691,7 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
 
-                const rowKey = `${date}|${time}|${user}|${sku}|${target}|${code}|${qty}`;
+                const rowKey = `${date}|${time}|${user}|${sku}|${target}|${code}|${qty}|${paValue}`;
 
                 if (!existingKeys.has(rowKey)) {
                     existingKeys.add(rowKey);
