@@ -564,16 +564,16 @@
 
             const lines = combinedRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
             
-            // Jeśli to standardowy format z tabulatorami
             if (combinedRaw.includes('\t')) {
                 const matrixRows = lines.map(l => l.split('\t'));
                 processMatrix(matrixRows);
                 return;
             }
 
-            // BEZPIECZNY HYBRYDOWY PARSER (Lekki i szybki - zero zwiech strony)
-            let records = [];
-            let seen = new Set();
+            // BEZPIECZNY HYBRYDOWY PARSER
+            let records = [...state.parsedData];
+            let existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}`));
+            
             let currentRecord = { code: 'PreAdv Status', sku: '-', qty: 1, target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: 'BULK' };
 
             lines.forEach((line) => {
@@ -581,16 +581,15 @@
                 
                 if (line === 'PreAdv Status' || up.includes('PLTTI')) {
                     if (currentRecord.paValue) {
-                        const key = `${currentRecord.paValue}|${currentRecord.date}|${currentRecord.time}`;
-                        if (!seen.has(key)) {
-                            seen.add(key);
+                        const rowKey = `${currentRecord.date}|${currentRecord.time}|${currentRecord.user}|${currentRecord.sku}|${currentRecord.target}|${currentRecord.code}|${currentRecord.qty}`;
+                        if (!existingKeys.has(rowKey)) {
+                            existingKeys.add(rowKey);
                             records.push({ ...currentRecord, id: records.length + 1, isClosedPAValid: true, taskType: 'Putaway', putawayZone: 'BULK' });
                         }
                     }
                     currentRecord = { code: 'PreAdv Status', sku: '-', qty: 1, target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: 'BULK' };
                 }
 
-                // Wyszukiwanie numerów PA (10 cyfr: 018... lub 45...)
                 const digits = line.replace(/\D/g, '');
                 if (digits.length >= 10 && !currentRecord.paValue) {
                     const cand = digits.substring(0, 10);
@@ -607,14 +606,14 @@
                 }
             });
 
-            // Dodaj ostatni rekord
             if (currentRecord.paValue) {
-                const key = `${currentRecord.paValue}|${currentRecord.date}|${currentRecord.time}`;
-                if (!seen.has(key)) {
+                const rowKey = `${currentRecord.date}|${currentRecord.time}|${currentRecord.user}|${currentRecord.sku}|${currentRecord.target}|${currentRecord.code}|${currentRecord.qty}`;
+                if (!existingKeys.has(rowKey)) {
                     records.push({ ...currentRecord, id: records.length + 1, isClosedPAValid: true, taskType: 'Putaway', putawayZone: 'BULK' });
                 }
             }
 
+            records.forEach((rec, index) => { rec.id = index + 1; });
             state.parsedData = records;
             state.selectedUser = null;
             state.selectedOdbiciaUser = null;
@@ -627,12 +626,12 @@
 
             saveDataToLocalStorage(records);
             renderAll();
-            showToast(`Przetworzono ${records.length} wierszy (v0.5.32 PA-FIX)`);
+            showToast(`Przetworzono dane. Unikalnych wierszy: ${records.length}`);
         }
 
         function processMatrix(matrix) {
-            const records = [];
-            const seen = new Set();
+            const records = [...state.parsedData];
+            const existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}`));
 
             matrix.forEach((r, idx) => {
                 if (!r || !r.length) return;
@@ -673,19 +672,27 @@
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
 
-                records.push({
-                    id: records.length + 1,
-                    code, sku, qty, target, time, date, user,
-                    taskType, putawayZone, isClosedPAValid,
-                    paValue, paType, preAdvStatusCol,
-                    statusVal: statusVal || preAdvStatusCol || 'In Progress --> Complete',
-                    activity
-                });
+                const rowKey = `${date}|${time}|${user}|${sku}|${target}|${code}|${qty}`;
+
+                if (!existingKeys.has(rowKey)) {
+                    existingKeys.add(rowKey);
+                    records.push({
+                        id: records.length + 1,
+                        code, sku, qty, target, time, date, user,
+                        taskType, putawayZone, isClosedPAValid,
+                        paValue, paType, preAdvStatusCol,
+                        statusVal: statusVal || preAdvStatusCol || 'In Progress --> Complete',
+                        activity
+                    });
+                }
             });
+
+            records.forEach((rec, index) => { rec.id = index + 1; });
 
             state.parsedData = records;
             saveDataToLocalStorage(records);
             renderAll();
+            showToast(`Przetworzono dane. Unikalnych wierszy w bazie: ${records.length}`);
         }
 
         function getActiveFilteredData() {
