@@ -233,9 +233,16 @@
                     </div>
                 </div>
 
-                <div class="bg-cyber-card/90 backdrop-blur-md border border-teal-500/50 rounded-xl p-3 flex flex-col justify-between">
-                    <span class="text-[9px] font-bold text-teal-400 uppercase">Zamknięte PA</span>
-                    <div class="text-base font-black text-teal-300 mt-1" id="dashPa018Ops">0</div>
+                <!-- Rozbudowany kafelek Zamknięte PA (ASN / PO) -->
+                <div onclick="switchCategory('ClosedPA')" class="bg-cyber-card/90 backdrop-blur-md border border-teal-500/50 hover:border-teal-400 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[9px] font-bold text-teal-400 uppercase">Zamknięte PA</span>
+                        <span id="dashTotalPa" class="text-xs font-black text-white font-mono">0</span>
+                    </div>
+                    <div class="border-t border-teal-500/20 pt-1 mt-1 flex justify-between items-center text-[9px] font-mono">
+                        <span class="text-purple-300">ASN: <strong id="dashAsnCount">0</strong></span>
+                        <span class="text-blue-300">PO: <strong id="dashPoCount">0</strong></span>
+                    </div>
                 </div>
             </div>
 
@@ -412,7 +419,6 @@
             const rawClosed = state.parsedData.filter(d => d.isClosedPAValid && d.paValue);
             const paMap = {};
             rawClosed.forEach(r => {
-                // Kluczem unikalności i sumowania jest wyłącznie numer PA/dokumentu
                 const uniqueKey = r.paValue;
                 if (!paMap[uniqueKey]) {
                     paMap[uniqueKey] = {
@@ -588,7 +594,6 @@
                 return;
             }
 
-            // BEZPIECZNY HYBRYDOWY PARSER (luźniejsze klucze unikalności dla jednoczesnych procesów)
             let records = [...state.parsedData];
             let existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}|${r.paValue}`));
             
@@ -649,7 +654,6 @@
 
         function processMatrix(matrix) {
             const records = [...state.parsedData];
-            // Klucz uwzględniający także paValue, żeby wiersze z tej samej sekundy nie były odrzucane jako duplikaty
             const existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}|${r.paValue}`));
 
             matrix.forEach((r, idx) => {
@@ -784,7 +788,10 @@
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
             const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
-            const closedPACount = getUniqueClosedPAs().length;
+            
+            const uniquePAs = getUniqueClosedPAs();
+            const asnTotal = uniquePAs.filter(p => p.paType === 'ASN').length;
+            const poTotal = uniquePAs.filter(p => p.paType === 'PO').length;
 
             let vna = 0, bulk = 0, vin = 0, shelf = 0;
             putawayItems.forEach(d => {
@@ -802,7 +809,11 @@
             document.getElementById('dashPutawayRelocateSum').textContent = purePutaway + relocateItems.length;
             document.getElementById('dashReceiptOps').textContent = receiptItems.length;
             document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((s, d) => s + d.qty, 0);
-            document.getElementById('dashPa018Ops').textContent = closedPACount;
+            
+            // Aktualizacja kafelka podsumowującego ASN / PO
+            document.getElementById('dashTotalPa').textContent = uniquePAs.length;
+            document.getElementById('dashAsnCount').textContent = asnTotal;
+            document.getElementById('dashPoCount').textContent = poTotal;
         }
 
         function renderWorkers() {
@@ -865,11 +876,15 @@
                 let data = getUniqueClosedPAs();
                 const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
                 const total = filtered.length;
+                const asnLen = filtered.filter(p => p.paType === 'ASN').length;
+                const poLen = filtered.filter(p => p.paType === 'PO').length;
+
                 const { page, pageSize } = state.pagination;
                 const start = (page - 1) * pageSize;
                 const pageData = filtered.slice(start, start + pageSize);
 
-                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) - Unikalne Dokumenty <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">${total} PA</span>`;
+                // Tytuł z dokładnym rozbiciem na ASN i PO
+                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) - Unikalne Dokumenty <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">Łącznie: ${total} (ASN: ${asnLen} | PO: ${poLen})</span>`;
                 thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Typ PA</th><th class="py-3 px-3">Status</th><th class="py-3 px-3">Numer PA / Dokumentu</th><th class="py-3 px-3 text-right">Pozycji / Sztuk</th></tr>`;
 
                 if (!pageData.length) {
