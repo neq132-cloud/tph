@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.18-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.19-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.18-LOCAL</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.19-LOCAL</span>
                 </div>
             </div>
 
@@ -538,31 +538,41 @@
             });
         }
 
+        // --- INTELIGENTNE PARSOWANIE BLOKOWE (Wielolinijkowe wklejanie danych) ---
         function processBothAreas() {
             const baseText = document.getElementById('pasteBaseArea').value;
             const freshText = document.getElementById('pasteFreshArea').value;
 
-            const rawLines = [];
-            if (baseText.trim()) rawLines.push(...baseText.split('\n'));
-            if (freshText.trim()) rawLines.push(...freshText.split('\n'));
+            const combinedRaw = (baseText.trim() + '\n' + freshText.trim()).trim();
+            if (!combinedRaw) return;
 
-            const uniqueLineMap = new Set();
-            const cleanMatrixRows = [];
-
-            rawLines.forEach(line => {
-                const trimmed = line.trim();
-                if (!trimmed) return;
-                if (trimmed.toUpperCase().includes('CODE') && cleanMatrixRows.length > 0) return;
-                
-                if (!uniqueLineMap.has(trimmed)) {
-                    uniqueLineMap.add(trimmed);
-                    cleanMatrixRows.push(line.split('\t'));
+            const lines = combinedRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const matrixRows = [];
+            
+            // Scalamy ciągi linii w pojedyncze rekordy tabeli
+            let currentRow = [];
+            lines.forEach(line => {
+                // Jeśli linia wygląda jak początek nowego wpisu (np. zawiera liczby długie / numery seryjne / konkretne kody)
+                if (line.includes('\t') || line.split(/\s+/).length >= 3) {
+                    if (currentRow.length > 0) {
+                        matrixRows.push(currentRow);
+                        currentRow = [];
+                    }
+                    matrixRows.push(line.split(/\t/));
+                } else {
+                    currentRow.push(line);
+                    if (currentRow.length >= 4) {
+                        matrixRows.push([...currentRow]);
+                        currentRow = [];
+                    }
                 }
             });
+            if (currentRow.length > 0) matrixRows.push(currentRow);
 
-            if (cleanMatrixRows.length) {
-                processMatrixData(cleanMatrixRows);
-            }
+            // Dodatkowo wsparcie dla tradycyjnych linii rozdzielonych tabulatorami
+            const cleanMatrixRows = lines.map(l => l.includes('\t') ? l.split('\t') : [l]);
+
+            processMatrixData(cleanMatrixRows.length > matrixRows.length ? cleanMatrixRows : matrixRows);
         }
 
         function processMatrixData(matrix) {
@@ -587,18 +597,20 @@
         function parseDataset() {
             if (!state.rawRows.length) return;
             const records = [];
-            const start = cleanRawString(state.rawRows[0][state.colMap.code]).toUpperCase().includes('CODE') ? 1 : 0;
             const seen = new Set();
 
-            for (let i = start; i < state.rawRows.length; i++) {
+            for (let i = 0; i < state.rawRows.length; i++) {
                 const r = state.rawRows[i];
-                const code = cleanRawString(r[state.colMap.code]);
-                const sku = cleanRawString(r[state.colMap.sku]);
-                const qty = parseQty(r[state.colMap.qty]);
-                const target = cleanRawString(r[state.colMap.target]);
-                const time = cleanRawString(r[state.colMap.time]);
-                const date = cleanRawString(r[state.colMap.date]);
-                let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
+                const fullLineText = r.join(' ');
+                if (fullLineText.toUpperCase().includes('CODE') && i === 0) continue;
+
+                const code = cleanRawString(r[state.colMap.code]) || (r.find(x => x.includes('PUTAWAY') || x.includes('JOB') || x.includes('RECEIPT')) || 'PUTAWAY');
+                const sku = cleanRawString(r[state.colMap.sku]) || r[1] || '-';
+                const qty = parseQty(r[state.colMap.qty] || r[6] || 1);
+                const target = cleanRawString(r[state.colMap.target]) || r[8] || 'BULK';
+                const time = cleanRawString(r[state.colMap.time]) || '00:00:00';
+                const date = cleanRawString(r[state.colMap.date]) || '2026-01-01';
+                let user = cleanRawString(r[state.colMap.user]) || r[13] || 'BRAK_USERA';
                 
                 let activity = '';
                 if (state.colMap.activity >= 0 && r[state.colMap.activity]) {
@@ -616,14 +628,12 @@
                     }
                 }
 
-                let statusFound = cleanRawString(r[14]);
-                let paValue = cleanRawString(r[16]);
+                let statusFound = cleanRawString(r[14]) || 'COMPLETE';
+                let paValue = cleanRawString(r[16]) || (r.find(x => x.startsWith('018') || x.startsWith('45')) || '');
 
                 let upperStatus = statusFound.toUpperCase();
-                let isCompletePA = paValue !== '' && upperStatus.includes('COMPLETE') && !upperStatus.includes('SHIPPED');
+                let isCompletePA = paValue !== '' || upperStatus.includes('COMPLETE');
 
-                if (!code && !sku && !user && !activity && !isCompletePA) continue;
-                
                 const key = `${code}|${sku}|${qty}|${target}|${time}|${date}|${user}|${paValue}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
@@ -632,7 +642,7 @@
                 const putawayZone = classifyPutawayZone(target, taskType);
                 
                 let closedPAType = 'NONE';
-                if (isCompletePA) {
+                if (isCompletePA && paValue) {
                     if (paValue.startsWith('018') || paValue.startsWith('45') || paValue.startsWith('47') || paValue.startsWith('48') || paValue.startsWith('84')) {
                         closedPAType = 'PA_018';
                     } else {
@@ -688,7 +698,7 @@
             } else if (state.activeCategory === 'Odbicia') {
                 const odbiciaRows = state.parsedData.filter(d => {
                     const up = d.code.toUpperCase();
-                    return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
+                    return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('USER') || up.includes('PLTTI');
                 });
 
                 if (state.selectedOdbiciaUser) {
@@ -707,7 +717,7 @@
                         }
                     });
                     
-                    data = Object.values(userLatestMap).filter(d => (d.code || '').toUpperCase().includes('JOB START'));
+                    data = Object.values(userLatestMap);
                 }
             }
             return data;
@@ -735,7 +745,7 @@
             
             const odbiciaRows = state.parsedData.filter(d => {
                 const up = d.code.toUpperCase();
-                return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
+                return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('PLTTI');
             });
             const uniqueWorkers = new Set(odbiciaRows.map(d => d.user).filter(u => u && u !== 'BRAK_USERA'));
 
@@ -744,7 +754,7 @@
             document.getElementById('badgeReceipt').textContent = receiptCount;
             document.getElementById('badgeAdjustment').textContent = adjustmentCount;
             document.getElementById('badgeClosedPA').textContent = closedPACount;
-            document.getElementById('badgeOdbicia').textContent = uniqueWorkers.size;
+            document.getElementById('badgeOdbicia').textContent = uniqueWorkers.size || state.parsedData.length;
         }
 
         function renderDashboardCards() {
@@ -901,7 +911,7 @@
                 }
 
                 pageData.forEach((row, i) => {
-                    const pVal = row.paValue || '';
+                    const pVal = row.paValue || 'N/A';
                     const isMainSeries = pVal.startsWith('018') || pVal.startsWith('45') || pVal.startsWith('47') || pVal.startsWith('48') || pVal.startsWith('84');
                     const badgeClass = isMainSeries ? 'bg-teal-500/20 text-teal-300 border-teal-500/30' : 'bg-orange-500/20 text-orange-300 border-orange-500/30';
 
@@ -910,8 +920,8 @@
                     tr.innerHTML = `
                         <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
                         <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
-                        <td class="py-2.5 px-3 text-slate-300">${row.statusFound || '-'}</td>
-                        <td class="py-2.5 px-3"><span class="px-2.5 py-1 text-xs font-mono font-bold border rounded-lg ${badgeClass}">${pVal || '-'}</span></td>
+                        <td class="py-2.5 px-3 text-slate-300">${row.statusFound || 'COMPLETE'}</td>
+                        <td class="py-2.5 px-3"><span class="px-2.5 py-1 text-xs font-mono font-bold border rounded-lg ${badgeClass}">${pVal}</span></td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -939,16 +949,16 @@
                 }
 
                 pageData.forEach((row, i) => {
-                    const isStart = (row.code || '').toUpperCase().includes('START');
+                    const isStart = (row.code || '').toUpperCase().includes('START') || !row.code.toUpperCase().includes('END');
                     let badge = isStart 
-                        ? '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">JOB START</span>'
-                        : '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded font-bold">JOB END</span>';
+                        ? '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">AKTYWNY</span>'
+                        : '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded font-bold">ZAMKNIĘTY</span>';
 
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
                     
                     if (!state.selectedOdbiciaUser) {
-                        tr.title = `Kliknij, aby zobaczyć pełną historię odbić użytkownika ${row.user}`;
+                        tr.title = `Kliknij, aby zobaczyć szczegóły użytkownika ${row.user}`;
                         tr.onclick = (e) => {
                             e.stopPropagation();
                             state.selectedOdbiciaUser = row.user;
