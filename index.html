@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.21-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.22-TEST</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -57,12 +57,12 @@
 <body class="text-slate-100 min-h-screen font-sans antialiased flex" ondblclick="if(event.target.tagName==='TD'||event.target.tagName==='TR') event.stopPropagation();">
 
     <!-- Dyskretny powiadomiacz -->
-    <div id="toastNotification" class="fixed top-5 right-5 z-50 hidden bg-slate-900/95 border border-cyan-500/50 backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl shadow-cyan-500/10 flex items-center gap-3 text-xs text-slate-200">
-        <div class="p-1.5 bg-cyan-500/20 text-cyan-400 rounded-xl">
-            <i data-lucide="check-circle" class="w-4 h-4"></i>
+    <div id="toastNotification" class="fixed top-5 right-5 z-50 hidden bg-slate-900/95 border border-amber-500/50 backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl shadow-amber-500/10 flex items-center gap-3 text-xs text-slate-200">
+        <div class="p-1.5 bg-amber-500/20 text-amber-400 rounded-xl">
+            <i data-lucide="cpu" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.21 (Filtry PA)</div>
+            <div class="font-bold text-white">Wersja testowa v0.5.22-TEST</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -71,12 +71,12 @@
     <aside class="w-64 bg-cyber-card/90 border-r border-cyber-border backdrop-blur-md flex flex-col justify-between hidden md:flex sticky top-0 h-screen z-40">
         <div class="p-5 space-y-6">
             <div class="flex items-center gap-3">
-                <div class="p-2 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl text-slate-950 shadow-lg shadow-cyan-500/20">
-                    <i data-lucide="terminal" class="w-5 h-5"></i>
+                <div class="p-2 bg-gradient-to-tr from-amber-500 to-orange-600 rounded-xl text-slate-950 shadow-lg shadow-amber-500/20">
+                    <i data-lucide="flask-conical" class="w-5 h-5"></i>
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.21-LOCAL</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.22-TEST</span>
                 </div>
             </div>
 
@@ -123,7 +123,7 @@
         <!-- Top Header Bar -->
         <header class="h-16 bg-cyber-card/80 border-b border-cyber-border backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
             <div class="flex items-center gap-4">
-                <span class="text-xs font-mono text-slate-400 uppercase tracking-widest">Widok: <strong id="activeCatLabel" class="text-cyan-400">Putaway</strong></span>
+                <span class="text-xs font-mono text-slate-400 uppercase tracking-widest">Widok Testowy: <strong id="activeCatLabel" class="text-amber-400">Putaway</strong></span>
             </div>
             <div class="flex items-center gap-3">
                 <span class="text-xs font-mono bg-slate-900/90 px-3 py-1.5 rounded-xl border border-cyber-border text-slate-300">
@@ -141,10 +141,10 @@
                 <div class="lg:col-span-2 bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
                     <div class="flex items-center justify-between border-b border-cyber-border pb-3">
                         <div class="flex gap-2">
-                            <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500 text-slate-950 transition">Wklejanie</button>
+                            <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-emerald-400 font-mono">Tryb Lokalny (Offline)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">Tryb Testowy (Smart Parser)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -152,7 +152,7 @@
                         <!-- Okno 1: Baza Główna -->
                         <div class="bg-slate-950/90 p-3 rounded-xl border border-cyber-border space-y-2">
                             <div class="flex items-center justify-between">
-                                <label class="text-[11px] font-semibold text-cyan-400">Baza Główna</label>
+                                <label class="text-[11px] font-semibold text-amber-400">Baza Główna (Test)</label>
                                 <div class="flex items-center gap-2">
                                     <button id="toggleLockBtn" onclick="toggleBaseLock()" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[9px] flex items-center gap-1">
                                         <i id="lockIcon" data-lucide="lock" class="w-2.5 h-2.5"></i> <span id="lockText">Zablokowane</span>
@@ -160,7 +160,7 @@
                                     <span id="countBase" class="text-[9px] font-mono text-slate-400">0 w.</span>
                                 </div>
                             </div>
-                            <textarea id="pasteBaseArea" readonly rows="3" placeholder="Główna baza operacji..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-300 custom-scrollbar resize-y cursor-not-allowed focus:outline-none focus:border-cyan-500"></textarea>
+                            <textarea id="pasteBaseArea" readonly rows="3" placeholder="Główna baza operacji..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-300 custom-scrollbar resize-y cursor-not-allowed focus:outline-none focus:border-amber-500"></textarea>
                         </div>
 
                         <!-- Okno 2: Świeże dane -->
@@ -169,19 +169,19 @@
                                 <label class="text-[11px] font-semibold text-emerald-400">Świeże dane (dopisywane)</label>
                                 <span id="countFresh" class="text-[9px] font-mono text-slate-400">0 w.</span>
                             </div>
-                            <textarea id="pasteFreshArea" rows="3" placeholder="Wklej świeże wiersze..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-200 custom-scrollbar resize-y focus:outline-none focus:border-cyan-500"></textarea>
+                            <textarea id="pasteFreshArea" rows="3" placeholder="Wklej świeże wiersze..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-200 custom-scrollbar resize-y focus:outline-none focus:border-amber-500"></textarea>
                         </div>
 
                         <div class="sm:col-span-2 flex justify-end">
-                            <button id="processPasteBtn" class="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center gap-2">
-                                <i data-lucide="cpu" class="w-3.5 h-3.5"></i> Przetwarzaj i Scalaj Dane
+                            <button id="processPasteBtn" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center gap-2">
+                                <i data-lucide="cpu" class="w-3.5 h-3.5"></i> Przetwarzaj (Smart Parser)
                             </button>
                         </div>
                     </div>
 
                     <!-- File Tab -->
                     <div id="tabFileContent" class="hidden space-y-3">
-                        <div id="dropZone" class="border-2 border-dashed border-cyber-border hover:border-cyan-500 bg-slate-950/70 rounded-xl p-6 text-center cursor-pointer transition">
+                        <div id="dropZone" class="border-2 border-dashed border-cyber-border hover:border-amber-500 bg-slate-950/70 rounded-xl p-6 text-center cursor-pointer transition">
                             <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
                             <p class="text-xs text-slate-300">Przeciągnij plik Excel/CSV lub kliknij tutaj</p>
                         </div>
@@ -284,7 +284,7 @@
                     <h3 id="tableSectionTitle" class="text-xs font-bold uppercase tracking-wider text-slate-300">Szczegółowa Tabela Operacji</h3>
                     <div class="relative">
                         <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400"></i>
-                        <input type="text" id="searchInput" placeholder="Szukaj..." class="bg-slate-950 border border-cyber-border text-xs rounded-xl pl-9 pr-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500">
+                        <input type="text" id="searchInput" placeholder="Szukaj..." class="bg-slate-950 border border-cyber-border text-xs rounded-xl pl-9 pr-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
                     </div>
                 </div>
                 <div class="overflow-x-auto custom-scrollbar border border-cyber-border rounded-xl">
@@ -317,7 +317,6 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
-            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, activity: -1, statusCol: 14, paCol: 16 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
             sortDir: 'desc'
@@ -408,17 +407,17 @@
 
         function loadDataFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem('wms_cyber_local_records');
+                const savedData = localStorage.getItem('wms_cyber_test_records_v22');
                 if (savedData) {
                     const records = JSON.parse(savedData);
                     if (records && records.length > 0) {
                         state.parsedData = records;
-                        const textRows = records.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity || ''}`).join('\n');
+                        const textRows = records.map(d => `${d.code}\t${d.sku}\t${d.qty}\t${d.target}\t${d.time}\t${d.date}\t${d.user}\t${d.statusFound}\t${d.paValue}`).join('\n');
                         document.getElementById('pasteBaseArea').value = textRows;
                         document.getElementById('countBase').textContent = `${records.length} w.`;
                     }
                 }
-                showToast(`Wczytano wersję v0.5.21`);
+                showToast(`Załadowano wersję testową v0.5.22-TEST`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -427,7 +426,7 @@
 
         function saveDataToLocalStorage(records) {
             try {
-                localStorage.setItem('wms_cyber_local_records', JSON.stringify(records));
+                localStorage.setItem('wms_cyber_test_records_v22', JSON.stringify(records));
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
             }
@@ -436,10 +435,10 @@
         function initPresenceModule() {
             ['presenceDsv', 'presenceServices', 'presenceQlevel'].forEach(id => {
                 const el = document.getElementById(id);
-                const val = localStorage.getItem(`wms_cyber_${id}`);
+                const val = localStorage.getItem(`wms_cyber_test_${id}`);
                 if (val !== null) el.value = val;
                 el.addEventListener('input', () => {
-                    localStorage.setItem(`wms_cyber_${id}`, el.value);
+                    localStorage.setItem(`wms_cyber_test_${id}`, el.value);
                     updateTotalPresence();
                 });
             });
@@ -490,13 +489,13 @@
 
         function initTabs() {
             document.getElementById('tabPasteBtn').addEventListener('click', () => {
-                document.getElementById('tabPasteBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500 text-slate-950 transition';
+                document.getElementById('tabPasteBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition';
                 document.getElementById('tabFileBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition';
                 document.getElementById('tabPasteContent').classList.remove('hidden');
                 document.getElementById('tabFileContent').classList.add('hidden');
             });
             document.getElementById('tabFileBtn').addEventListener('click', () => {
-                document.getElementById('tabFileBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500 text-slate-950 transition';
+                document.getElementById('tabFileBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition';
                 document.getElementById('tabPasteBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition';
                 document.getElementById('tabFileContent').classList.remove('hidden');
                 document.getElementById('tabPasteContent').classList.add('hidden');
@@ -552,80 +551,49 @@
         }
 
         function processMatrixData(matrix) {
-            state.rawRows = matrix.map(r => { const row = [...r]; while(row.length < 45) row.push(''); return row; });
-            
-            if (state.rawRows.length > 0) {
-                const headerRow = state.rawRows[0];
-                let actIdx = -1, statusIdx = -1, paIdx = -1;
-                for (let c = 0; c < headerRow.length; c++) {
-                    const hText = String(headerRow[c]).toUpperCase();
-                    if (hText.includes('AQ') || hText.includes('ACTIVITY') || hText.includes('AKTYWNOŚĆ') || hText.includes('AKTYWNOSC')) actIdx = c;
-                    if (hText.includes('PREADV') || hText.includes('STATUS')) statusIdx = c;
-                    if (hText.includes('018') || hText.includes('NUMER') || hText.includes('DOKUMENT')) paIdx = c;
-                }
-                if (actIdx !== -1) state.colMap.activity = actIdx;
-                if (statusIdx !== -1) state.colMap.statusCol = statusIdx;
-                if (paIdx !== -1) state.colMap.paCol = paIdx;
-            }
-
-            parseDataset();
-        }
-
-        function parseDataset() {
-            if (!state.rawRows.length) return;
             const records = [];
             const seen = new Set();
 
-            for (let i = 0; i < state.rawRows.length; i++) {
-                const r = state.rawRows[i];
-                const fullLineText = r.join(' ');
-                const fullUp = fullLineText.toUpperCase();
-                
-                if (fullUp.includes('CODE') && i === 0) continue;
-                if (fullUp.includes('PREADV STATUS') || fullUp.includes('ZAMKNIĘTE PRE-ADVICE')) continue;
+            matrix.forEach((r, idx) => {
+                if (!r || r.length === 0) return;
+                const rowStr = r.join(' | ');
+                const rowUp = rowStr.toUpperCase();
 
-                const code = cleanRawString(r[state.colMap.code]) || (r.find(x => x.includes('PUTAWAY') || x.includes('JOB') || x.includes('RECEIPT')) || 'PUTAWAY');
-                const sku = cleanRawString(r[state.colMap.sku]) || r[1] || '-';
-                const qty = parseQty(r[state.colMap.qty] || r[6] || 1);
-                const target = cleanRawString(r[state.colMap.target]) || r[8] || 'BULK';
-                const time = cleanRawString(r[state.colMap.time]) || '00:00:00';
-                const date = cleanRawString(r[state.colMap.date]) || '2026-01-01';
-                let user = cleanRawString(r[state.colMap.user]) || r[13] || 'BRAK_USERA';
-                
-                let activity = '';
-                if (state.colMap.activity >= 0 && r[state.colMap.activity]) {
-                    activity = cleanRawString(r[state.colMap.activity]);
+                if (rowUp.includes('PREADV STATUS') || (rowUp.includes('CODE') && idx === 0)) return;
+
+                // Smart Parser: przeszukaj całą linię w poszukiwaniu statusu i numeru PA
+                let statusFound = 'In Progress --> Complete';
+                if (rowUp.includes('PROGRESS') || rowUp.includes('COMPLETE')) {
+                    statusFound = 'In Progress --> Complete';
                 }
-                if (!activity || activity === '-') {
-                    for (let c = 0; c < r.length; c++) {
-                        const val = cleanRawString(r[c]);
-                        if (val.toUpperCase().startsWith('AQ') || (val.length > 3 && !isNaN(val))) {
-                            if (val.toUpperCase().includes('AQ') || Number(val) > 1000) {
-                                activity = val;
-                                break;
-                            }
-                        }
+
+                // Szukaj numeru PA zaczynającego się od prefiksów lub dowolnego długiego ciągu cyfr
+                let paValue = '';
+                for (let cell of r) {
+                    let cleanC = cleanRawString(cell);
+                    if (!cleanC) continue;
+                    if (cleanC.startsWith('018') || cleanC.startsWith('45') || cleanC.startsWith('47') || cleanC.startsWith('48') || cleanC.startsWith('0084') || /^\d{8,}/.test(cleanC)) {
+                        paValue = cleanC;
+                        break;
                     }
                 }
-
-                let statusFound = cleanRawString(r[14]) || cleanRawString(r[state.colMap.statusCol]) || '';
-                let paValue = cleanRawString(r[16]) || cleanRawString(r[state.colMap.paCol]) || '';
-
-                if (!paValue) {
-                    const foundNum = r.find(x => x && (x.startsWith('018') || x.startsWith('45') || x.startsWith('47') || x.startsWith('48') || x.startsWith('0084') || /^\d{8,}/.test(x)));
-                    if (foundNum) paValue = foundNum;
-                }
-
-                if (!paValue) {
-                    const potentialNum = r.find(x => x && /^\d+$/.test(x) && x.length >= 5);
-                    if (potentialNum) paValue = potentialNum;
-                }
-
-                // Ścisłe sprawdzenie warunku Zamkniętego PA:
-                // Status musi zawierać "In Progress --> Complete" oraz numer PA musi zaczynać się od 018, 45, 47, 48 lub 0084
-                let upperStatus = statusFound.toUpperCase();
-                let isCompleteStatus = upperStatus.includes('IN PROGRESS') && upperStatus.includes('COMPLETE');
                 
+                // Fallback szukania w całej linii regexem
+                if (!paValue) {
+                    let match = rowStr.match(/\b(018\d+|45\d+|47\d+|48\d+|0084\d+|\d{9,})\b/);
+                    if (match) paValue = match[1];
+                }
+
+                const code = cleanRawString(r[0]) || 'PUTAWAY';
+                const sku = cleanRawString(r[1]) || '-';
+                const qty = parseQty(r[6] || 1);
+                const target = cleanRawString(r[8]) || 'BULK';
+                const time = cleanRawString(r[10]) || '08:00:00';
+                const date = cleanRawString(r[12]) || '02/11/2026';
+                const user = cleanRawString(r[13]) || '657MAOR';
+
+                // Walidacja warunku ClosedPA
+                let isCompleteStatus = statusFound.toUpperCase().includes('IN PROGRESS') && statusFound.toUpperCase().includes('COMPLETE');
                 let hasValidPrefix = false;
                 if (paValue) {
                     hasValidPrefix = paValue.startsWith('018') || 
@@ -634,47 +602,45 @@
                                      paValue.startsWith('48') || 
                                      paValue.startsWith('0084');
                 }
-
-                const isClosedPAValid = isCompleteStatus && hasValidPrefix;
+                let isClosedPAValid = isCompleteStatus && hasValidPrefix;
 
                 const key = `${code}|${sku}|${qty}|${target}|${time}|${date}|${user}|${paValue}`;
-                if (seen.has(key)) continue;
+                if (seen.has(key)) return;
                 seen.add(key);
 
                 const taskType = classifyTaskType(code);
                 const putawayZone = classifyPutawayZone(target, taskType);
 
-                records.push({ 
-                    id: records.length + 1, 
-                    code: code, 
-                    sku, 
-                    qty, 
-                    target, 
-                    time, 
-                    date, 
-                    user, 
-                    taskType, 
-                    putawayZone, 
-                    isClosedPAValid, 
-                    activity: activity || '-', 
+                records.push({
+                    id: records.length + 1,
+                    code,
+                    sku,
+                    qty,
+                    target,
+                    time,
+                    date,
+                    user,
+                    taskType,
+                    putawayZone,
+                    isClosedPAValid,
                     paValue,
-                    statusFound: statusFound || '-'
+                    statusFound
                 });
-            }
+            });
+
             state.parsedData = records;
             state.selectedUser = null;
             state.selectedOdbiciaUser = null;
-            
-            const textRows = records.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity || ''}`).join('\n');
+
+            const textRows = records.map(d => `${d.code}\t${d.sku}\t${d.qty}\t${d.target}\t${d.time}\t${d.date}\t${d.user}\t${d.statusFound}\t${d.paValue}`).join('\n');
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
-            
             document.getElementById('pasteFreshArea').value = '';
             document.getElementById('countFresh').textContent = '0 w.';
 
             saveDataToLocalStorage(records);
             renderAll();
-            showToast(`Przetworzono ${records.length} wierszy`);
+            showToast(`Smart Parser przetworzył ${records.length} wierszy`);
         }
 
         function getActiveFilteredData() {
@@ -689,7 +655,6 @@
             } else if (state.activeCategory === 'Relocate') {
                 data = state.parsedData.filter(d => d.taskType === 'Relocate');
             } else if (state.activeCategory === 'ClosedPA') {
-                // Tylko rekordy spełniające rygorystyczny warunek ClosedPA
                 data = state.parsedData.filter(d => d.isClosedPAValid);
             } else if (state.activeCategory === 'Odbicia') {
                 const odbiciaRows = state.parsedData.filter(d => {
@@ -712,7 +677,6 @@
                             userLatestMap[d.user] = d;
                         }
                     });
-                    
                     data = Object.values(userLatestMap);
                 }
             }
@@ -805,12 +769,12 @@
                 const rateText = `${ratePer8h} /8h`;
 
                 const tr = document.createElement('tr');
-                tr.className = `hover:bg-slate-800/50 transition cursor-pointer ${isSelected ? 'bg-cyan-500/20 border-l-4 border-cyan-400' : ''}`;
+                tr.className = `hover:bg-slate-800/50 transition cursor-pointer ${isSelected ? 'bg-amber-500/20 border-l-4 border-amber-400' : ''}`;
                 tr.onclick = () => { state.selectedUser = user; renderWorkers(); renderDrilldown(); };
                 
                 tr.innerHTML = `
                     <td class="py-2.5 px-3 font-semibold text-white">${user}</td>
-                    <td class="py-2.5 px-3 text-right font-bold text-cyan-400">${count}</td>
+                    <td class="py-2.5 px-3 text-right font-bold text-amber-400">${count}</td>
                     <td class="py-2.5 px-3 text-right font-mono text-emerald-400 text-[11px]">${rateText}</td>
                 `;
                 tbody.appendChild(tr);
@@ -835,7 +799,7 @@
             movements.forEach((m, i) => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-800/40 transition';
-                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${i+1}</td><td class="py-2 px-3 text-slate-400">${m.date} ${m.time}</td><td class="py-2 px-3 text-slate-300">${m.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${m.putawayZone}</span></td><td class="py-2 px-3 text-emerald-400">${m.sku}</td><td class="py-2 px-3 text-slate-200">${m.target}</td>`;
+                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${i+1}</td><td class="py-2 px-3 text-slate-400">${m.date} ${m.time}</td><td class="py-2 px-3 text-slate-300">${m.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-amber-500/10 text-amber-400 rounded">${m.putawayZone}</span></td><td class="py-2 px-3 text-emerald-400">${m.sku}</td><td class="py-2 px-3 text-slate-200">${m.target}</td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -861,34 +825,13 @@
 
             const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
 
-            filtered.sort((a, b) => {
-                let valA, valB;
-                if (state.sortField === 'date') {
-                    valA = `${a.date || ''} ${a.time || ''}`;
-                    valB = `${b.date || ''} ${b.time || ''}`;
-                } else if (state.sortField === 'code') {
-                    valA = a.code || ''; valB = b.code || '';
-                } else if (state.sortField === 'user') {
-                    valA = a.user || ''; valB = b.user || '';
-                } else if (state.sortField === 'qty') {
-                    valA = a.qty || 0; valB = b.qty || 0;
-                } else {
-                    valA = `${a.date || ''} ${a.time || ''}`;
-                    valB = `${b.date || ''} ${b.time || ''}`;
-                }
-
-                if (valA < valB) return state.sortDir === 'asc' ? -1 : 1;
-                if (valA > valB) return state.sortDir === 'asc' ? 1 : -1;
-                return 0;
-            });
-
             const total = filtered.length;
             const { page, pageSize } = state.pagination;
             const start = (page - 1) * pageSize;
             const pageData = filtered.slice(start, start + pageSize);
 
             if (state.activeCategory === 'ClosedPA') {
-                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">${total} poz.</span>`;
+                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) - Test <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">${total} poz.</span>`;
                 
                 thead.innerHTML = `
                     <tr>
@@ -899,7 +842,7 @@
                     </tr>`;
 
                 if (!pageData.length) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">Brak zamkniętych PA spełniających kryteria (wymagany status In Progress --> Complete oraz prefiks 018, 45, 47, 48, 0084).</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">Brak zamkniętych PA spełniających warunki (wymagany In Progress --> Complete oraz prefiks 018, 45, 47, 48, 0084).</td></tr>';
                     document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                     return;
                 }
@@ -917,68 +860,19 @@
                     tbody.appendChild(tr);
                 });
 
-            } else if (state.activeCategory === 'Odbicia') {
-                if (state.selectedOdbiciaUser) {
-                    titleEl.innerHTML = `Historia odbić pracownika: <strong class="text-cyan-400">${state.selectedOdbiciaUser}</strong> <button onclick="state.selectedOdbiciaUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-xs rounded text-slate-300">Powrót do listy</button>`;
-                } else {
-                    titleEl.innerHTML = `Aktualny Stan Wbić Pracowników <span class="ml-2 px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded text-[10px] font-mono">${total} osób</span>`;
-                }
-
-                thead.innerHTML = `
-                    <tr>
-                        <th class="py-3 px-3">Lp.</th>
-                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('date')">Data / Czas ${state.sortField==='date'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
-                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('code')">Zdarzenie ${state.sortField==='code'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
-                        <th class="py-3 px-3">Aktywność (AQ)</th>
-                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('user')">Pracownik ${state.sortField==='user'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
-                    </tr>`;
-                
-                if (!pageData.length) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych o odbiciach.</td></tr>';
-                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
-                    return;
-                }
-
-                pageData.forEach((row, i) => {
-                    const isStart = (row.code || '').toUpperCase().includes('START') || !row.code.toUpperCase().includes('END');
-                    let badge = isStart 
-                        ? '<span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">AKTYWNY</span>'
-                        : '<span class="px-2 py-0.5 text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded font-bold">ZAMKNIĘTY</span>';
-
-                    const tr = document.createElement('tr');
-                    tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
-                    
-                    if (!state.selectedOdbiciaUser) {
-                        tr.title = `Kliknij, aby zobaczyć szczegóły użytkownika ${row.user}`;
-                        tr.onclick = (e) => {
-                            e.stopPropagation();
-                            state.selectedOdbiciaUser = row.user;
-                            renderDetailsTable();
-                        };
-                    }
-
-                    tr.innerHTML = `
-                        <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
-                        <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
-                        <td class="py-2.5 px-3">${badge}</td>
-                        <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || '-'}</td>
-                        <td class="py-2.5 px-3 text-cyan-300 font-semibold underline">${row.user || '-'}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
             } else {
-                titleEl.innerHTML = `Szczegółowa Tabela Operacji <span class="ml-2 px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded text-[10px] font-mono">${total} ops</span>`;
+                titleEl.innerHTML = `Szczegółowa Tabela Operacji - Test <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} ops</span>`;
                 
                 thead.innerHTML = `
                     <tr>
                         <th class="py-3 px-3">Lp.</th>
-                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('date')">Data / Czas ${state.sortField==='date'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
-                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('code')">Kod ${state.sortField==='code'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3">Data / Czas</th>
+                        <th class="py-3 px-3">Kod</th>
                         <th class="py-3 px-3">Typ / Strefa</th>
                         <th class="py-3 px-3">SKU</th>
-                        <th class="py-3 px-3 text-right cursor-pointer hover:text-cyan-400" onclick="sortBy('qty')">Sztuk ${state.sortField==='qty'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3 text-right">Sztuk</th>
                         <th class="py-3 px-3">Docelowa</th>
-                        <th class="py-3 px-3 cursor-pointer hover:text-cyan-400" onclick="sortBy('user')">Pracownik ${state.sortField==='user'?(state.sortDir==='asc'?'▲':'▼'):''}</th>
+                        <th class="py-3 px-3">Pracownik</th>
                     </tr>`;
 
                 if (!pageData.length) {
@@ -990,7 +884,7 @@
                 pageData.forEach((row, i) => {
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition';
-                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-cyan-500/10 text-cyan-400 rounded">${row.putawayZone || '-'}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku || '-'}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user || '-'}</td>`;
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-amber-500/10 text-amber-400 rounded">${row.putawayZone || '-'}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku || '-'}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user || '-'}</td>`;
                     tbody.appendChild(tr);
                 });
             }
@@ -1009,11 +903,11 @@
             document.getElementById('exportCsvBtn').addEventListener('click', () => {
                 const data = getActiveFilteredData();
                 if (!data.length) return;
-                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;Activity\n';
-                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${r.putawayZone || ''}";"${r.sku || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.activity || ''}"\n`);
+                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Sztuki;Docel;User;PA\n';
+                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${r.putawayZone || ''}";"${r.sku || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.paValue || ''}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_EXPORT_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_CYBER_TEST_EXPORT_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             });
         }
     </script>
