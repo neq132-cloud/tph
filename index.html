@@ -562,7 +562,6 @@
             const combinedRaw = (baseText.trim() + '\n' + freshText.trim()).trim();
             if (!combinedRaw) return;
 
-            // Inteligentne dzielenie po blokach (jeśli wklejone jest pionowo z pętlami)
             parseSmartBlockText(combinedRaw);
         }
 
@@ -570,18 +569,14 @@
             const records = [];
             const seen = new Set();
 
-            // Dzielimy tekst na bloki (np. po wystąpieniu "PreAdv Status" lub "PLTTI")
-            // Lub standardowo po liniach, jeśli to plik tabelaryczny
             const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
             
-            // Jeśli to format tabelaryczny (tabulatory)
             if (rawText.includes('\t') && !rawText.includes('PreAdv Status\n')) {
                 const matrixRows = lines.map(l => l.split('\t'));
                 processMatrix(matrixRows);
                 return;
             }
 
-            // Parser blokowy dla wklejania pionowego
             let currentBlock = [];
             const blocks = [];
 
@@ -598,14 +593,12 @@
                 const blockStr = block.join(' ');
                 const blockUp = blockStr.toUpperCase();
 
-                // Sprawdzamy status: MUSI zawierać "IN PROGRESS" oraz "COMPLETE" (i nie może zawierać SHIPPED)
                 const hasInProg = blockUp.includes('IN PROGRESS');
                 const hasComplete = blockUp.includes('COMPLETE');
                 const hasShipped = blockUp.includes('SHIPPED');
 
                 const isExactClosedStatus = hasInProg && hasComplete && !hasShipped;
 
-                // Szukamy 10-cyfrowego numeru PA zaczynającego się od prawidłowych prefiksów
                 let paValue = '';
                 let paType = 'INNE';
 
@@ -622,7 +615,6 @@
                     }
                 }
 
-                // Szukamy daty i czasu w bloku
                 let date = '02/11/2026';
                 let time = '00:00:00';
                 let user = 'BRAK_USERA';
@@ -679,7 +671,6 @@
         }
 
         function processMatrix(matrix) {
-            // Standardowy fallback dla tabelarycznego wklejania
             parseSmartBlockText(matrix.map(r => r.join('\t')).join('\n'));
         }
 
