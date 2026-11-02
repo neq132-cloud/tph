@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.16-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.17-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -54,7 +54,7 @@
         .toast-exit { animation: fadeOut 0.5s ease forwards; }
     </style>
 </head>
-<body class="text-slate-100 min-h-screen font-sans antialiased flex" ondblclick="if(event.target.tagName==='TD'||event.target.tagName==='TR') event.stopPropagation();">
+<body class="text-slate-100 min-h-screen font-sans antialiased flex">
 
     <!-- Dyskretny powiadomiacz -->
     <div id="toastNotification" class="fixed top-5 right-5 z-50 hidden bg-slate-900/95 border border-cyan-500/50 backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl shadow-cyan-500/10 flex items-center gap-3 text-xs text-slate-200">
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.16-LOCAL</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.17-LOCAL</span>
                 </div>
             </div>
 
@@ -321,7 +321,7 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedOdbiciaUser: null,
-            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, activity: 42 },
+            colMap: { code: 0, sku: 1, qty: 6, target: 8, time: 10, date: 12, user: 13, activity: -1 },
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
             sortDir: 'desc'
@@ -567,6 +567,26 @@
 
         function processMatrixData(matrix) {
             state.rawRows = matrix.map(r => { const row = [...r]; while(row.length < 45) row.push(''); return row; });
+            
+            // Automatyczne wykrycie kolumny z aktywnością (AQ) z nagłówków
+            if (state.rawRows.length > 0) {
+                const headerRow = state.rawRows[0];
+                let actIdx = -1;
+                for (let c = 0; c < headerRow.length; c++) {
+                    const hText = String(headerRow[c]).toUpperCase();
+                    if (hText.includes('AQ') || hText.includes('ACTIVITY') || hText.includes('AKTYWNOŚĆ') || hText.includes('AKTYWNOSC')) {
+                        actIdx = c;
+                        break;
+                    }
+                }
+                if (actIdx !== -1) {
+                    state.colMap.activity = actIdx;
+                } else {
+                    // Fallback do standardowych kolumn, jeśli nie znaleziono w nagłówku
+                    state.colMap.activity = headerRow.length > 42 ? 42 : headerRow.length - 1;
+                }
+            }
+
             parseDataset();
         }
 
@@ -585,7 +605,24 @@
                 const time = cleanRawString(r[state.colMap.time]);
                 const date = cleanRawString(r[state.colMap.date]);
                 let user = cleanRawString(r[state.colMap.user]) || 'BRAK_USERA';
-                const activity = cleanRawString(r[state.colMap.activity]);
+                
+                // Pobieranie aktywności z wykrytej kolumny lub skanowanie wiersza w poszukiwaniu kodu AQ (np. AQ...)
+                let activity = '';
+                if (state.colMap.activity >= 0 && r[state.colMap.activity]) {
+                    activity = cleanRawString(r[state.colMap.activity]);
+                }
+                if (!activity || activity === '-') {
+                    for (let c = 0; c < r.length; c++) {
+                        const val = cleanRawString(r[c]);
+                        if (val.toUpperCase().startsWith('AQ') || (val.length > 3 && !isNaN(val))) {
+                            // Sprawdzamy czy to wygląda jak numer aktywności
+                            if (val.toUpperCase().includes('AQ') || Number(val) > 1000) {
+                                activity = val;
+                                break;
+                            }
+                        }
+                    }
+                }
 
                 let statusFound = cleanRawString(r[14]);
                 let paValue = cleanRawString(r[16]);
@@ -623,7 +660,7 @@
                     taskType, 
                     putawayZone, 
                     closedPAType, 
-                    activity, 
+                    activity: activity || '-', 
                     paValue,
                     statusFound 
                 });
