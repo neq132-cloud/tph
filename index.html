@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.29-TEST</title>
+    <title>WMS Cyberpunk Hub v0.5.30-TEST</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja Testowa v0.5.29-TEST</div>
+            <div class="font-bold text-white">Wersja Testowa v0.5.30-TEST</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.29-TEST</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.30-TEST</span>
                 </div>
             </div>
 
@@ -144,7 +144,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">PA Max 10 cyfr | Priorytet Job Start</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">Ścisły filtr Kol. O i Q (v0.5.30)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -392,7 +392,6 @@
             return 'BULK';
         }
 
-        // Pomocnicza funkcja do pobierania unikalnych dokumentów Zamkniętych PA
         function getUniqueClosedPAs() {
             const rawClosed = state.parsedData.filter(d => d.isClosedPAValid && d.paValue);
             const paMap = {};
@@ -401,7 +400,7 @@
                     paMap[r.paValue] = {
                         paValue: r.paValue,
                         paType: r.paType,
-                        statusFound: r.statusVal || r.statusFound,
+                        statusFound: r.statusVal || r.preAdvStatusCol,
                         date: r.date,
                         time: r.time,
                         lineCount: 1,
@@ -430,7 +429,7 @@
 
         function loadDataFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem('wms_cyber_test_records_v29');
+                const savedData = localStorage.getItem('wms_cyber_test_records_v30');
                 if (savedData) {
                     const records = JSON.parse(savedData);
                     if (records && records.length > 0) {
@@ -440,7 +439,7 @@
                         document.getElementById('countBase').textContent = `${records.length} w.`;
                     }
                 }
-                showToast(`Wczytano wersję v0.5.29-TEST`);
+                showToast(`Wczytano wersję v0.5.30-TEST`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -449,7 +448,7 @@
 
         function saveDataToLocalStorage(records) {
             try {
-                localStorage.setItem('wms_cyber_test_records_v29', JSON.stringify(records));
+                localStorage.setItem('wms_cyber_test_records_v30', JSON.stringify(records));
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
             }
@@ -578,35 +577,35 @@
                 const fullUp = r.join(' ').toUpperCase();
                 if (fullUp.includes('PREADV STATUS') || fullUp.includes('SZCZEGÓŁOWA TABELA') || (fullUp.includes('CODE') && idx === 0)) return;
 
-                // STRUKTURA KOLUMN:
-                const preAdvStatusCol = cleanRawString(r[0]) || 'PreAdv Status'; // Kolumna A (index 0)
-                const sku = cleanRawString(r[1]) || '-';                         // Kolumna B (index 1)
-                const qty = parseQty(r[6]);                                      // Kolumna G (index 6)
-                const target = cleanRawString(r[8]) || 'BULK';                  // Kolumna I (index 8)
-                const time = cleanRawString(r[10]) || '00:00:00';                // Kolumna K (index 10)
-                const date = cleanRawString(r[12]) || '02/11/2026';               // Kolumna M (index 12)
-                const user = cleanRawString(r[13]) || 'BRAK_USERA';              // Kolumna N (index 13)
-                const statusVal = cleanRawString(r[14]) || 'In Progress --> Complete'; // Kolumna O (index 14)
-                
-                // Kolumna Q (index 16) - Numer PA
-                let paValue = cleanRawString(r[16]) || '';
-                if (!paValue || !/^\d+$/.test(paValue)) {
-                    const foundPa = r.find(c => {
-                        const s = cleanRawString(c);
-                        return s.startsWith('018') || s.startsWith('48') || s.startsWith('45') || s.startsWith('47') || s.startsWith('0084');
-                    });
-                    if (foundPa) paValue = cleanRawString(foundPa);
+                // STRUKTURA KOLUMN BEZ SZTUCZNYCH WARTOŚCI DOMYŚLNYCH:
+                const preAdvStatusCol = cleanRawString(r[0]); // Kolumna A (index 0)
+                const sku = cleanRawString(r[1]) || '-';     // Kolumna B (index 1)
+                const qty = parseQty(r[6]);                  // Kolumna G (index 6)
+                const target = cleanRawString(r[8]) || 'BULK'; // Kolumna I (index 8)
+                const time = cleanRawString(r[10]) || '00:00:00'; // Kolumna K (index 10)
+                const date = cleanRawString(r[12]) || '02/11/2026'; // Kolumna M (index 12)
+                const user = cleanRawString(r[13]) || 'BRAK_USERA'; // Kolumna N (index 13)
+                const statusVal = cleanRawString(r[14]);    // Kolumna O (index 14)
+                const rawPaVal = cleanRawString(r[16]);     // Kolumna Q (index 16) ŚCIŚLE
+
+                // Pobieranie wartości numeru PA wyłącznie z kolumny Q (index 16)
+                let paValue = '';
+                if (rawPaVal && /^\d+$/.test(rawPaVal)) {
+                    paValue = rawPaVal;
+                } else if (rawPaVal) {
+                    const match = rawPaVal.match(/\d+/);
+                    if (match) paValue = match[0];
                 }
 
-                // Ograniczenie PA ściśle do pierwszych 10 cyfr (odcięcie sufiksów/linii)
-                if (paValue && paValue.length > 10) {
+                // Ograniczenie PA ściśle do pierwszych 10 cyfr
+                if (paValue && paValue.length >= 10) {
                     paValue = paValue.substring(0, 10);
                 }
 
                 // Kolumna AQ (index 42) - Aktywność
                 let activity = cleanRawString(r[42]) || target;
 
-                // Klasyfikacja PA (ASN vs PO)
+                // Klasyfikacja PA (ASN vs PO) i weryfikacja prefiksu
                 let paType = 'INNE';
                 if (paValue && paValue.length === 10) {
                     if (paValue.startsWith('018') || paValue.startsWith('48')) {
@@ -616,11 +615,11 @@
                     }
                 }
 
-                let isCompleteStatus = statusVal.toUpperCase().includes('IN PROGRESS') && statusVal.toUpperCase().includes('COMPLETE');
-                if (!isCompleteStatus) {
-                    isCompleteStatus = preAdvStatusCol.toUpperCase().includes('IN PROGRESS') || preAdvStatusCol.toUpperCase().includes('COMPLETE');
-                }
+                // Weryfikacja rzeczywistego statusu zamknięcia w kolumnie O lub A (musi zawierać IN PROGRESS i COMPLETE)
+                const statusTextCombined = `${statusVal} ${preAdvStatusCol}`.toUpperCase();
+                let isCompleteStatus = statusTextCombined.includes('IN PROGRESS') && statusTextCombined.includes('COMPLETE');
 
+                // Zamknięte PA jest prawidłowe TYLKO gdy status jest naprawdę zamknięty ORAZ numer z Q ma typ ASN/PO
                 let isClosedPAValid = isCompleteStatus && (paType === 'ASN' || paType === 'PO');
 
                 const code = preAdvStatusCol || 'Putaway';
@@ -663,7 +662,7 @@
 
             saveDataToLocalStorage(records);
             renderAll();
-            showToast(`Przetworzono ${records.length} wierszy (PA 10 cyfr)`);
+            showToast(`Przetworzono ${records.length} wierszy (Ścisły filtr O & Q)`);
         }
 
         function getActiveFilteredData() {
@@ -688,7 +687,6 @@
                 if (state.selectedOdbiciaUser) {
                     data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
                 } else {
-                    // Sortowanie z zachowaniem priorytetu dla 'Job Start' przy tym samym czasie
                     const sortedOdbicia = [...odbiciaRows].sort((a, b) => {
                         const tA = `${a.date || ''} ${a.time || ''}`.trim();
                         const tB = `${b.date || ''} ${b.time || ''}`.trim();
@@ -854,7 +852,7 @@
                 const start = (page - 1) * pageSize;
                 const pageData = filtered.slice(start, start + pageSize);
 
-                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) - Unikalne Dokumenty (10 cyfr) <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">${total} PA</span>`;
+                titleEl.innerHTML = `Zamknięte Pre-Advice (PA) - Unikalne Dokumenty <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">${total} PA</span>`;
                 
                 thead.innerHTML = `
                     <tr>
@@ -881,7 +879,7 @@
                         <td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
                         <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
                         <td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] border rounded font-mono font-bold ${badgeClass}">${row.paType}</span></td>
-                        <td class="py-2.5 px-3 text-teal-400 font-semibold">${row.statusFound}</td>
+                        <td class="py-2.5 px-3 text-teal-400 font-semibold">${row.statusFound || 'In Progress --> Complete'}</td>
                         <td class="py-2.5 px-3"><span class="px-2.5 py-1 text-xs font-mono font-bold border rounded-lg bg-teal-500/20 text-teal-300 border-teal-500/30">${pVal}</span></td>
                         <td class="py-2.5 px-3 text-right font-mono text-slate-300"><strong class="text-amber-400">${row.lineCount}</strong> poz. / <strong class="text-emerald-400">${row.totalQty}</strong> szt.</td>
                     `;
