@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.6-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.7-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.6-LOCAL</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.7-LOCAL</span>
                 </div>
             </div>
 
@@ -584,7 +584,6 @@
                 let paValue = cleanRawString(r[16]);
 
                 let upperStatus = statusFound.toUpperCase();
-                // Poprawiony warunek: wyłapuje tylko statusy zakończone zawierające "COMPLETE" (np. "In Progress --> Complete")
                 let isCompletePA = paValue !== '' && upperStatus.includes('COMPLETE');
 
                 if (!code && !sku && !user && !activity && !isCompletePA) continue;
@@ -661,11 +660,7 @@
                     const sortedOdbicia = [...odbiciaRows].sort((a, b) => {
                         const tA = `${a.date || ''} ${a.time || ''}`.trim();
                         const tB = `${b.date || ''} ${b.time || ''}`.trim();
-                        if (tA !== tB) return tA.localeCompare(tB);
-                        
-                        const aIsStart = (a.code || '').toUpperCase().includes('START') ? 1 : 0;
-                        const bIsStart = (b.code || '').toUpperCase().includes('START') ? 1 : 0;
-                        return aIsStart - bIsStart;
+                        return tA.localeCompare(tB);
                     });
 
                     const userLatestMap = {};
@@ -674,7 +669,8 @@
                             userLatestMap[d.user] = d;
                         }
                     });
-                    data = Object.values(userLatestMap);
+                    
+                    data = Object.values(userLatestMap).filter(d => (d.code || '').toUpperCase().includes('JOB START'));
                 }
             }
             return data;
