@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.4-STABLE</title>
+    <title>WMS Cyberpunk Hub v0.5.5-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -25,8 +25,6 @@
     </script>
     <!-- SheetJS (xlsx) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -78,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.4-STABLE</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.5-LOCAL</span>
                 </div>
             </div>
 
@@ -146,7 +144,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-slate-400 font-mono">System Gotowy</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-emerald-400 font-mono">Tryb Lokalny (Offline)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -316,10 +314,6 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://kopwsxkfscnhaoocdxzk.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvcHdzeGtmc2NuaGFvb2NkeHprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzMTE4MTYsImV4cCI6MjEwODg4NzgxNn0.Vb01SXWqE0pqPpUV0rExs834M580_imz4Y5d-alCEN4';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         const state = {
             rawRows: [],
             parsedData: [],
@@ -413,94 +407,34 @@
             initExport();
             initPresenceModule();
 
-            loadDataFromCloud();
+            loadDataFromLocalStorage();
         });
 
-        async function loadDataFromCloud() {
+        function loadDataFromLocalStorage() {
             try {
-                let allOpData = [];
-                let from = 0;
-                let step = 1000;
-                let fetchMore = true;
-
-                while (fetchMore) {
-                    const { data: opData, error: opError } = await supabaseClient
-                        .from('wms_operations')
-                        .select('*')
-                        .range(from, from + step - 1);
-                    
-                    if (opError) throw opError;
-                    
-                    if (opData && opData.length > 0) {
-                        allOpData.push(...opData);
-                        if (opData.length < step) {
-                            fetchMore = false;
-                        } else {
-                            from += step;
-                        }
-                    } else {
-                        fetchMore = false;
+                const savedData = localStorage.getItem('wms_cyber_local_records');
+                if (savedData) {
+                    const records = JSON.parse(savedData);
+                    if (records && records.length > 0) {
+                        state.parsedData = records;
+                        const textRows = records.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity || ''}`).join('\n');
+                        document.getElementById('pasteBaseArea').value = textRows;
+                        document.getElementById('countBase').textContent = `${records.length} w.`;
                     }
                 }
-                
-                if (allOpData.length > 0) {
-                    state.parsedData = allOpData.map(d => ({
-                        id: d.id,
-                        code: d.code,
-                        sku: d.sku,
-                        qty: d.qty,
-                        target: d.target,
-                        time: d.time,
-                        date: d.date,
-                        user: d.user,
-                        taskType: d.task_type,
-                        putawayZone: d.putaway_zone,
-                        closedPAType: d.closed_pa_type,
-                        activity: d.activity || '',
-                        paValue: d.pa_value || ''
-                    }));
-                    
-                    const textRows = state.parsedData.map(d => `${d.code}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity || ''}`).join('\n');
-                    document.getElementById('pasteBaseArea').value = textRows;
-                    document.getElementById('countBase').textContent = `${state.parsedData.length} w.`;
-                }
-
-                document.getElementById('systemStatusLabel').textContent = `Załadowano pomyślnie`;
-                showToast(`Załadowano dane z bazy (${new Date().toLocaleTimeString().slice(0,5)})`);
+                showToast(`Wczytano dane lokalne (${new Date().toLocaleTimeString().slice(0,5)})`);
                 renderAll();
             } catch (err) {
-                console.error('Błąd pobierania:', err);
-                document.getElementById('systemStatusLabel').textContent = 'Gotowy do pracy';
+                console.error('Błąd wczytywania localStorage:', err);
             }
         }
 
-        async function saveDataToCloud(records) {
+        function saveDataToLocalStorage(records) {
             try {
-                await supabaseClient.from('wms_operations').delete().neq('id', 0);
-                const batchSize = 500;
-                for (let i = 0; i < records.length; i += batchSize) {
-                    const batch = records.slice(i, i + batchSize).map(r => ({
-                        code: r.code,
-                        sku: r.sku,
-                        qty: r.qty,
-                        target: r.target,
-                        time: r.time,
-                        date: r.date,
-                        user: r.user,
-                        task_type: r.taskType,
-                        putaway_zone: r.putawayZone,
-                        closed_pa_type: r.closedPAType,
-                        activity: r.activity,
-                        pa_value: r.paValue
-                    }));
-                    const { error } = await supabaseClient.from('wms_operations').insert(batch);
-                    if (error) console.error('Błąd zapisu batcha:', error);
-                }
-
-                document.getElementById('systemStatusLabel').textContent = `Zapisano ${records.length} wierszy`;
-                showToast(`Zaktualizowano pomyślnie o ${new Date().toLocaleTimeString().slice(0,5)}`);
+                localStorage.setItem('wms_cyber_local_records', JSON.stringify(records));
+                showToast(`Zapisano lokalnie ${records.length} wierszy`);
             } catch(e) {
-                console.error('Supabase error:', e);
+                console.error('Błąd zapisu localStorage:', e);
             }
         }
 
@@ -628,7 +562,7 @@
             parseDataset();
         }
 
-        async function parseDataset() {
+        function parseDataset() {
             if (!state.rawRows.length) return;
             const records = [];
             const start = cleanRawString(state.rawRows[0][state.colMap.code]).toUpperCase().includes('CODE') ? 1 : 0;
@@ -697,7 +631,7 @@
             document.getElementById('pasteFreshArea').value = '';
             document.getElementById('countFresh').textContent = '0 w.';
 
-            await saveDataToCloud(records);
+            saveDataToLocalStorage(records);
             renderAll();
         }
 
