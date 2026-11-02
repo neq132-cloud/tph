@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.31-TEST</title>
+    <title>WMS Cyberpunk Hub v0.5.32-TEST</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja Testowa v0.5.31-TEST</div>
+            <div class="font-bold text-white">Wersja Testowa v0.5.32-TEST</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.31-TEST</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.32-TEST</span>
                 </div>
             </div>
 
@@ -144,7 +144,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">Autokorekta PA & Statusu (v0.5.31)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">Ścisły filtr: In Progress -> Complete + PA 10 Cyfr (v0.5.32)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -392,7 +392,6 @@
             return 'BULK';
         }
 
-        // Pomocnicza funkcja do pobierania unikalnych dokumentów Zamkniętych PA
         function getUniqueClosedPAs() {
             const rawClosed = state.parsedData.filter(d => d.isClosedPAValid && d.paValue);
             const paMap = {};
@@ -430,7 +429,7 @@
 
         function loadDataFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem('wms_cyber_test_records_v31');
+                const savedData = localStorage.getItem('wms_cyber_test_records_v32');
                 if (savedData) {
                     const records = JSON.parse(savedData);
                     if (records && records.length > 0) {
@@ -440,7 +439,7 @@
                         document.getElementById('countBase').textContent = `${records.length} w.`;
                     }
                 }
-                showToast(`Wczytano wersję v0.5.31-TEST`);
+                showToast(`Wczytano wersję v0.5.32-TEST`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -449,7 +448,7 @@
 
         function saveDataToLocalStorage(records) {
             try {
-                localStorage.setItem('wms_cyber_test_records_v31', JSON.stringify(records));
+                localStorage.setItem('wms_cyber_test_records_v32', JSON.stringify(records));
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
             }
@@ -588,34 +587,30 @@
                 const date = getCol(12) || '02/11/2026'; // Kolumna M
                 const user = getCol(13) || 'BRAK_USERA'; // Kolumna N
                 const statusVal = getCol(14);      // Kolumna O
-                const rawPaVal = getCol(16);       // Kolumna Q
+                const rawPaVal = getCol(16);       // Kolumna Q (Ściśle numer PA)
 
-                // Szukanie właściwego PA (Kolumna Q z ewentualnym poszukiwaniem prefiksu)
-                let candidatePa = '';
-                if (rawPaVal && (rawPaVal.startsWith('018') || rawPaVal.startsWith('48') || rawPaVal.startsWith('45') || rawPaVal.startsWith('47') || rawPaVal.startsWith('0084'))) {
-                    candidatePa = rawPaVal;
-                } else {
-                    const digitsOnly = rawPaVal.replace(/\D/g, '');
-                    if (digitsOnly.length >= 2 && (digitsOnly.startsWith('018') || digitsOnly.startsWith('48') || digitsOnly.startsWith('45') || digitsOnly.startsWith('47') || digitsOnly.startsWith('0084'))) {
-                        candidatePa = digitsOnly;
-                    } else {
-                        const foundCell = r.find(c => {
-                            const s = cleanRawString(c).replace(/\D/g, '');
-                            return s.startsWith('018') || s.startsWith('48') || s.startsWith('45') || s.startsWith('47') || s.startsWith('0084');
-                        });
-                        if (foundCell) candidatePa = cleanRawString(foundCell).replace(/\D/g, '');
+                // 1. ŚCISŁY WARUNEK STATUSU:
+                // Musi zaczynać się od "In Progress" i kończyć na "Complete"
+                // Odrzuca statusy typu "Complete --> Shipped"
+                const combinedStatusText = `${statusVal} ${preAdvStatusCol}`.toUpperCase();
+                const isExactClosedStatus = (combinedStatusText.includes('IN PROGRESS') && combinedStatusText.includes('COMPLETE')) &&
+                                           !combinedStatusText.includes('SHIPPED');
+
+                // 2. ŚCISŁA WERYFIKACJA NUMERU PA W KOLUMNIE Q:
+                let paValue = '';
+                const digitsInQ = rawPaVal.replace(/\D/g, '');
+
+                if (digitsInQ.length >= 10) {
+                    const first10 = digitsInQ.substring(0, 10);
+                    // Sprawdzamy dozwolone prefiksy dla 10-cyfrowego PA
+                    if (first10.startsWith('018') || first10.startsWith('48') || first10.startsWith('45') || first10.startsWith('47') || first10.startsWith('0084')) {
+                        paValue = first10;
                     }
                 }
 
-                // Obcinanie PA do pierwszych 10 cyfr
-                let paValue = candidatePa;
-                if (paValue && paValue.length > 10) {
-                    paValue = paValue.substring(0, 10);
-                }
-
-                // Klasyfikacja PA (ASN vs PO)
+                // 3. KLASYFIKACJA TYPU PA:
                 let paType = 'INNE';
-                if (paValue) {
+                if (paValue && paValue.length === 10) {
                     if (paValue.startsWith('018') || paValue.startsWith('48')) {
                         paType = 'ASN';
                     } else if (paValue.startsWith('45') || paValue.startsWith('47') || paValue.startsWith('0084')) {
@@ -623,11 +618,8 @@
                     }
                 }
 
-                // Odporne sprawdzanie statusu (Kolumna O lub A)
-                const statusCombined = `${statusVal} ${preAdvStatusCol}`.toUpperCase();
-                const isCompleteStatus = statusCombined.includes('COMPLETE') || statusCombined.includes('PROGRESS');
-
-                const isClosedPAValid = isCompleteStatus && (paType === 'ASN' || paType === 'PO');
+                // PA jest prawidłowe TYLKO gdy status to "In Progress --> Complete" ORAZ typ dokumentu to ASN lub PO (10 cyfr)
+                const isClosedPAValid = isExactClosedStatus && (paType === 'ASN' || paType === 'PO');
 
                 const activity = getCol(42) || target;
                 const code = preAdvStatusCol || 'Putaway';
@@ -670,7 +662,7 @@
 
             saveDataToLocalStorage(records);
             renderAll();
-            showToast(`Przetworzono ${records.length} wierszy (v0.5.31)`);
+            showToast(`Przetworzono ${records.length} wierszy (v0.5.32-TEST)`);
         }
 
         function getActiveFilteredData() {
@@ -868,7 +860,7 @@
                         <th class="py-3 px-3">Data / Czas</th>
                         <th class="py-3 px-3">Typ PA</th>
                         <th class="py-3 px-3">PreAdv Status (Kol. O / A)</th>
-                        <th class="py-3 px-3">Numer PA / Dokumentu</th>
+                        <th class="py-3 px-3">Numer PA / Dokumentu (10 cyfr)</th>
                         <th class="py-3 px-3 text-right">Pozycji / Sztuk</th>
                     </tr>`;
 
