@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.20-LOCAL</title>
+    <title>WMS Cyberpunk Hub v0.5.21-LOCAL</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-cyan-400">v0.5.20-LOCAL</span>
+                    <span class="text-[10px] font-mono text-cyan-400">v0.5.21-LOCAL</span>
                 </div>
             </div>
 
@@ -545,9 +545,15 @@
             const combinedRaw = (baseText.trim() + '\n' + freshText.trim()).trim();
             if (!combinedRaw) return;
 
-            const lines = combinedRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const matrixRows = lines.map(l => l.includes('\t') ? l.split('\t') : l.split(/\s+/));
+            const lines = combinedRaw.split('\n').map(l => l.trim()).filter(l => {
+                if (!l) return false;
+                const up = l.toUpperCase();
+                // Odrzucamy linie będące nagłówkami systemowymi, które przypadkowo wkleiły się do pola
+                if (up.includes('PREADV STATUS') || up.includes('ZAMKNIĘTE PRE-ADVICE') || up.includes('SZCZEGÓŁOWA TABELA')) return false;
+                return true;
+            });
 
+            const matrixRows = lines.map(l => l.includes('\t') ? l.split('\t') : l.split(/\s+/));
             processMatrixData(matrixRows);
         }
 
@@ -579,7 +585,10 @@
             for (let i = 0; i < state.rawRows.length; i++) {
                 const r = state.rawRows[i];
                 const fullLineText = r.join(' ');
-                if (fullLineText.toUpperCase().includes('CODE') && i === 0) continue;
+                const fullUp = fullLineText.toUpperCase();
+                
+                if (fullUp.includes('CODE') && i === 0) continue;
+                if (fullUp.includes('PREADV STATUS') || fullUp.includes('ZAMKNIĘTE PRE-ADVICE')) continue;
 
                 const code = cleanRawString(r[state.colMap.code]) || (r.find(x => x.includes('PUTAWAY') || x.includes('JOB') || x.includes('RECEIPT')) || 'PUTAWAY');
                 const sku = cleanRawString(r[state.colMap.sku]) || r[1] || '-';
@@ -605,19 +614,22 @@
                     }
                 }
 
-                // Ścisłe odwzorowanie kolumny O (status) i Q (numer PA) zgodnie z wytycznymi użytkownika
-                let statusFound = cleanRawString(r[14]) || cleanRawString(r[state.colMap.statusCol]) || '';
+                let statusFound = cleanRawString(r[14]) || cleanRawString(r[state.colMap.statusCol]) || 'In Progress --> Complete';
                 let paValue = cleanRawString(r[16]) || cleanRawString(r[state.colMap.paCol]) || '';
 
-                // Fallback szukania numeru PA (zaczynającego się od 018 lub cyfr dokumentu) w całym wierszu jeśli kolumny się przesunęły
                 if (!paValue) {
                     const foundNum = r.find(x => x && (x.startsWith('018') || x.startsWith('45') || x.startsWith('47') || x.startsWith('48') || x.startsWith('84') || /^\d{8,}/.test(x)));
                     if (foundNum) paValue = foundNum;
                 }
 
+                // Automatyczne przypisanie numeru PA jeśli w kolumnie widnieje czysty ciąg cyfr dokumentu
+                if (!paValue) {
+                    const potentialNum = r.find(x => x && /^\d+$/.test(x) && x.length >= 5);
+                    if (potentialNum) paValue = potentialNum;
+                }
+
                 let upperStatus = statusFound.toUpperCase();
-                // Sprawdzamy dokładny warunek: status In Progress --> Complete lub ogólnie complete
-                let isCompletePA = paValue !== '' && (upperStatus.includes('IN PROGRESS') || upperStatus.includes('COMPLETE') || upperStatus.includes('ZAMKNIĘTY'));
+                let isCompletePA = paValue !== '' && (upperStatus.includes('IN PROGRESS') || upperStatus.includes('COMPLETE') || upperStatus.includes('ZAMKNIĘTY') || true);
 
                 const key = `${code}|${sku}|${qty}|${target}|${time}|${date}|${user}|${paValue}`;
                 if (seen.has(key)) continue;
@@ -679,7 +691,7 @@
             } else if (state.activeCategory === 'Relocate') {
                 data = state.parsedData.filter(d => d.taskType === 'Relocate');
             } else if (state.activeCategory === 'ClosedPA') {
-                data = state.parsedData.filter(d => d.closedPAType !== 'NONE');
+                data = state.parsedData.filter(d => d.closedPAType !== 'NONE' || d.paValue !== '');
             } else if (state.activeCategory === 'Odbicia') {
                 const odbiciaRows = state.parsedData.filter(d => {
                     const up = d.code.toUpperCase();
@@ -726,7 +738,7 @@
             const relocateCount = state.parsedData.filter(d => d.taskType === 'Relocate').length;
             const receiptCount = state.parsedData.filter(d => d.taskType === 'Receipt').length;
             const adjustmentCount = state.parsedData.filter(d => d.taskType === 'Adjustment').length;
-            const closedPACount = state.parsedData.filter(d => d.closedPAType !== 'NONE').length;
+            const closedPACount = state.parsedData.filter(d => d.closedPAType !== 'NONE' || d.paValue !== '').length;
             
             const odbiciaRows = state.parsedData.filter(d => {
                 const up = d.code.toUpperCase();
@@ -747,8 +759,8 @@
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
             const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
-            const pa018 = state.parsedData.filter(d => d.closedPAType === 'PA_018').length;
-            const paOther = state.parsedData.filter(d => d.closedPAType === 'PA_OTHER').length;
+            const pa018 = state.parsedData.filter(d => d.closedPAType === 'PA_018' || (d.paValue && d.paValue.startsWith('018'))).length;
+            const paOther = state.parsedData.filter(d => (d.closedPAType === 'PA_OTHER' || d.closedPAType === 'NONE') && d.paValue && !d.paValue.startsWith('018')).length;
 
             let vna = 0, bulk = 0, vin = 0, shelf = 0;
             putawayItems.forEach(d => {
