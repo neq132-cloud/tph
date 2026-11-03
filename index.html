@@ -459,11 +459,12 @@
                 const targetUp = (row.target || '').toUpperCase();
                 const actUp = (row.activity || '').toUpperCase();
 
-                const isTtiRow = codeUp.includes('TTI') || targetUp.includes('TTI') || actUp.includes('TTI');
-                if (!isTtiRow) return;
+                // Ścisłe dopasowanie zdarzenia Job Start / Job End wyłącznie dla TTIADD / TTI
+                const isTtiTarget = targetUp.includes('TTIADD') || actUp.includes('TTIADD') || targetUp === 'TTI' || actUp === 'TTI';
+                const isStart = (codeUp.includes('JOB START') || codeUp.includes('START')) && isTtiTarget;
+                const isEnd = (codeUp.includes('JOB END') || codeUp.includes('JOB STOP') || codeUp.includes('COMPLETE')) && isTtiTarget;
 
-                const isStart = codeUp.includes('JOB START') || targetUp.includes('TTI') || actUp.includes('TTI');
-                const isEnd = codeUp.includes('JOB END') || codeUp.includes('JOB STOP') || codeUp.includes('COMPLETE');
+                if (!isStart && !isEnd) return;
 
                 if (!userSessions[user]) {
                     userSessions[user] = { activeStart: null, totalSeconds: 0, sessionsCount: 0, lastStartStr: '-' };
@@ -989,7 +990,12 @@
                             const up = (d.code || '').toUpperCase();
                             const targetUp = (d.target || '').toUpperCase();
                             const actUp = (d.activity || '').toUpperCase();
-                            if (up.includes('TTI') || targetUp.includes('TTI') || actUp.includes('TTI')) {
+
+                            // Ścisły warunek: ZDARZENIE = Job Start / Job End / Job Stop ORAZ AKTYWNOŚĆ/TARGET = TTIADD / TTI
+                            const isJobCode = up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
+                            const isTtiTarget = targetUp.includes('TTIADD') || actUp.includes('TTIADD') || targetUp === 'TTI' || actUp === 'TTI';
+
+                            if (isJobCode && isTtiTarget) {
                                 rawUserEvents.push(d);
                             }
                         }
@@ -1007,7 +1013,7 @@
                     rawUserEvents.forEach((row, i) => {
                         const tr = document.createElement('tr');
                         tr.className = 'hover:bg-slate-800/40 transition';
-                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td><td class="py-2.5 px-3 text-cyan-300">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
                         tbody.appendChild(tr);
                     });
                     document.getElementById('pageInfo').textContent = `Pokazuję ${rawUserEvents.length} zdarzeń`;
