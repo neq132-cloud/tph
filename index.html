@@ -330,6 +330,7 @@
             activeCategory: 'Putaway',
             activeZone: 'ALL',
             selectedUser: null,
+            selectedTtiUser: null, // Stan wybranego pracownika w TTI ADD
             selectedOdbiciaUser: null,
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
@@ -442,16 +443,14 @@
             return Object.values(paMap);
         }
 
-        // Funkcja pomocnicza do obliczania czasu trwania TTI ADD
         function calculateTtiAddSessions() {
-            // Sortujemy całą bazę po dacie i czasie rosnąco
             const sorted = [...state.parsedData].sort((a, b) => {
                 const tA = `${a.date || ''} ${a.time || ''}`;
                 const tB = `${b.date || ''} ${b.time || ''}`;
                 return tA.localeCompare(tB);
             });
 
-            const userSessions = {}; // user -> { startTime, startDate, totalSeconds }
+            const userSessions = {};
 
             sorted.forEach(row => {
                 const user = row.user;
@@ -464,18 +463,25 @@
                 const isEnd = codeUp.includes('JOB END') || codeUp.includes('JOB STOP') || codeUp.includes('COMPLETE');
 
                 if (!userSessions[user]) {
-                    userSessions[user] = { activeStart: null, totalSeconds: 0, sessionsCount: 0, lastStartStr: '-' };
+                    userSessions[user] = { activeStart: null, totalSeconds: 0, sessionsCount: 0, lastStartStr: '-', events: [] };
                 }
 
                 const timeParts = (row.time || '00:00:00').split(':');
                 const seconds = (parseInt(timeParts[0]) || 0) * 3600 + (parseInt(timeParts[1]) || 0) * 60 + (parseInt(timeParts[2]) || 0);
+
+                if (isStart) {
+                    userSessions[user].events.push({ type: 'WBICIE (START)', time: `${row.date || ''} ${row.time || ''}`, details: row.code || row.activity || 'TTI ADD' });
+                }
+                if (isEnd) {
+                    userSessions[user].events.push({ type: 'WYBICIE (STOP)', time: `${row.date || ''} ${row.time || ''}`, details: row.code || row.activity || 'KONIEC' });
+                }
 
                 if (isStart && !userSessions[user].activeStart) {
                     userSessions[user].activeStart = seconds;
                     userSessions[user].lastStartStr = `${row.date || ''} ${row.time || ''}`;
                 } else if (isEnd && userSessions[user].activeStart !== null) {
                     let diff = seconds - userSessions[user].activeStart;
-                    if (diff < 0) diff += 86400; // obsługa przejścia przez północ
+                    if (diff < 0) diff += 86400;
                     userSessions[user].totalSeconds += diff;
                     userSessions[user].sessionsCount++;
                     userSessions[user].activeStart = null;
@@ -490,13 +496,14 @@
                 const minutes = Math.floor((totalSec % 3600) / 60);
                 const decimalHours = (totalSec / 3600).toFixed(2).replace('.', ',');
 
-                if (totalSec > 0 || data.sessionsCount > 0) {
+                if (totalSec > 0 || data.sessionsCount > 0 || data.events.length > 0) {
                     result.push({
                         user: user,
                         durationText: `${hours} godzina ${minutes} minut`,
                         decimalText: decimalHours,
                         sessionsCount: data.sessionsCount,
-                        lastStart: data.lastStartStr
+                        lastStart: data.lastStartStr,
+                        events: data.events
                     });
                 }
             });
@@ -569,6 +576,7 @@
             state.activeCategory = cat;
             state.activeZone = 'ALL';
             state.selectedUser = null;
+            state.selectedTtiUser = null;
             state.selectedOdbiciaUser = null;
 
             ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'TtiAdd', 'Odbicia'].forEach(c => {
@@ -705,6 +713,7 @@
             records.forEach((rec, index) => { rec.id = index + 1; });
             state.parsedData = records;
             state.selectedUser = null;
+            state.selectedTtiUser = null;
             state.selectedOdbiciaUser = null;
 
             const textRows = records.map(d => `${d.preAdvStatusCol || 'PreAdv Status'}\t${d.sku}\t\t\t\t\t${d.qty}\t\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusVal}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}`).join('\n');
@@ -978,6 +987,41 @@
                 document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
 
             } else if (state.activeCategory === 'TtiAdd') {
+                if (state.selectedTtiUser) {
+                    // Widok szczegółowy wbić i wybić dla wybranego pracownika w TTI ADD
+                    let rawUserEvents = [];
+                    state.parsedData.forEach(d => {
+                        if (d.user === state.selectedTtiUser) {
+                            const up = (d.code || '').toUpperCase();
+                            const targetUp = (d.target || '').toUpperCase();
+                            const actUp = (d.activity || '').toUpperCase();
+                            if (up.includes('JOB') || targetUp.includes('TTI') || actUp.includes('TTI') || up.includes('START') || up.includes('END') || up.includes('STOP') || up.includes('COMPLETE')) {
+                                rawUserEvents.push(d);
+                            }
+                        }
+                    });
+
+                    titleEl.innerHTML = `Szczegóły wbić/wybić dla pracownika: <strong class="text-amber-400">${state.selectedTtiUser}</strong> <button onclick="state.selectedTtiUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 text-slate-200 text-xs rounded hover:bg-slate-700">Powrót</button>`;
+                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">Status</th></tr>`;
+
+                    if (!rawUserEvents.length) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak szczegółowych zdarzeń dla tego pracownika.</td></tr>';
+                        document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                        return;
+                    }
+
+                    rawUserEvents.forEach((row, i) => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-800/40 transition';
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td><td class="py-2.5 px-3 text-cyan-300">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
+                        tbody.appendChild(tr);
+                    });
+                    document.getElementById('pageInfo').textContent = `Pokazuję ${rawUserEvents.length} zdarzeń`;
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
+                    return;
+                }
+
                 let data = getActiveFilteredData();
                 const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
                 const total = filtered.length;
@@ -985,7 +1029,7 @@
                 const start = (page - 1) * pageSize;
                 const pageData = filtered.slice(start, start + pageSize);
 
-                titleEl.innerHTML = `Aktywność TTI ADD <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób</span>`;
+                titleEl.innerHTML = `Aktywność TTI ADD (Kliknij w pracownika, aby zobaczyć szczegóły wbić/wybić) <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób</span>`;
                 thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Pracownik</th><th class="py-3 px-3">Czas trwania (Format)</th><th class="py-3 px-3">Wartość dziesiętna</th><th class="py-3 px-3 text-right">Sesji</th></tr>`;
 
                 if (!pageData.length) {
@@ -996,8 +1040,9 @@
 
                 pageData.forEach((row, i) => {
                     const tr = document.createElement('tr');
-                    tr.className = 'hover:bg-slate-800/40 transition';
-                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.durationText}</td><td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row.decimalText}</td><td class="py-2.5 px-3 text-right font-mono text-slate-300">${row.sessionsCount}</td>`;
+                    tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
+                    tr.onclick = () => { state.selectedTtiUser = row.user; renderDetailsTable(); };
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.durationText}</td><td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row.decimalText}</td><td class="py-2.5 px-3 text-right font-mono text-slate-300">${row.sessionsCount}</td>`;
                     tbody.appendChild(tr);
                 });
                 document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
