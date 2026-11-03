@@ -102,6 +102,10 @@
                     <span class="flex items-center gap-3"><i data-lucide="check-circle-2" class="w-4 h-4"></i> Zamknięte PA</span>
                     <span id="badgeClosedPA" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
                 </button>
+                <button onclick="switchCategory('TtiAdd')" id="navTtiAdd" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="clock" class="w-4 h-4"></i> TTI ADD</span>
+                    <span id="badgeTtiAdd" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
                 <button onclick="switchCategory('Odbicia')" id="navOdbicia" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                     <span class="flex items-center gap-3"><i data-lucide="user-check" class="w-4 h-4"></i> Odbicia (Live)</span>
                     <span id="badgeOdbicia" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
@@ -438,6 +442,68 @@
             return Object.values(paMap);
         }
 
+        // Funkcja pomocnicza do obliczania czasu trwania TTI ADD
+        function calculateTtiAddSessions() {
+            // Sortujemy całą bazę po dacie i czasie rosnąco
+            const sorted = [...state.parsedData].sort((a, b) => {
+                const tA = `${a.date || ''} ${a.time || ''}`;
+                const tB = `${b.date || ''} ${b.time || ''}`;
+                return tA.localeCompare(tB);
+            });
+
+            const userSessions = {}; // user -> { startTime, startDate, totalSeconds }
+
+            sorted.forEach(row => {
+                const user = row.user;
+                if (!user || user === 'BRAK_USERA') return;
+                const codeUp = (row.code || '').toUpperCase();
+                const targetUp = (row.target || '').toUpperCase();
+                const actUp = (row.activity || '').toUpperCase();
+
+                const isStart = codeUp.includes('JOB START') || targetUp.includes('TTI') || actUp.includes('TTI');
+                const isEnd = codeUp.includes('JOB END') || codeUp.includes('JOB STOP') || codeUp.includes('COMPLETE');
+
+                if (!userSessions[user]) {
+                    userSessions[user] = { activeStart: null, totalSeconds: 0, sessionsCount: 0, lastStartStr: '-' };
+                }
+
+                const timeParts = (row.time || '00:00:00').split(':');
+                const seconds = (parseInt(timeParts[0]) || 0) * 3600 + (parseInt(timeParts[1]) || 0) * 60 + (parseInt(timeParts[2]) || 0);
+
+                if (isStart && !userSessions[user].activeStart) {
+                    userSessions[user].activeStart = seconds;
+                    userSessions[user].lastStartStr = `${row.date || ''} ${row.time || ''}`;
+                } else if (isEnd && userSessions[user].activeStart !== null) {
+                    let diff = seconds - userSessions[user].activeStart;
+                    if (diff < 0) diff += 86400; // obsługa przejścia przez północ
+                    userSessions[user].totalSeconds += diff;
+                    userSessions[user].sessionsCount++;
+                    userSessions[user].activeStart = null;
+                }
+            });
+
+            const result = [];
+            Object.keys(userSessions).forEach(user => {
+                const data = userSessions[user];
+                const totalSec = data.totalSeconds;
+                const hours = Math.floor(totalSec / 3600);
+                const minutes = Math.floor((totalSec % 3600) / 60);
+                const decimalHours = (totalSec / 3600).toFixed(2).replace('.', ',');
+
+                if (totalSec > 0 || data.sessionsCount > 0) {
+                    result.push({
+                        user: user,
+                        durationText: `${hours} godzina ${minutes} minut`,
+                        decimalText: decimalHours,
+                        sessionsCount: data.sessionsCount,
+                        lastStart: data.lastStartStr
+                    });
+                }
+            });
+
+            return result;
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             initTabs();
@@ -505,7 +571,7 @@
             state.selectedUser = null;
             state.selectedOdbiciaUser = null;
 
-            ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'Odbicia'].forEach(c => {
+            ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'TtiAdd', 'Odbicia'].forEach(c => {
                 const btn = document.getElementById(`nav${c}`);
                 if (btn) {
                     if (c === cat) {
@@ -516,11 +582,11 @@
                 }
             });
 
-            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'Adjustment': 'Adjustment', 'ClosedPA': 'Zamknięte PA', 'Odbicia': 'Odbicia (Live)' };
+            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'Adjustment': 'Adjustment', 'ClosedPA': 'Zamknięte PA', 'TtiAdd': 'TTI ADD', 'Odbicia': 'Odbicia (Live)' };
             document.getElementById('activeCatLabel').textContent = labels[cat];
             
-            document.getElementById('kpiContainer').style.display = (cat === 'Odbicia') ? 'none' : 'grid';
-            document.getElementById('workersSection').style.display = (cat === 'Odbicia') ? 'none' : 'grid';
+            document.getElementById('kpiContainer').style.display = (cat === 'Odbicia' || cat === 'TtiAdd') ? 'none' : 'grid';
+            document.getElementById('workersSection').style.display = (cat === 'Odbicia' || cat === 'TtiAdd') ? 'none' : 'grid';
 
             state.pagination.page = 1;
             renderAll();
@@ -618,7 +684,6 @@
                     const cand = digits.substring(0, 10);
                     if (cand.startsWith('018') || cand.startsWith('48') || cand.startsWith('45') || cand.startsWith('47') || cand.startsWith('0084')) {
                         currentRecord.paValue = cand;
-                        // 48 i PO klasyfikowane jako PO, 018 jako ASN
                         currentRecord.paType = (cand.startsWith('018')) ? 'ASN' : 'PO';
                     }
                 }
@@ -686,7 +751,6 @@
 
                 let paType = 'INNE';
                 if (paValue && paValue.length === 10) {
-                    // Tylko 018 to ASN, 48 oraz reszta (45, 47, 0084 itp.) trafiają do PO
                     if (paValue.startsWith('018')) paType = 'ASN';
                     else paType = 'PO';
                 }
@@ -733,6 +797,8 @@
                 data = state.parsedData.filter(d => d.taskType === 'Relocate');
             } else if (state.activeCategory === 'ClosedPA') {
                 data = state.parsedData.filter(d => d.isClosedPAValid);
+            } else if (state.activeCategory === 'TtiAdd') {
+                data = getTtiAddSessions();
             } else if (state.activeCategory === 'Odbicia') {
                 const odbiciaRows = state.parsedData.filter(d => {
                     const up = (d.code || '').toUpperCase();
@@ -749,6 +815,10 @@
                 }
             }
             return data;
+        }
+
+        function getTtiAddSessions() {
+            return calculateTtiAddSessions();
         }
 
         function initFilters() {
@@ -770,6 +840,7 @@
             const receiptCount = state.parsedData.filter(d => d.taskType === 'Receipt').length;
             const adjustmentCount = state.parsedData.filter(d => d.taskType === 'Adjustment').length;
             const closedPACount = getUniqueClosedPAs().length;
+            const ttiAddCount = calculateTtiAddSessions().length;
             
             const odbiciaRows = state.parsedData.filter(d => {
                 const up = (d.code || '').toUpperCase();
@@ -782,11 +853,12 @@
             document.getElementById('badgeReceipt').textContent = receiptCount;
             document.getElementById('badgeAdjustment').textContent = adjustmentCount;
             document.getElementById('badgeClosedPA').textContent = closedPACount;
+            document.getElementById('badgeTtiAdd').textContent = ttiAddCount;
             document.getElementById('badgeOdbicia').textContent = uniqueWorkers.size || odbiciaRows.length;
         }
 
         function renderDashboardCards() {
-            if (state.activeCategory === 'Odbicia') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd') return;
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
             const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
@@ -818,7 +890,7 @@
         }
 
         function renderWorkers() {
-            if (state.activeCategory === 'Odbicia') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd') return;
             const activeData = getActiveFilteredData();
             const userMap = {};
             activeData.forEach(d => userMap[d.user] = (userMap[d.user] || 0) + 1);
@@ -848,7 +920,7 @@
         function clearUserSelection() { state.selectedUser = null; renderWorkers(); renderDrilldown(); }
 
         function renderDrilldown() {
-            if (state.activeCategory === 'Odbicia') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd') return;
             const nameEl = document.getElementById('selectedUserName');
             const tbody = document.getElementById('drilldownTableBody');
             tbody.innerHTML = '';
@@ -904,6 +976,31 @@
                 document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} unikalnych PA`;
                 document.getElementById('prevPageBtn').disabled = page === 1;
                 document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+            } else if (state.activeCategory === 'TtiAdd') {
+                let data = getActiveFilteredData();
+                const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+                const total = filtered.length;
+                const { page, pageSize } = state.pagination;
+                const start = (page - 1) * pageSize;
+                const pageData = filtered.slice(start, start + pageSize);
+
+                titleEl.innerHTML = `Aktywność TTI ADD <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób</span>`;
+                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Pracownik</th><th class="py-3 px-3">Czas trwania (Format)</th><th class="py-3 px-3">Wartość dziesiętna</th><th class="py-3 px-3 text-right">Sesji</th></tr>`;
+
+                if (!pageData.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych TTI ADD.</td></tr>';
+                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    return;
+                }
+
+                pageData.forEach((row, i) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-800/40 transition';
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.durationText}</td><td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row.decimalText}</td><td class="py-2.5 px-3 text-right font-mono text-slate-300">${row.sessionsCount}</td>`;
+                    tbody.appendChild(tr);
+                });
+                document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
 
             } else if (state.activeCategory === 'Odbicia') {
                 let data = getActiveFilteredData();
