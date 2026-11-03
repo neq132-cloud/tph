@@ -330,7 +330,7 @@
             activeCategory: 'Putaway',
             activeZone: 'ALL',
             selectedUser: null,
-            selectedTtiUser: null, // Stan wybranego pracownika w TTI ADD
+            selectedTtiUser: null,
             selectedOdbiciaUser: null,
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
@@ -459,22 +459,19 @@
                 const targetUp = (row.target || '').toUpperCase();
                 const actUp = (row.activity || '').toUpperCase();
 
+                // Sprawdzamy czy wiersz dotyczy TTI
+                const isTtiRow = codeUp.includes('TTI') || targetUp.includes('TTI') || actUp.includes('TTI');
+                if (!isTtiRow) return;
+
                 const isStart = codeUp.includes('JOB START') || targetUp.includes('TTI') || actUp.includes('TTI');
                 const isEnd = codeUp.includes('JOB END') || codeUp.includes('JOB STOP') || codeUp.includes('COMPLETE');
 
                 if (!userSessions[user]) {
-                    userSessions[user] = { activeStart: null, totalSeconds: 0, sessionsCount: 0, lastStartStr: '-', events: [] };
+                    userSessions[user] = { activeStart: null, totalSeconds: 0, sessionsCount: 0, lastStartStr: '-' };
                 }
 
                 const timeParts = (row.time || '00:00:00').split(':');
                 const seconds = (parseInt(timeParts[0]) || 0) * 3600 + (parseInt(timeParts[1]) || 0) * 60 + (parseInt(timeParts[2]) || 0);
-
-                if (isStart) {
-                    userSessions[user].events.push({ type: 'WBICIE (START)', time: `${row.date || ''} ${row.time || ''}`, details: row.code || row.activity || 'TTI ADD' });
-                }
-                if (isEnd) {
-                    userSessions[user].events.push({ type: 'WYBICIE (STOP)', time: `${row.date || ''} ${row.time || ''}`, details: row.code || row.activity || 'KONIEC' });
-                }
 
                 if (isStart && !userSessions[user].activeStart) {
                     userSessions[user].activeStart = seconds;
@@ -496,14 +493,13 @@
                 const minutes = Math.floor((totalSec % 3600) / 60);
                 const decimalHours = (totalSec / 3600).toFixed(2).replace('.', ',');
 
-                if (totalSec > 0 || data.sessionsCount > 0 || data.events.length > 0) {
+                if (totalSec > 0 || data.sessionsCount > 0) {
                     result.push({
                         user: user,
                         durationText: `${hours} godzina ${minutes} minut`,
                         decimalText: decimalHours,
                         sessionsCount: data.sessionsCount,
-                        lastStart: data.lastStartStr,
-                        events: data.events
+                        lastStart: data.lastStartStr
                     });
                 }
             });
@@ -988,24 +984,24 @@
 
             } else if (state.activeCategory === 'TtiAdd') {
                 if (state.selectedTtiUser) {
-                    // Widok szczegółowy wbić i wybić dla wybranego pracownika w TTI ADD
+                    // Szczegóły TYLKO dla wierszy powiązanych z TTI dla wybranego pracownika
                     let rawUserEvents = [];
                     state.parsedData.forEach(d => {
                         if (d.user === state.selectedTtiUser) {
                             const up = (d.code || '').toUpperCase();
                             const targetUp = (d.target || '').toUpperCase();
                             const actUp = (d.activity || '').toUpperCase();
-                            if (up.includes('JOB') || targetUp.includes('TTI') || actUp.includes('TTI') || up.includes('START') || up.includes('END') || up.includes('STOP') || up.includes('COMPLETE')) {
+                            if (up.includes('TTI') || targetUp.includes('TTI') || actUp.includes('TTI')) {
                                 rawUserEvents.push(d);
                             }
                         }
                     });
 
-                    titleEl.innerHTML = `Szczegóły wbić/wybić dla pracownika: <strong class="text-amber-400">${state.selectedTtiUser}</strong> <button onclick="state.selectedTtiUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 text-slate-200 text-xs rounded hover:bg-slate-700">Powrót</button>`;
+                    titleEl.innerHTML = `Szczegóły wbić/wybić TTI dla pracownika: <strong class="text-amber-400">${state.selectedTtiUser}</strong> <button onclick="state.selectedTtiUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 text-slate-200 text-xs rounded hover:bg-slate-700">Powrót</button>`;
                     thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">Status</th></tr>`;
 
                     if (!rawUserEvents.length) {
-                        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak szczegółowych zdarzeń dla tego pracownika.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak szczegółowych zdarzeń TTI dla tego pracownika.</td></tr>';
                         document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                         return;
                     }
