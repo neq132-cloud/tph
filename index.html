@@ -459,7 +459,6 @@
                 const targetUp = (row.target || '').toUpperCase();
                 const actUp = (row.activity || '').toUpperCase();
 
-                // Sprawdzamy czy wiersz dotyczy TTI
                 const isTtiRow = codeUp.includes('TTI') || targetUp.includes('TTI') || actUp.includes('TTI');
                 if (!isTtiRow) return;
 
@@ -984,7 +983,6 @@
 
             } else if (state.activeCategory === 'TtiAdd') {
                 if (state.selectedTtiUser) {
-                    // Szczegóły TYLKO dla wierszy powiązanych z TTI dla wybranego pracownika
                     let rawUserEvents = [];
                     state.parsedData.forEach(d => {
                         if (d.user === state.selectedTtiUser) {
@@ -1021,11 +1019,19 @@
                 let data = getActiveFilteredData();
                 const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
                 const total = filtered.length;
+
+                // Sumowanie wartości dziesiętnych
+                let sumDecimal = filtered.reduce((acc, item) => {
+                    let val = parseFloat(String(item.decimalText).replace(',', '.')) || 0;
+                    return acc + val;
+                }, 0);
+                let sumDecimalStr = sumDecimal.toFixed(2).replace('.', ',');
+
                 const { page, pageSize } = state.pagination;
                 const start = (page - 1) * pageSize;
                 const pageData = filtered.slice(start, start + pageSize);
 
-                titleEl.innerHTML = `Aktywność TTI ADD (Kliknij w pracownika, aby zobaczyć szczegóły wbić/wybić) <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób</span>`;
+                titleEl.innerHTML = `Aktywność TTI ADD (Kliknij w pracownika, aby zobaczyć szczegóły wbić/wybić) <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób | Suma godzin: ${sumDecimalStr}</span>`;
                 thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Pracownik</th><th class="py-3 px-3">Czas trwania (Format)</th><th class="py-3 px-3">Wartość dziesiętna</th><th class="py-3 px-3 text-right">Sesji</th></tr>`;
 
                 if (!pageData.length) {
@@ -1041,6 +1047,13 @@
                     tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.durationText}</td><td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row.decimalText}</td><td class="py-2.5 px-3 text-right font-mono text-slate-300">${row.sessionsCount}</td>`;
                     tbody.appendChild(tr);
                 });
+
+                // Wiersz podsumowania na dole tabeli
+                const trSum = document.createElement('tr');
+                trSum.className = 'bg-slate-950/80 font-bold border-t border-cyber-border';
+                trSum.innerHTML = `<td colspan="3" class="py-2.5 px-3 text-right text-slate-400 uppercase text-[10px]">Suma całkowita:</td><td class="py-2.5 px-3 text-emerald-400 font-mono">${sumDecimalStr}</td><td></td>`;
+                tbody.appendChild(trSum);
+
                 document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
 
             } else if (state.activeCategory === 'Odbicia') {
