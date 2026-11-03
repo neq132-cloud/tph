@@ -233,7 +233,7 @@
                     </div>
                 </div>
 
-                <!-- Rozbudowany kafelek Zamknięte PA (ASN / PO) -->
+                <!-- Kafelek Zamknięte PA (ASN / PO) -->
                 <div onclick="switchCategory('ClosedPA')" class="bg-cyber-card/90 backdrop-blur-md border border-teal-500/50 hover:border-teal-400 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition">
                     <div class="flex justify-between items-center">
                         <span class="text-[9px] font-bold text-teal-400 uppercase">Zamknięte PA</span>
@@ -618,7 +618,8 @@
                     const cand = digits.substring(0, 10);
                     if (cand.startsWith('018') || cand.startsWith('48') || cand.startsWith('45') || cand.startsWith('47') || cand.startsWith('0084')) {
                         currentRecord.paValue = cand;
-                        currentRecord.paType = (cand.startsWith('018') || cand.startsWith('48')) ? 'ASN' : 'PO';
+                        // 48 i PO klasyfikowane jako PO, 018 jako ASN
+                        currentRecord.paType = (cand.startsWith('018')) ? 'ASN' : 'PO';
                     }
                 }
 
@@ -685,7 +686,8 @@
 
                 let paType = 'INNE';
                 if (paValue && paValue.length === 10) {
-                    if (paValue.startsWith('018') || paValue.startsWith('48')) paType = 'ASN';
+                    // Tylko 018 to ASN, 48 oraz reszta (45, 47, 0084 itp.) trafiają do PO
+                    if (paValue.startsWith('018')) paType = 'ASN';
                     else paType = 'PO';
                 }
 
@@ -810,7 +812,6 @@
             document.getElementById('dashReceiptOps').textContent = receiptItems.length;
             document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((s, d) => s + d.qty, 0);
             
-            // Aktualizacja kafelka podsumowującego ASN / PO
             document.getElementById('dashTotalPa').textContent = uniquePAs.length;
             document.getElementById('dashAsnCount').textContent = asnTotal;
             document.getElementById('dashPoCount').textContent = poTotal;
@@ -883,7 +884,6 @@
                 const start = (page - 1) * pageSize;
                 const pageData = filtered.slice(start, start + pageSize);
 
-                // Tytuł z dokładnym rozbiciem na ASN i PO
                 titleEl.innerHTML = `Zamknięte Pre-Advice (PA) - Unikalne Dokumenty <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">Łącznie: ${total} (ASN: ${asnLen} | PO: ${poLen})</span>`;
                 thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Typ PA</th><th class="py-3 px-3">Status</th><th class="py-3 px-3">Numer PA / Dokumentu</th><th class="py-3 px-3 text-right">Pozycji / Sztuk</th></tr>`;
 
