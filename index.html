@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.32-PA-FIX</title>
+    <title>WMS Cyberpunk Hub v0.5.33-PAG-FIX</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.32-PA-FIX</div>
+            <div class="font-bold text-white">Wersja v0.5.33-PAG-FIX</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.32-PA-FIX</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.33-PAG-FIX</span>
                 </div>
             </div>
 
@@ -148,7 +148,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">Stabilna v0.5.32 (PA Fix)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">Stabilna v0.5.33 (PAG Fix)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -366,6 +366,7 @@
         function clearAllData() {
             if (confirm("Czy na pewno chcesz wyczyścić całą bazę danych i zapamiętane wpisy?")) {
                 state.parsedData = [];
+                localStorage.removeItem('wms_cyber_test_records_v33_pagfix');
                 localStorage.removeItem('wms_cyber_test_records_v32_pafix');
                 document.getElementById('pasteBaseArea').value = '';
                 document.getElementById('countBase').textContent = '0 w.';
@@ -548,7 +549,7 @@
 
         function loadDataFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem('wms_cyber_test_records_v32_pafix');
+                const savedData = localStorage.getItem('wms_cyber_test_records_v33_pagfix') || localStorage.getItem('wms_cyber_test_records_v32_pafix');
                 if (savedData) {
                     const records = JSON.parse(savedData);
                     if (records && records.length > 0) {
@@ -558,7 +559,7 @@
                         document.getElementById('countBase').textContent = `${records.length} w.`;
                     }
                 }
-                showToast(`Wczytano wersję v0.5.32-PA-FIX`);
+                showToast(`Wczytano wersję v0.5.33-PAG-FIX`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -567,7 +568,7 @@
 
         function saveDataToLocalStorage(records) {
             try {
-                localStorage.setItem('wms_cyber_test_records_v32_pafix', JSON.stringify(records));
+                localStorage.setItem('wms_cyber_test_records_v33_pagfix', JSON.stringify(records));
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
             }
@@ -1043,6 +1044,8 @@
                 if (!pageData.length) {
                     tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak zamkniętych PA.</td></tr>';
                     document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
                     return;
                 }
 
@@ -1082,6 +1085,8 @@
                     if (!rawUserEvents.length) {
                         tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak szczegółowych zdarzeń TTI dla tego pracownika.</td></tr>';
                         document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
                         return;
                     }
 
@@ -1117,6 +1122,8 @@
                 if (!pageData.length) {
                     tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych TTI ADD.</td></tr>';
                     document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
                     return;
                 }
 
@@ -1134,10 +1141,11 @@
                 tbody.appendChild(trSum);
 
                 document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
+                document.getElementById('prevPageBtn').disabled = page === 1;
+                document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
 
             } else if (state.activeCategory === 'Odbicia') {
                 if (state.selectedOdbiciaUser) {
-                    // Widok historii TYLKO wbić (Job Start / Job End / Job Stop) dla pracownika
                     let rawUserEvents = state.parsedData.filter(d => {
                         if (d.user !== state.selectedOdbiciaUser) return false;
                         const up = (d.code || '').toUpperCase();
@@ -1151,7 +1159,6 @@
                         });
                     }
 
-                    // Obliczanie wyliczonego czasu trwania operacji dla każdego JOBA
                     const openStarts = {};
                     const sortedForDur = [...rawUserEvents].sort((a, b) => {
                         const tA = parseDateTime(a.date, a.time);
@@ -1200,6 +1207,8 @@
                     if (!rawUserEvents.length) {
                         tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak zarejestrowanych odbić Job Start / Job End dla tego pracownika.</td></tr>';
                         document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
                         return;
                     }
 
@@ -1215,7 +1224,6 @@
                     return;
                 }
 
-                // Lista ogólna wbić z filtrem aktywności
                 const allOdbiciaRows = state.parsedData.filter(d => {
                     const up = (d.code || '').toUpperCase();
                     return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('USER') || up.includes('PLTTI');
@@ -1253,6 +1261,8 @@
                 if (!pageData.length) {
                     tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych o odbiciach.</td></tr>';
                     document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
                     return;
                 }
 
@@ -1264,6 +1274,8 @@
                     tbody.appendChild(tr);
                 });
                 document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
+                document.getElementById('prevPageBtn').disabled = page === 1;
+                document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
 
             } else {
                 let data = getActiveFilteredData();
@@ -1277,6 +1289,14 @@
                 titleEl.innerHTML = `Szczegóły Operacji <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} ops</span>`;
                 thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>`;
 
+                if (!pageData.length) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Brak wierszy.</td></tr>';
+                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
+                    return;
+                }
+
                 pageData.forEach((row, i) => {
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition';
@@ -1284,6 +1304,8 @@
                     tbody.appendChild(tr);
                 });
                 document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} wierszy`;
+                document.getElementById('prevPageBtn').disabled = page === 1;
+                document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
             }
         }
 
