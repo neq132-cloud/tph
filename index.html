@@ -1070,8 +1070,13 @@
 
             } else if (state.activeCategory === 'Odbicia') {
                 if (state.selectedOdbiciaUser) {
-                    // Widok historii wbić/aktywności dla pracownika
-                    let rawUserEvents = state.parsedData.filter(d => d.user === state.selectedOdbiciaUser);
+                    // Widok historii TYLKO wbić (Job Start / Job End / Job Stop) dla pracownika
+                    let rawUserEvents = state.parsedData.filter(d => {
+                        if (d.user !== state.selectedOdbiciaUser) return false;
+                        const up = (d.code || '').toUpperCase();
+                        return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
+                    });
+
                     if (state.selectedOdbiciaActivity && state.selectedOdbiciaActivity !== 'ALL') {
                         rawUserEvents = rawUserEvents.filter(d => {
                             const act = (d.activity || d.target || '').toUpperCase();
@@ -1083,7 +1088,7 @@
                     thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">Status</th></tr>`;
 
                     if (!rawUserEvents.length) {
-                        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak zarejestrowanych odbić dla tego pracownika.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak zarejestrowanych odbić Job Start / Job End dla tego pracownika.</td></tr>';
                         document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                         return;
                     }
