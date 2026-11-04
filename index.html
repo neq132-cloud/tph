@@ -404,6 +404,15 @@
             return isNaN(num) || num <= 0 ? 1 : num;
         }
 
+        function parseDateTime(dStr, tStr) {
+            if (!dStr) return '';
+            const parts = dStr.split('/');
+            if (parts.length === 3) {
+                return `${parts[2]}-${parts[1]}-${parts[0]} ${tStr || '00:00:00'}`;
+            }
+            return `${dStr} ${tStr || '00:00:00'}`;
+        }
+
         function classifyTaskType(codeStr) {
             const upper = codeStr.toUpperCase().trim();
             if (upper.includes('ADJUSTMENT') || upper.includes('KOREKTA')) return 'Adjustment';
@@ -446,8 +455,8 @@
 
         function calculateTtiAddSessions() {
             const sorted = [...state.parsedData].sort((a, b) => {
-                const tA = `${a.date || ''} ${a.time || ''}`;
-                const tB = `${b.date || ''} ${b.time || ''}`;
+                const tA = parseDateTime(a.date, a.time);
+                const tB = parseDateTime(b.date, b.time);
                 return tA.localeCompare(tB);
             });
 
@@ -811,21 +820,62 @@
                     return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('USER') || up.includes('PLTTI');
                 });
 
-                if (state.selectedOdbiciaActivity && state.selectedOdbiciaActivity !== 'ALL') {
-                    odbiciaRows = odbiciaRows.filter(d => {
-                        const act = (d.activity || d.target || '').toUpperCase();
-                        return act === state.selectedOdbiciaActivity.toUpperCase();
-                    });
-                }
-
                 if (state.selectedOdbiciaUser) {
                     data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
                 } else {
-                    const userLatestMap = {};
+                    const userGroups = {};
                     odbiciaRows.forEach(d => {
-                        if (d.user && d.user !== 'BRAK_USERA') userLatestMap[d.user] = d;
+                        if (d.user && d.user !== 'BRAK_USERA') {
+                            if (!userGroups[d.user]) userGroups[d.user] = [];
+                            userGroups[d.user].push(d);
+                        }
                     });
-                    data = Object.values(userLatestMap);
+
+                    const userActiveList = [];
+
+                    Object.keys(userGroups).forEach(user => {
+                        const events = userGroups[user].sort((a, b) => {
+                            const tA = parseDateTime(a.date, a.time);
+                            const tB = parseDateTime(b.date, b.time);
+                            return tA.localeCompare(tB);
+                        });
+
+                        const activeStack = [];
+                        let lastEvent = null;
+
+                        events.forEach(row => {
+                            lastEvent = row;
+                            const codeUp = (row.code || '').toUpperCase();
+                            const actUp = (row.activity || row.target || '').trim().toUpperCase();
+                            const isStart = codeUp.includes('JOB START') || codeUp.includes('START');
+                            const isEnd = codeUp.includes('JOB END') || codeUp.includes('JOB STOP') || codeUp.includes('COMPLETE');
+
+                            if (isStart) {
+                                activeStack.push({ act: actUp, row: row });
+                            } else if (isEnd) {
+                                const idx = activeStack.map(s => s.act).lastIndexOf(actUp);
+                                if (idx !== -1) {
+                                    activeStack.splice(idx, 1);
+                                } else if (activeStack.length > 0) {
+                                    activeStack.pop();
+                                }
+                            }
+                        });
+
+                        const currentActiveRow = activeStack.length > 0 ? activeStack[activeStack.length - 1].row : lastEvent;
+                        if (currentActiveRow) {
+                            userActiveList.push(currentActiveRow);
+                        }
+                    });
+
+                    data = userActiveList;
+
+                    if (state.selectedOdbiciaActivity && state.selectedOdbiciaActivity !== 'ALL') {
+                        data = data.filter(d => {
+                            const act = (d.activity || d.target || '').toUpperCase();
+                            return act === state.selectedOdbiciaActivity.toUpperCase();
+                        });
+                    }
                 }
             }
             return data;
@@ -1164,7 +1214,7 @@
                 const start = (page - 1) * pageSize;
                 const pageData = filtered.slice(start, start + pageSize);
 
-                titleEl.innerHTML = `Szczegółowa Tabela Operacji <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} ops</span>`;
+                titleEl.innerHTML = `Szczegóły Operacji <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} ops</span>`;
                 thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>`;
 
                 pageData.forEach((row, i) => {
