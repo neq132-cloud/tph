@@ -413,6 +413,23 @@
             return `${dStr} ${tStr || '00:00:00'}`;
         }
 
+        function parseDateTimeInSeconds(dStr, tStr) {
+            if (!tStr) return 0;
+            const parts = tStr.split(':');
+            const h = parseInt(parts[0]) || 0;
+            const m = parseInt(parts[1]) || 0;
+            const s = parseInt(parts[2]) || 0;
+            let daySec = h * 3600 + m * 60 + s;
+            if (dStr) {
+                const dParts = dStr.split('/');
+                if (dParts.length === 3) {
+                    const day = parseInt(dParts[0]) || 1;
+                    daySec += day * 86400;
+                }
+            }
+            return daySec;
+        }
+
         function classifyTaskType(codeStr) {
             const upper = codeStr.toUpperCase().trim();
             if (upper.includes('ADJUSTMENT') || upper.includes('KOREKTA')) return 'Adjustment';
@@ -1134,8 +1151,51 @@
                         });
                     }
 
+                    // Obliczanie wyliczonego czasu trwania operacji dla każdego JOBA
+                    const openStarts = {};
+                    const sortedForDur = [...rawUserEvents].sort((a, b) => {
+                        const tA = parseDateTime(a.date, a.time);
+                        const tB = parseDateTime(b.date, b.time);
+                        return tA.localeCompare(tB);
+                    });
+
+                    sortedForDur.forEach(row => {
+                        const codeUp = (row.code || '').toUpperCase();
+                        const actUp = (row.activity || row.target || '').trim().toUpperCase();
+                        const isStart = codeUp.includes('JOB START') || codeUp.includes('START');
+                        const isEnd = codeUp.includes('JOB END') || codeUp.includes('JOB STOP');
+
+                        if (isStart) {
+                            openStarts[actUp] = row;
+                            row._durationText = '-';
+                        } else if (isEnd) {
+                            if (openStarts[actUp]) {
+                                const startRow = openStarts[actUp];
+                                const tStart = parseDateTimeInSeconds(startRow.date, startRow.time);
+                                const tEnd = parseDateTimeInSeconds(row.date, row.time);
+                                let diffSec = tEnd - tStart;
+                                if (diffSec < 0) diffSec += 86400;
+
+                                const h = Math.floor(diffSec / 3600);
+                                const m = Math.floor((diffSec % 3600) / 60);
+                                const s = diffSec % 60;
+                                let durStr = '';
+                                if (h > 0) durStr += `${h}g `;
+                                if (m > 0 || h > 0) durStr += `${m}m `;
+                                durStr += `${s}s`;
+
+                                const finalDur = durStr.trim() || '0s';
+                                row._durationText = finalDur;
+                                startRow._durationText = finalDur;
+                                delete openStarts[actUp];
+                            } else {
+                                row._durationText = '-';
+                            }
+                        }
+                    });
+
                     titleEl.innerHTML = `Historia wbić / aktywności dla pracownika: <strong class="text-amber-400">${state.selectedOdbiciaUser}</strong> <button onclick="state.selectedOdbiciaUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 text-slate-200 text-xs rounded hover:bg-slate-700">Powrót</button>`;
-                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">Status</th></tr>`;
+                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">CZAS TRWANIA</th><th class="py-3 px-3">Status</th></tr>`;
 
                     if (!rawUserEvents.length) {
                         tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak zarejestrowanych odbić Job Start / Job End dla tego pracownika.</td></tr>';
@@ -1146,7 +1206,7 @@
                     rawUserEvents.forEach((row, i) => {
                         const tr = document.createElement('tr');
                         tr.className = 'hover:bg-slate-800/40 transition';
-                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-mono">${row.sku || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row._durationText || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
                         tbody.appendChild(tr);
                     });
                     document.getElementById('pageInfo').textContent = `Pokazuję ${rawUserEvents.length} zdarzeń dla ${state.selectedOdbiciaUser}`;
