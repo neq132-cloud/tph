@@ -332,6 +332,7 @@
             selectedUser: null,
             selectedTtiUser: null,
             selectedOdbiciaUser: null,
+            selectedOdbiciaActivity: 'ALL',
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
             sortDir: 'desc'
@@ -459,7 +460,6 @@
                 const targetUp = (row.target || '').toUpperCase();
                 const actUp = (row.activity || '').toUpperCase();
 
-                // Ścisłe dopasowanie zdarzenia Job Start / Job End wyłącznie dla TTIADD / TTI
                 const isTtiTarget = targetUp.includes('TTIADD') || actUp.includes('TTIADD') || targetUp === 'TTI' || actUp === 'TTI';
                 const isStart = (codeUp.includes('JOB START') || codeUp.includes('START')) && isTtiTarget;
                 const isEnd = (codeUp.includes('JOB END') || codeUp.includes('JOB STOP') || codeUp.includes('COMPLETE')) && isTtiTarget;
@@ -574,6 +574,7 @@
             state.selectedUser = null;
             state.selectedTtiUser = null;
             state.selectedOdbiciaUser = null;
+            state.selectedOdbiciaActivity = 'ALL';
 
             ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'TtiAdd', 'Odbicia'].forEach(c => {
                 const btn = document.getElementById(`nav${c}`);
@@ -805,10 +806,18 @@
             } else if (state.activeCategory === 'TtiAdd') {
                 data = getTtiAddSessions();
             } else if (state.activeCategory === 'Odbicia') {
-                const odbiciaRows = state.parsedData.filter(d => {
+                let odbiciaRows = state.parsedData.filter(d => {
                     const up = (d.code || '').toUpperCase();
                     return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('USER') || up.includes('PLTTI');
                 });
+
+                if (state.selectedOdbiciaActivity && state.selectedOdbiciaActivity !== 'ALL') {
+                    odbiciaRows = odbiciaRows.filter(d => {
+                        const act = (d.activity || d.target || '').toUpperCase();
+                        return act === state.selectedOdbiciaActivity.toUpperCase();
+                    });
+                }
+
                 if (state.selectedOdbiciaUser) {
                     data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
                 } else {
@@ -991,7 +1000,6 @@
                             const targetUp = (d.target || '').toUpperCase();
                             const actUp = (d.activity || '').toUpperCase();
 
-                            // Ścisły warunek: ZDARZENIE = Job Start / Job End / Job Stop ORAZ AKTYWNOŚĆ/TARGET = TTIADD / TTI
                             const isJobCode = up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
                             const isTtiTarget = targetUp.includes('TTIADD') || actUp.includes('TTIADD') || targetUp === 'TTI' || actUp === 'TTI';
 
@@ -1026,7 +1034,6 @@
                 const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
                 const total = filtered.length;
 
-                // Sumowanie wartości dziesiętnych
                 let sumDecimal = filtered.reduce((acc, item) => {
                     let val = parseFloat(String(item.decimalText).replace(',', '.')) || 0;
                     return acc + val;
@@ -1054,7 +1061,6 @@
                     tbody.appendChild(tr);
                 });
 
-                // Wiersz podsumowania na dole tabeli
                 const trSum = document.createElement('tr');
                 trSum.className = 'bg-slate-950/80 font-bold border-t border-cyber-border';
                 trSum.innerHTML = `<td colspan="3" class="py-2.5 px-3 text-right text-slate-400 uppercase text-[10px]">Suma całkowita:</td><td class="py-2.5 px-3 text-emerald-400 font-mono">${sumDecimalStr}</td><td></td>`;
@@ -1063,6 +1069,55 @@
                 document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
 
             } else if (state.activeCategory === 'Odbicia') {
+                if (state.selectedOdbiciaUser) {
+                    // Widok historii wbić/aktywności dla pracownika
+                    let rawUserEvents = state.parsedData.filter(d => d.user === state.selectedOdbiciaUser);
+                    if (state.selectedOdbiciaActivity && state.selectedOdbiciaActivity !== 'ALL') {
+                        rawUserEvents = rawUserEvents.filter(d => {
+                            const act = (d.activity || d.target || '').toUpperCase();
+                            return act === state.selectedOdbiciaActivity.toUpperCase();
+                        });
+                    }
+
+                    titleEl.innerHTML = `Historia wbić / aktywności dla pracownika: <strong class="text-amber-400">${state.selectedOdbiciaUser}</strong> <button onclick="state.selectedOdbiciaUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 text-slate-200 text-xs rounded hover:bg-slate-700">Powrót</button>`;
+                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">Status</th></tr>`;
+
+                    if (!rawUserEvents.length) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak zarejestrowanych odbić dla tego pracownika.</td></tr>';
+                        document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                        return;
+                    }
+
+                    rawUserEvents.forEach((row, i) => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-800/40 transition';
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-mono">${row.sku || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
+                        tbody.appendChild(tr);
+                    });
+                    document.getElementById('pageInfo').textContent = `Pokazuję ${rawUserEvents.length} zdarzeń dla ${state.selectedOdbiciaUser}`;
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
+                    return;
+                }
+
+                // Lista ogólna wbić z filtrem aktywności
+                const allOdbiciaRows = state.parsedData.filter(d => {
+                    const up = (d.code || '').toUpperCase();
+                    return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('USER') || up.includes('PLTTI');
+                });
+
+                const activitiesSet = new Set();
+                allOdbiciaRows.forEach(d => {
+                    const act = (d.activity || d.target || '').trim();
+                    if (act) activitiesSet.add(act.toUpperCase());
+                });
+                const uniqueActivities = Array.from(activitiesSet).sort();
+
+                let optionsHtml = `<option value="ALL" ${state.selectedOdbiciaActivity === 'ALL' ? 'selected' : ''}>Wszystkie Aktywności</option>`;
+                uniqueActivities.forEach(act => {
+                    optionsHtml += `<option value="${act}" ${state.selectedOdbiciaActivity === act ? 'selected' : ''}>${act}</option>`;
+                });
+
                 let data = getActiveFilteredData();
                 const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
                 const total = filtered.length;
@@ -1070,7 +1125,14 @@
                 const start = (page - 1) * pageSize;
                 const pageData = filtered.slice(start, start + pageSize);
 
-                titleEl.innerHTML = `Aktualny Stan Wbić Pracowników (Live) <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób</span>`;
+                titleEl.innerHTML = `<div class="flex items-center gap-3">
+                    <span>Aktualny Stan Wbić Pracowników (Live)</span>
+                    <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób</span>
+                    <select onchange="state.selectedOdbiciaActivity=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-2.5 py-1 text-amber-400 focus:outline-none focus:border-amber-500 font-mono">
+                        ${optionsHtml}
+                    </select>
+                </div>`;
+
                 thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie</th><th class="py-3 px-3">Aktywność</th><th class="py-3 px-3">Pracownik</th></tr>`;
 
                 if (!pageData.length) {
@@ -1081,11 +1143,13 @@
 
                 pageData.forEach((row, i) => {
                     const tr = document.createElement('tr');
-                    tr.className = 'hover:bg-slate-800/40 transition';
-                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 rounded font-bold">AKTYWNY</span></td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user || '-'}</td>`;
+                    tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
+                    tr.onclick = () => { state.selectedOdbiciaUser = row.user; renderDetailsTable(); };
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 rounded font-bold">${row.code || 'AKTYWNY'}</span></td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user || '-'}</td>`;
                     tbody.appendChild(tr);
                 });
                 document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
+
             } else {
                 let data = getActiveFilteredData();
                 if (state.selectedUser) data = data.filter(d => d.user === state.selectedUser);
