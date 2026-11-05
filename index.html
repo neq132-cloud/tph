@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.38-PERSIST-FIX</title>
+    <title>WMS Cyberpunk Hub v0.5.39-JOB-STATUS</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.38-PERSIST-FIX</div>
+            <div class="font-bold text-white">Wersja v0.5.39-JOB-STATUS</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.38-PERSIST-FIX</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.39-JOB-STATUS</span>
                 </div>
             </div>
 
@@ -148,7 +148,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.38 (Persist Fix)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.39 (Job Status Fix)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -324,7 +324,7 @@
     </div>
 
     <script>
-        const CURRENT_STORAGE_KEY = 'wms_cyber_test_records_v38_persistfix';
+        const CURRENT_STORAGE_KEY = 'wms_cyber_main_database';
 
         const state = {
             rawRows: [],
@@ -372,6 +372,7 @@
                 state.parsedData = [];
                 const keysToRemove = [
                     CURRENT_STORAGE_KEY,
+                    'wms_cyber_test_records_v38_persistfix',
                     'wms_cyber_test_records_v37_containerfix',
                     'wms_cyber_test_records_v36_kontenery',
                     'wms_cyber_test_records_v35_userfilter',
@@ -569,6 +570,7 @@
         function loadDataFromLocalStorage() {
             try {
                 const oldKeys = [
+                    'wms_cyber_test_records_v38_persistfix',
                     'wms_cyber_test_records_v37_containerfix',
                     'wms_cyber_test_records_v36_kontenery',
                     'wms_cyber_test_records_v35_userfilter',
@@ -588,7 +590,6 @@
                     }
                 }
 
-                // Usuń stare klucze i zwolnij pamięć przeglądarki!
                 oldKeys.forEach(k => localStorage.removeItem(k));
 
                 if (savedData) {
@@ -598,12 +599,10 @@
                         const textRows = records.map(d => `${d.preAdvStatusCol || 'PreAdv Status'}\t${d.sku}\t\t\t\t\t${d.qty}\t${d.source || ''}\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusVal}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}\t${d.container || '-'}`).join('\n');
                         document.getElementById('pasteBaseArea').value = textRows;
                         document.getElementById('countBase').textContent = `${records.length} w.`;
-                        
-                        // Zapisz od razu do aktualnego czystego klucza
                         saveDataToLocalStorage(records);
                     }
                 }
-                showToast(`Wczytano wersję v0.5.38-PERSIST-FIX`);
+                showToast(`Wczytano wersję v0.5.39-JOB-STATUS`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -984,9 +983,14 @@
                             }
                         });
 
-                        const currentActiveRow = activeStack.length > 0 ? activeStack[activeStack.length - 1].row : lastEvent;
+                        const isCurrentlyActive = activeStack.length > 0;
+                        const currentActiveRow = isCurrentlyActive ? activeStack[activeStack.length - 1].row : lastEvent;
+
                         if (currentActiveRow) {
-                            userActiveList.push(currentActiveRow);
+                            userActiveList.push({
+                                ...currentActiveRow,
+                                _isActive: isCurrentlyActive
+                            });
                         }
                     });
 
@@ -1499,19 +1503,24 @@
                 let data = getActiveFilteredData();
                 const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
                 const total = filtered.length;
+
+                const activeCount = filtered.filter(r => r._isActive).length;
+                const inactiveCount = filtered.filter(r => !r._isActive).length;
+
                 const { page, pageSize } = state.pagination;
                 const start = (page - 1) * pageSize;
                 const pageData = filtered.slice(start, start + pageSize);
 
-                titleEl.innerHTML = `<div class="flex items-center gap-3">
+                titleEl.innerHTML = `<div class="flex flex-wrap items-center gap-3 w-full">
                     <span>Aktualny Stan Wbić Pracowników (Live)</span>
-                    <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób</span>
-                    <select onchange="state.selectedOdbiciaActivity=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-2.5 py-1 text-amber-400 focus:outline-none focus:border-amber-500 font-mono">
+                    <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded text-[10px] font-mono font-bold">Aktywni (Job Start): ${activeCount}</span>
+                    <span class="px-2 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/30 rounded text-[10px] font-mono font-bold">Nieaktywni (Job Stop): ${inactiveCount}</span>
+                    <select onchange="state.selectedOdbiciaActivity=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-2.5 py-1 text-amber-400 focus:outline-none focus:border-amber-500 font-mono ml-auto">
                         ${optionsHtml}
                     </select>
                 </div>`;
 
-                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie</th><th class="py-3 px-3">Aktywność</th><th class="py-3 px-3">Pracownik</th></tr>`;
+                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Status</th><th class="py-3 px-3">Aktywność</th><th class="py-3 px-3">Pracownik</th></tr>`;
 
                 if (!pageData.length) {
                     tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych o odbiciach.</td></tr>';
@@ -1525,7 +1534,14 @@
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
                     tr.onclick = () => { state.selectedOdbiciaUser = row.user; renderDetailsTable(); };
-                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-400 rounded font-bold">${row.code || 'AKTYWNY'}</span></td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user || '-'}</td>`;
+
+                    const isActive = row._isActive !== undefined ? row._isActive : (row.code || '').toUpperCase().includes('START');
+                    const badgeClass = isActive 
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+                        : 'bg-rose-500/20 text-rose-400 border-rose-500/40';
+                    const statusLabel = isActive ? (row.code || 'Job Start') : (row.code || 'Job Stop');
+
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] border rounded font-mono font-bold ${badgeClass}">${statusLabel}</span></td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user || '-'}</td>`;
                     tbody.appendChild(tr);
                 });
                 document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
