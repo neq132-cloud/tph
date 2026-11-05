@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.41-WORKERS-TAB</title>
+    <title>WMS Cyberpunk Hub v0.5.42-WORKERS-COL-A</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.41-WORKERS-TAB</div>
+            <div class="font-bold text-white">Wersja v0.5.42-WORKERS-COL-A</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.41-WORKERS-TAB</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.42-WORKERS-COL-A</span>
                 </div>
             </div>
 
@@ -110,7 +110,6 @@
                     <span class="flex items-center gap-3"><i data-lucide="user-check" class="w-4 h-4"></i> Odbicia (Live)</span>
                     <span id="badgeOdbicia" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
                 </button>
-                <!-- NOWA ZAKŁADKA PRACOWNICY -->
                 <button onclick="switchCategory('Pracownicy')" id="navPracownicy" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                     <span class="flex items-center gap-3"><i data-lucide="users" class="w-4 h-4"></i> Pracownicy</span>
                     <span id="badgePracownicy" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
@@ -153,7 +152,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.41 (Workers Tab)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.42 (Workers Col A)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -609,7 +608,7 @@
                         saveDataToLocalStorage(records);
                     }
                 }
-                showToast(`Wczytano wersję v0.5.41-WORKERS-TAB`);
+                showToast(`Wczytano wersję v0.5.42-WORKERS-COL-A`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -1162,17 +1161,20 @@
 
             if (state.activeCategory === 'Pracownicy') {
                 const userOpsMap = {};
+                const allColACodes = new Set();
+
                 state.parsedData.forEach(d => {
                     if (d.user && d.user !== 'BRAK_USERA') {
                         if (!userOpsMap[d.user]) {
                             userOpsMap[d.user] = { total: 0, putaway: 0, relocate: 0, receipt: 0, adjustment: 0 };
                         }
                         userOpsMap[d.user].total++;
-                        if (d.taskType === 'Putaway' || d.code.toUpperCase().includes('PUTAWAY')) userOpsMap[d.user].putaway++;
+                        if (d.taskType === 'Putaway' || (d.code && d.code.toUpperCase().includes('PUTAWAY'))) userOpsMap[d.user].putaway++;
                         else if (d.taskType === 'Relocate') userOpsMap[d.user].relocate++;
                         else if (d.taskType === 'Receipt') userOpsMap[d.user].receipt++;
                         else if (d.taskType === 'Adjustment') userOpsMap[d.user].adjustment++;
                     }
+                    if (d.code) allColACodes.add(d.code.trim());
                 });
 
                 const sortedUsers = Object.keys(userOpsMap).sort((a,b) => userOpsMap[b].total - userOpsMap[a].total);
@@ -1181,62 +1183,83 @@
                     state.selectedWorkerUser = sortedUsers[0];
                 }
 
-                let userOptionsHtml = '';
+                let userOptionsHtml = `<option value="ALL" ${state.selectedWorkerUser === 'ALL' ? 'selected' : ''}>Wszyscy Operatorzy (${state.parsedData.length} ops)</option>`;
                 sortedUsers.forEach(u => {
                     userOptionsHtml += `<option value="${u}" ${state.selectedWorkerUser === u ? 'selected' : ''}>${u} (${userOpsMap[u].total} ops)</option>`;
                 });
 
-                let workerData = state.parsedData.filter(d => d.user === state.selectedWorkerUser);
+                // Kody bezpośrednio z kolumny A do filtrowania
+                const sortedColACodes = Array.from(allColACodes).filter(c => c.length > 0).sort();
+                let processOptionsHtml = `<option value="ALL" ${state.workerProcessFilter==='ALL'?'selected':''}>Wszystkie procesy</option>`;
+                
+                // Grupy ogólne
+                processOptionsHtml += `<option value="GRP_Putaway" ${state.workerProcessFilter==='GRP_Putaway'?'selected':''}>[Grupa] Putaway</option>`;
+                processOptionsHtml += `<option value="GRP_Relocate" ${state.workerProcessFilter==='GRP_Relocate'?'selected':''}>[Grupa] Relokacje</option>`;
+                processOptionsHtml += `<option value="GRP_Receipt" ${state.workerProcessFilter==='GRP_Receipt'?'selected':''}>[Grupa] Przyjęcia</option>`;
+                processOptionsHtml += `<option value="GRP_Adjustment" ${state.workerProcessFilter==='GRP_Adjustment'?'selected':''}>[Grupa] Adjustment</option>`;
+                
+                // Konkretne kody z Kolumny A
+                sortedColACodes.forEach(codeVal => {
+                    processOptionsHtml += `<option value="${codeVal}" ${state.workerProcessFilter === codeVal ? 'selected' : ''}>${codeVal}</option>`;
+                });
 
-                if (state.workerProcessFilter !== 'ALL') {
-                    if (state.workerProcessFilter === 'Putaway') {
-                        workerData = workerData.filter(d => d.taskType === 'Putaway' || d.code.toUpperCase().includes('PUTAWAY'));
+                let workerData = state.parsedData;
+                if (state.selectedWorkerUser && state.selectedWorkerUser !== 'ALL') {
+                    workerData = workerData.filter(d => d.user === state.selectedWorkerUser);
+                }
+
+                if (state.workerProcessFilter && state.workerProcessFilter !== 'ALL') {
+                    if (state.workerProcessFilter.startsWith('GRP_')) {
+                        const grpName = state.workerProcessFilter.replace('GRP_', '');
+                        if (grpName === 'Putaway') {
+                            workerData = workerData.filter(d => d.taskType === 'Putaway' || (d.code && d.code.toUpperCase().includes('PUTAWAY')));
+                        } else {
+                            workerData = workerData.filter(d => d.taskType === grpName);
+                        }
                     } else {
-                        workerData = workerData.filter(d => d.taskType === state.workerProcessFilter);
+                        workerData = workerData.filter(d => (d.code || '').trim() === state.workerProcessFilter);
                     }
                 }
 
                 const filtered = workerData.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
                 const total = filtered.length;
 
-                const selectedStats = userOpsMap[state.selectedWorkerUser] || { total: 0, putaway: 0, relocate: 0, receipt: 0, adjustment: 0 };
+                const selectedStats = (state.selectedWorkerUser && state.selectedWorkerUser !== 'ALL' && userOpsMap[state.selectedWorkerUser]) 
+                    ? userOpsMap[state.selectedWorkerUser] 
+                    : { total: state.parsedData.length, putaway: state.parsedData.filter(d=>d.taskType==='Putaway').length, relocate: state.parsedData.filter(d=>d.taskType==='Relocate').length, receipt: state.parsedData.filter(d=>d.taskType==='Receipt').length, adjustment: state.parsedData.filter(d=>d.taskType==='Adjustment').length };
 
                 titleEl.innerHTML = `<div class="flex flex-col space-y-3 w-full">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div class="flex items-center gap-3">
-                            <span>Wybór Pracownika:</span>
+                            <span class="text-xs font-bold text-slate-300 uppercase">WYBÓR PRACOWNIKA:</span>
                             <select onchange="state.selectedWorkerUser=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-3 py-1.5 text-amber-400 font-bold focus:outline-none focus:border-amber-500 font-mono">
-                                ${userOptionsHtml || '<option value="">Brak pracowników</option>'}
+                                ${userOptionsHtml}
                             </select>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="text-[11px] text-slate-400">Filtr procesu:</span>
+                            <span class="text-[11px] text-slate-400 font-bold uppercase">FILTR PROCESU:</span>
                             <select onchange="state.workerProcessFilter=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-2.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono">
-                                <option value="ALL" ${state.workerProcessFilter==='ALL'?'selected':''}>Wszystkie procesy</option>
-                                <option value="Putaway" ${state.workerProcessFilter==='Putaway'?'selected':''}>Putaway</option>
-                                <option value="Relocate" ${state.workerProcessFilter==='Relocate'?'selected':''}>Relokacje</option>
-                                <option value="Receipt" ${state.workerProcessFilter==='Receipt'?'selected':''}>Przyjęcia</option>
-                                <option value="Adjustment" ${state.workerProcessFilter==='Adjustment'?'selected':''}>Adjustment</option>
+                                ${processOptionsHtml}
                             </select>
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 text-xs font-mono pt-1">
-                        <span class="bg-slate-950 border border-cyber-border px-2.5 py-1 rounded-xl text-slate-300">Łącznie: <strong class="text-white">${selectedStats.total}</strong> ops</span>
-                        <span class="bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-xl text-emerald-400">Putaway: <strong>${selectedStats.putaway}</strong></span>
-                        <span class="bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-xl text-amber-300">Relokacje: <strong>${selectedStats.relocate}</strong></span>
-                        <span class="bg-indigo-500/10 border border-indigo-500/30 px-2.5 py-1 rounded-xl text-indigo-300">Przyjęcia: <strong>${selectedStats.receipt}</strong></span>
-                        <span class="bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-xl text-rose-300">Adjustment: <strong>${selectedStats.adjustment}</strong></span>
+                        <span class="bg-slate-950 border border-cyber-border px-3 py-1 rounded-xl text-slate-300">ŁĄCZNIE: <strong class="text-white">${selectedStats.total} OPS</strong></span>
+                        <span class="bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-xl text-emerald-400">PUTAWAY: <strong>${selectedStats.putaway}</strong></span>
+                        <span class="bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-xl text-amber-300">RELOKACJE: <strong>${selectedStats.relocate}</strong></span>
+                        <span class="bg-indigo-500/10 border border-indigo-500/30 px-3 py-1 rounded-xl text-indigo-300">PRZYJĘCIA: <strong>${selectedStats.receipt}</strong></span>
+                        <span class="bg-rose-500/10 border border-rose-500/30 px-3 py-1 rounded-xl text-rose-300">ADJUSTMENT: <strong>${selectedStats.adjustment}</strong></span>
                     </div>
                 </div>`;
 
-                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod / Proces</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD (Source)</th><th class="py-3 px-3">GDZIE (Target)</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Dokument / PA</th><th class="py-3 px-3">Operator</th></tr>`;
+                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">KOD / PROCES</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD (SOURCE)</th><th class="py-3 px-3">GDZIE (TARGET)</th><th class="py-3 px-3 text-right">SZTUK</th><th class="py-3 px-3">DOKUMENT / PA</th><th class="py-3 px-3">OPERATOR</th></tr>`;
 
                 const { page, pageSize } = state.pagination;
                 const start = (page - 1) * pageSize;
                 const pageData = filtered.slice(start, start + pageSize);
 
                 if (!pageData.length) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Brak zarejestrowanych ruchów dla wybranego pracownika.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Brak zarejestrowanych ruchów dla wybranych kryteriów.</td></tr>';
                     document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                     document.getElementById('prevPageBtn').disabled = true;
                     document.getElementById('nextPageBtn').disabled = true;
@@ -1246,17 +1269,30 @@
                 pageData.forEach((row, i) => {
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-800/40 transition';
-                    const codeUpper = (row.code || '').toUpperCase();
+                    
+                    const codeDisplay = row.code || row.preAdvStatusCol || '-';
+                    const codeUpper = codeDisplay.toUpperCase();
+                    
                     let processBadge = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
-                    if (row.taskType === 'Relocate') processBadge = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
-                    else if (row.taskType === 'Receipt') processBadge = 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30';
-                    else if (row.taskType === 'Adjustment') processBadge = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+                    if (codeUpper.includes('RECEIPT')) processBadge = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40';
+                    else if (codeUpper.includes('RELOCATE')) processBadge = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+                    else if (codeUpper.includes('ADJUSTMENT')) processBadge = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+                    else if (codeUpper.includes('PREADV')) processBadge = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+                    else if (codeUpper.includes('PUTAWAY')) processBadge = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
 
-                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400 font-mono">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] border rounded font-mono font-bold ${processBadge}">${row.code || '-'}</span></td><td class="py-2.5 px-3 text-emerald-400 font-mono">${row.sku || '-'}</td><td class="py-2.5 px-3 text-slate-300 font-mono">${row.source || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.target || '-'}</td><td class="py-2.5 px-3 font-bold text-emerald-400 text-right font-mono">${row.qty || 1}</td><td class="py-2.5 px-3 text-slate-400 font-mono text-[11px]">${row.paValue || row.container || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user || '-'}</td>`;
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500 font-mono">${start + i + 1}</td>
+                        <td class="py-2.5 px-3 text-slate-400 font-mono">${row.date || '-'} ${row.time || '-'}</td>
+                        <td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] border rounded font-mono font-bold ${processBadge}">${codeDisplay}</span></td>
+                        <td class="py-2.5 px-3 text-emerald-400 font-mono">${row.sku || '-'}</td>
+                        <td class="py-2.5 px-3 text-slate-300 font-mono">${row.source || '-'}</td>
+                        <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.target || '-'}</td>
+                        <td class="py-2.5 px-3 font-bold text-emerald-400 text-right font-mono">${row.qty || 1}</td>
+                        <td class="py-2.5 px-3 text-slate-400 font-mono text-[11px]">${row.paValue || row.container || '-'}</td>
+                        <td class="py-2.5 px-3 text-cyan-300 font-semibold cursor-pointer hover:underline" onclick="state.selectedWorkerUser='${row.user}'; state.pagination.page=1; renderDetailsTable();">${row.user || '-'}</td>`;
                     tbody.appendChild(tr);
                 });
 
-                document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} ruchów pracownika ${state.selectedWorkerUser}`;
+                document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} ruchów`;
                 document.getElementById('prevPageBtn').disabled = page === 1;
                 document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
 
