@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.44-WORKERS-TIMELINE</title>
+    <title>WMS Cyberpunk Hub v0.5.45-WORKERS-TIMELINE-CLEAN</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.44-WORKERS-TIMELINE</div>
+            <div class="font-bold text-white">Wersja v0.5.45-WORKERS-TIMELINE-CLEAN</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.44-TIMELINE</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.45-TIMELINE-CLEAN</span>
                 </div>
             </div>
 
@@ -152,7 +152,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.44 (Workers Timeline)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.45 (Workers Timeline Clean)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -614,7 +614,7 @@
                         saveDataToLocalStorage(records);
                     }
                 }
-                showToast(`Wczytano wersję v0.5.44-WORKERS-TIMELINE`);
+                showToast(`Wczytano wersję v0.5.45-WORKERS-TIMELINE-CLEAN`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -1158,7 +1158,7 @@
             renderDetailsTable();
         }
 
-        // FUNKCJA GENERUJĄCA POZIOMY WYKRES OSI CZASU (GANTT) Z LUKAMI / PRZERWAMI
+        // CZYSTY I WYRAŹNY WYKRES PROPORCJI I LISTA PRZERW DLA PRACOWNIKA
         function renderWorkerTimeline(workerRows, selectedUser) {
             const container = document.getElementById('workerTimelineContainer');
             if (!container) return;
@@ -1169,7 +1169,6 @@
                 return;
             }
 
-            // Sortuj operacje chronologicznie
             const sorted = [...workerRows].sort((a, b) => {
                 const tA = parseDateTimeInSeconds(a.date, a.time);
                 const tB = parseDateTimeInSeconds(b.date, b.time);
@@ -1180,11 +1179,12 @@
             const lastSec = parseDateTimeInSeconds(sorted[sorted.length - 1].date, sorted[sorted.length - 1].time);
             let totalRangeSec = lastSec - firstSec;
 
-            if (totalRangeSec <= 0) totalRangeSec = 3600; // Domyślny margines minimum 1h
+            if (totalRangeSec <= 0) totalRangeSec = 3600;
 
-            // Podział na zdarzenia i wykryte LUKI (np. luka > 10 minut = 600 sekund)
-            const timelineBlocks = [];
             const GAP_THRESHOLD_SEC = 600; // 10 minut
+            const timelineSegments = [];
+            let totalGapSec = 0;
+            let gapCount = 0;
 
             for (let i = 0; i < sorted.length; i++) {
                 const curr = sorted[i];
@@ -1196,85 +1196,115 @@
                     const diff = currSec - prevSec;
 
                     if (diff >= GAP_THRESHOLD_SEC) {
-                        const gapMinutes = Math.floor(diff / 60);
-                        timelineBlocks.push({
+                        const gapMin = Math.floor(diff / 60);
+                        totalGapSec += diff;
+                        gapCount++;
+                        timelineSegments.push({
                             isGap: true,
                             startSec: prevSec,
                             endSec: currSec,
-                            durationSec: diff,
-                            durationMin: gapMinutes,
+                            durationMin: gapMin,
                             startTimeStr: prev.time,
                             endTimeStr: curr.time
                         });
                     }
                 }
 
-                timelineBlocks.push({
+                timelineSegments.push({
                     isGap: false,
                     sec: currSec,
                     row: curr
                 });
             }
 
-            const startTimeFormatted = sorted[0].time || '00:00';
-            const endTimeFormatted = sorted[sorted.length - 1].time || '23:59';
-            const totalShiftMinutes = Math.round(totalRangeSec / 60);
+            const totalShiftMin = Math.round(totalRangeSec / 60);
+            const totalGapMin = Math.round(totalGapSec / 60);
+            const workMin = Math.max(0, totalShiftMin - totalGapMin);
 
-            let blocksHtml = '';
-            timelineBlocks.forEach((block, idx) => {
-                if (block.isGap) {
-                    const widthPct = Math.max((block.durationSec / totalRangeSec) * 100, 3);
-                    blocksHtml += `
-                        <div style="width: ${widthPct}%;" class="h-10 bg-rose-500/30 border border-rose-500/60 rounded-md flex flex-col justify-center items-center text-[9px] font-mono font-bold text-rose-300 relative group transition-all hover:bg-rose-500/50 cursor-pointer" title="Przerwa / Luka: ${block.startTimeStr} - ${block.endTimeStr} (${block.durationMin} min)">
-                            <span class="truncate px-1 text-rose-300">⚠️ LUKA ${block.durationMin}m</span>
-                            <span class="text-[8px] text-rose-400 font-normal">${block.startTimeStr}</span>
+            // 1. Proporcjonalny Pasek Stanu Zmiany (100% szerokości bez przewijania)
+            let barSegmentsHtml = '';
+            timelineSegments.forEach(seg => {
+                if (seg.isGap) {
+                    const widthPct = ((seg.endSec - seg.startSec) / totalRangeSec) * 100;
+                    barSegmentsHtml += `<div style="width: ${widthPct.toFixed(2)}%" class="h-full bg-rose-500 hover:bg-rose-400 transition cursor-pointer relative group" title="PRZERWA: ${seg.startTimeStr} - ${seg.endTimeStr} (${seg.durationMin} min)"></div>`;
+                } else {
+                    const widthPct = (120 / totalRangeSec) * 100;
+                    barSegmentsHtml += `<div style="width: ${Math.max(widthPct, 0.4).toFixed(2)}%" class="h-full bg-emerald-500/80 hover:bg-emerald-400 transition cursor-pointer" title="[${seg.row.time}] ${seg.row.code || 'Akcja'}"></div>`;
+                }
+            });
+
+            // 2. Chronologiczne Wiersze Aktywności i Przerw (Wyraźny układ)
+            let listHtml = '';
+            timelineSegments.forEach((seg, idx) => {
+                if (seg.isGap) {
+                    listHtml += `
+                        <div class="flex items-center gap-3 bg-rose-500/10 border border-rose-500/40 p-2.5 rounded-xl font-mono text-xs text-rose-300">
+                            <div class="p-1.5 bg-rose-500/20 rounded-lg text-rose-400">
+                                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                            </div>
+                            <div class="flex-1 flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <strong class="text-rose-200 uppercase">PRZERWA / LUKA W PRACY:</strong>
+                                    <span class="ml-2 text-slate-300 font-bold">${seg.startTimeStr} ➔ ${seg.endTimeStr}</span>
+                                </div>
+                                <span class="px-2.5 py-0.5 bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg font-bold">${seg.durationMin} min braku operacji</span>
+                            </div>
                         </div>
                     `;
                 } else {
-                    const r = block.row;
+                    const r = seg.row;
                     const codeDisplay = r.code || r.preAdvStatusCol || 'Akcja';
-                    const codeUp = codeDisplay.toUpperCase();
-                    let colorClass = 'bg-emerald-500/40 border-emerald-500 text-emerald-200';
-                    if (codeUp.includes('START')) colorClass = 'bg-amber-500/40 border-amber-500 text-amber-200';
-                    else if (codeUp.includes('END') || codeUp.includes('STOP')) colorClass = 'bg-blue-500/40 border-blue-500 text-blue-200';
-                    else if (codeUp.includes('RECEIPT')) colorClass = 'bg-indigo-500/40 border-indigo-500 text-indigo-200';
-                    else if (codeUp.includes('RELOCATE')) colorClass = 'bg-cyan-500/40 border-cyan-500 text-cyan-200';
+                    const codeUpper = codeDisplay.toUpperCase();
+                    
+                    let badgeStyle = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+                    if (codeUpper.includes('START')) badgeStyle = 'bg-amber-500/10 border-amber-500/30 text-amber-400';
+                    else if (codeUpper.includes('END') || codeUpper.includes('STOP')) badgeStyle = 'bg-blue-500/10 border-blue-500/30 text-blue-400';
+                    else if (codeUpper.includes('RECEIPT')) badgeStyle = 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400';
+                    else if (codeUpper.includes('RELOCATE')) badgeStyle = 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400';
 
-                    blocksHtml += `
-                        <div class="h-10 min-w-[28px] ${colorClass} border rounded-md flex flex-col justify-center items-center text-[9px] font-mono font-bold relative group hover:scale-105 transition-all cursor-pointer px-1 shadow" title="[${r.time}] ${codeDisplay} | SKU: ${r.sku || '-'} | Cel: ${r.target || '-'}">
-                            <span class="truncate max-w-[60px]">${codeDisplay}</span>
-                            <span class="text-[8px] font-normal opacity-80">${r.time}</span>
+                    listHtml += `
+                        <div class="flex items-center gap-3 bg-slate-900/60 border border-cyber-border/80 p-2 rounded-xl text-xs font-mono">
+                            <span class="text-slate-400 font-bold w-16">${r.time || '-'}</span>
+                            <span class="px-2 py-0.5 border rounded-md text-[10px] font-bold ${badgeStyle}">${codeDisplay}</span>
+                            <span class="text-slate-300 truncate">SKU: <strong class="text-emerald-400">${r.sku || '-'}</strong></span>
+                            <span class="text-slate-400 truncate hidden sm:inline">Cel: <strong class="text-amber-300">${r.target || '-'}</strong></span>
+                            <span class="ml-auto text-slate-500 text-[10px]">#${r.id || idx+1}</span>
                         </div>
                     `;
                 }
             });
 
             container.innerHTML = `
-                <div class="flex items-center justify-between border-b border-cyber-border pb-2">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="activity" class="w-4 h-4 text-amber-400"></i>
-                        <span class="text-xs font-bold text-white uppercase tracking-wider">WYKRES OSI CZASU AKTYWNOŚCI: <strong class="text-amber-400 font-mono">${selectedUser}</strong></span>
+                <div class="space-y-4">
+                    <!-- Nagłówek i Statystyki -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-cyber-border pb-3">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">ANALIZA AKTYWNOŚCI I PRZERW: <strong class="text-amber-400 font-mono">${selectedUser}</strong></span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+                            <span class="bg-slate-900 border border-cyber-border px-2.5 py-1 rounded-lg text-slate-300">Zmiana: <strong class="text-white">${sorted[0].time} - ${sorted[sorted.length-1].time}</strong></span>
+                            <span class="bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg text-emerald-400">Aktywność: <strong>~${workMin} min</strong></span>
+                            <span class="bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-lg text-rose-300">Przerwy/Luki: <strong>${totalGapMin} min (${gapCount} przerw)</strong></span>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-3 text-[10px] font-mono">
-                        <span class="text-slate-400">Początek: <strong class="text-white">${startTimeFormatted}</strong></span>
-                        <span class="text-slate-400">Koniec: <strong class="text-white">${endTimeFormatted}</strong></span>
-                        <span class="text-slate-400">Zakres: <strong class="text-emerald-400">${totalShiftMinutes} min</strong></span>
-                    </div>
-                </div>
 
-                <!-- POZIOMA OŚ CZASU (GANTT BAR) -->
-                <div class="relative pt-2">
-                    <div class="w-full flex items-center gap-1 overflow-x-auto custom-scrollbar pb-2 pt-1">
-                        ${blocksHtml}
+                    <!-- PROPORCJONALNY PASEK ZMIANY -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                            <span>Początek: ${sorted[0].time}</span>
+                            <span class="text-amber-400 font-bold">Wizualny Pasek Zmiany (Zielony = Aktywność | Czerwony = Luka >10 min)</span>
+                            <span>Koniec: ${sorted[sorted.length-1].time}</span>
+                        </div>
+                        <div class="w-full h-3.5 bg-slate-900 border border-cyber-border rounded-lg overflow-hidden flex items-center">
+                            ${barSegmentsHtml}
+                        </div>
                     </div>
-                </div>
 
-                <!-- LEGENDA OSI CZASU -->
-                <div class="flex flex-wrap items-center gap-4 text-[10px] font-mono text-slate-400 pt-1 border-t border-cyber-border/40">
-                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500/40 border border-emerald-500 inline-block"></span><span>Praca / Putaway</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500/40 border border-amber-500 inline-block"></span><span>Job Start</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-500/40 border border-blue-500 inline-block"></span><span>Job End</span></div>
-                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-500/40 border border-rose-500 inline-block"></span><span class="text-rose-400 font-bold">PRZERWA / LUKA (>10 min)</span></div>
+                    <!-- CHRONOLOGICZNA LISTA AKTYWNOŚCI Z WYRÓŻNIONYMI PRZERWAMI -->
+                    <div class="space-y-2 max-h-[260px] overflow-y-auto custom-scrollbar pr-1">
+                        ${listHtml}
+                    </div>
                 </div>
             `;
 
@@ -1368,7 +1398,7 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[11px] text-slate-400 font-bold uppercase">FILTR PROCESU:</span>
-                            <select onchange="state.workerProcessFilter=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-2.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono">
+                            <select onchange="state.workerProcessFilter=this.value; state.pagination.page=1; renderDetailsTable(); font-mono" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-2.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono">
                                 ${processOptionsHtml}
                             </select>
                         </div>
@@ -1382,7 +1412,7 @@
                     </div>
                 </div>`;
 
-                // GENERUJ WYKRES OSI CZASU AKTYWNOŚCI DLA WYBRANEGO PRACOWNIKA
+                // GENERUJ WYKRES / ANALIZĘ DLA PRACOWNIKA
                 renderWorkerTimeline(workerData, state.selectedWorkerUser);
 
                 thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">KOD / PROCES</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD (SOURCE)</th><th class="py-3 px-3">GDZIE (TARGET)</th><th class="py-3 px-3 text-right">SZTUK</th><th class="py-3 px-3">DOKUMENT / PA</th><th class="py-3 px-3">OPERATOR</th></tr>`;
