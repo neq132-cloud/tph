@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.35-USER-FILTER</title>
+    <title>WMS Cyberpunk Hub v0.5.36-KONTENERY</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.35-USER-FILTER</div>
+            <div class="font-bold text-white">Wersja v0.5.36-KONTENERY</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.35-USER-FILTER</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.36-KONTENERY</span>
                 </div>
             </div>
 
@@ -148,7 +148,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.35 (User Filter)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.36 (Kontenery CN)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -333,6 +333,8 @@
             selectedTtiUser: null,
             selectedOdbiciaUser: null,
             selectedOdbiciaActivity: 'ALL',
+            receiptSubView: 'ALL', // 'ALL' lub 'CONTAINERS'
+            expandedContainers: {}, // id rozwijanych kontenerów
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
             sortDir: 'desc'
@@ -366,6 +368,7 @@
         function clearAllData() {
             if (confirm("Czy na pewno chcesz wyczyścić całą bazę danych i zapamiętane wpisy?")) {
                 state.parsedData = [];
+                localStorage.removeItem('wms_cyber_test_records_v36_kontenery');
                 localStorage.removeItem('wms_cyber_test_records_v35_userfilter');
                 localStorage.removeItem('wms_cyber_test_records_v34_colfix');
                 localStorage.removeItem('wms_cyber_test_records_v33_pagfix');
@@ -551,7 +554,7 @@
 
         function loadDataFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem('wms_cyber_test_records_v35_userfilter') || localStorage.getItem('wms_cyber_test_records_v34_colfix') || localStorage.getItem('wms_cyber_test_records_v33_pagfix') || localStorage.getItem('wms_cyber_test_records_v32_pafix');
+                const savedData = localStorage.getItem('wms_cyber_test_records_v36_kontenery') || localStorage.getItem('wms_cyber_test_records_v35_userfilter') || localStorage.getItem('wms_cyber_test_records_v34_colfix') || localStorage.getItem('wms_cyber_test_records_v33_pagfix') || localStorage.getItem('wms_cyber_test_records_v32_pafix');
                 if (savedData) {
                     const records = JSON.parse(savedData);
                     if (records && records.length > 0) {
@@ -561,7 +564,7 @@
                         document.getElementById('countBase').textContent = `${records.length} w.`;
                     }
                 }
-                showToast(`Wczytano wersję v0.5.35-USER-FILTER`);
+                showToast(`Wczytano wersję v0.5.36-KONTENERY`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -570,7 +573,7 @@
 
         function saveDataToLocalStorage(records) {
             try {
-                localStorage.setItem('wms_cyber_test_records_v35_userfilter', JSON.stringify(records));
+                localStorage.setItem('wms_cyber_test_records_v36_kontenery', JSON.stringify(records));
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
             }
@@ -697,7 +700,7 @@
             let records = [...state.parsedData];
             let existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}|${r.paValue}`));
             
-            let currentRecord = { code: 'PreAdv Status', sku: '-', qty: 1, source: '-', target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: 'BULK' };
+            let currentRecord = { code: 'PreAdv Status', sku: '-', qty: 1, source: '-', target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: 'BULK', container: '-' };
 
             lines.forEach((line) => {
                 const up = line.toUpperCase();
@@ -710,7 +713,7 @@
                             records.push({ ...currentRecord, id: records.length + 1, isClosedPAValid: true, taskType: 'Putaway', putawayZone: 'BULK' });
                         }
                     }
-                    currentRecord = { code: 'PreAdv Status', sku: '-', qty: 1, source: '-', target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: 'BULK' };
+                    currentRecord = { code: 'PreAdv Status', sku: '-', qty: 1, source: '-', target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: 'BULK', container: '-' };
                 }
 
                 const digits = line.replace(/\D/g, '');
@@ -771,6 +774,7 @@
                 const user = getCol(13) || 'BRAK_USERA';
                 const statusVal = getCol(14);
                 const rawPaVal = getCol(16);
+                const container = getCol(91) || '-'; // Kolumna CN (KONTENER)
 
                 const combinedStatusText = `${statusVal} ${preAdvStatusCol}`.toUpperCase();
                 const isExactClosedStatus = (combinedStatusText.includes('IN PROGRESS') && combinedStatusText.includes('COMPLETE')) &&
@@ -807,7 +811,7 @@
                         taskType, putawayZone, isClosedPAValid,
                         paValue, paType, preAdvStatusCol,
                         statusVal: statusVal || preAdvStatusCol || 'In Progress --> Complete',
-                        activity
+                        activity, container
                     });
                 }
             });
@@ -1036,6 +1040,11 @@
             });
         }
 
+        function toggleContainerExpand(cName) {
+            state.expandedContainers[cName] = !state.expandedContainers[cName];
+            renderDetailsTable();
+        }
+
         function renderDetailsTable() {
             const tbody = document.getElementById('detailsTableBody');
             const thead = document.getElementById('tableHead');
@@ -1043,7 +1052,143 @@
             tbody.innerHTML = '';
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
 
-            if (state.activeCategory === 'ClosedPA') {
+            if (state.activeCategory === 'Receipt') {
+                let data = getActiveFilteredData();
+                if (state.selectedUser) data = data.filter(d => d.user === state.selectedUser);
+                const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+                const total = filtered.length;
+
+                let userFilterSuffix = state.selectedUser ? ` (Filtruję pracownika: <strong class="text-amber-400">${state.selectedUser}</strong> <button onclick="clearUserSelection()" class="ml-2 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded transition">Pokaż wszystkich</button>)` : '';
+
+                titleEl.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3 w-full">
+                    <div class="flex items-center gap-3">
+                        <span>Przyjęcia (Receipts) <span class="ml-1 px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 rounded text-[10px] font-mono">${total} ops</span>${userFilterSuffix}</span>
+                    </div>
+                    <div class="flex bg-slate-950 p-1 rounded-xl border border-cyber-border gap-1 font-sans font-medium text-xs">
+                        <button onclick="state.receiptSubView='ALL'; state.pagination.page=1; renderDetailsTable();" class="px-3 py-1 rounded-lg transition ${state.receiptSubView!=='CONTAINERS'?'bg-amber-500 text-slate-950 font-bold shadow':'text-slate-400 hover:text-white'}">Wszystkie</button>
+                        <button onclick="state.receiptSubView='CONTAINERS'; renderDetailsTable();" class="px-3 py-1 rounded-lg transition ${state.receiptSubView==='CONTAINERS'?'bg-amber-500 text-slate-950 font-bold shadow':'text-slate-400 hover:text-white'}">Wg Kontenerów (CN)</button>
+                    </div>
+                </div>`;
+
+                if (state.receiptSubView === 'CONTAINERS') {
+                    thead.innerHTML = `<tr><th class="py-3 px-3" colspan="9">WIDOK GRUPOWANY WG KONTENERÓW (KOLUMNA CN)</th></tr>`;
+                    
+                    if (!filtered.length) {
+                        tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Brak przyjęć do wyświetlenia.</td></tr>';
+                        document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 kontenerów';
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        return;
+                    }
+
+                    // Grupowanie po numerze kontenera
+                    const containerGroups = {};
+                    filtered.forEach(r => {
+                        const cKey = (r.container && r.container !== '-') ? r.container : 'Brak Kontenera / Inne';
+                        if (!containerGroups[cKey]) containerGroups[cKey] = [];
+                        containerGroups[cKey].push(r);
+                    });
+
+                    const cKeys = Object.keys(containerGroups).sort();
+
+                    cKeys.forEach((cName, idx) => {
+                        const items = containerGroups[cName];
+                        const sumQty = items.reduce((acc, it) => acc + (it.qty || 0), 0);
+                        const isExpanded = !!state.expandedContainers[cName];
+
+                        const trHead = document.createElement('tr');
+                        trHead.className = 'bg-slate-950/90 border-b border-cyber-border hover:bg-slate-900 cursor-pointer transition';
+                        trHead.onclick = () => toggleContainerExpand(cName);
+                        trHead.innerHTML = `
+                            <td colspan="9" class="py-3 px-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="p-1.5 bg-amber-500/20 text-amber-400 rounded-lg">
+                                            <i data-lucide="${isExpanded ? 'chevron-down' : 'chevron-right'}" class="w-4 h-4"></i>
+                                        </div>
+                                        <span class="font-mono text-sm font-bold text-amber-400">${cName}</span>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-xs font-mono">
+                                        <span class="text-slate-400">Pozycji: <strong class="text-white">${items.length}</strong></span>
+                                        <span class="text-slate-400">Łącznie sztuk: <strong class="text-emerald-400">${sumQty}</strong></span>
+                                        <span class="px-2 py-0.5 rounded text-[10px] ${isExpanded ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-400'}">${isExpanded ? 'Zwiń' : 'Rozwiń'}</span>
+                                    </div>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(trHead);
+
+                        if (isExpanded) {
+                            // Sub-table z pozycjami z kontenera
+                            const trSubTable = document.createElement('tr');
+                            trSubTable.className = 'bg-slate-950/50 border-b border-cyber-border/60';
+                            
+                            let subRowsHtml = items.map((subRow, sIdx) => `
+                                <tr class="hover:bg-slate-800/30 transition border-b border-cyber-border/30">
+                                    <td class="py-2 px-3 text-slate-500 font-mono text-[11px]">${sIdx + 1}</td>
+                                    <td class="py-2 px-3 text-slate-400 text-[11px]">${subRow.date || '-'} ${subRow.time || '-'}</td>
+                                    <td class="py-2 px-3 text-slate-300 font-mono text-[11px]">${subRow.code || '-'}</td>
+                                    <td class="py-2 px-3"><span class="px-2 py-0.5 text-[9px] bg-indigo-500/20 text-indigo-300 rounded">${subRow.putawayZone || '-'}</span></td>
+                                    <td class="py-2 px-3 text-emerald-400 font-mono text-[11px]">${subRow.sku || '-'}</td>
+                                    <td class="py-2 px-3 text-slate-300 text-[11px]">${subRow.source || '-'}</td>
+                                    <td class="py-2 px-3 font-bold text-amber-300 text-right font-mono text-[11px]">${subRow.qty || '-'}</td>
+                                    <td class="py-2 px-3 text-slate-300 text-[11px]">${subRow.target || '-'}</td>
+                                    <td class="py-2 px-3 text-cyan-300 font-semibold text-[11px] cursor-pointer hover:underline" onclick="event.stopPropagation(); state.selectedUser = '${subRow.user}'; renderAll();">${subRow.user || '-'}</td>
+                                </tr>
+                            `).join('');
+
+                            trSubTable.innerHTML = `
+                                <td colspan="9" class="p-3">
+                                    <div class="border border-cyber-border/60 rounded-xl overflow-hidden bg-slate-900/60">
+                                        <table class="w-full text-left text-xs">
+                                            <thead class="bg-slate-950 text-slate-400 font-mono uppercase text-[10px] border-b border-cyber-border/40">
+                                                <tr><th class="py-2 px-3">Lp.</th><th class="py-2 px-3">Data / Czas</th><th class="py-2 px-3">Kod</th><th class="py-2 px-3">Strefa</th><th class="py-2 px-3">SKU</th><th class="py-2 px-3">SKĄD</th><th class="py-2 px-3 text-right">Sztuk</th><th class="py-2 px-3">Docelowa</th><th class="py-2 px-3">Pracownik</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${subRowsHtml}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            `;
+                            tbody.appendChild(trSubTable);
+                        }
+                    });
+
+                    lucide.createIcons();
+                    document.getElementById('pageInfo').textContent = `Wyświetlam ${cKeys.length} kontenerów (${total} wszystkich pozycji)`;
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
+                    return;
+                }
+
+                // Domyślny widok WSZYSTKIE przyjęcia
+                const { page, pageSize } = state.pagination;
+                const start = (page - 1) * pageSize;
+                const pageData = filtered.slice(start, start + pageSize);
+
+                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>`;
+
+                if (!pageData.length) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Brak wierszy przyjęć.</td></tr>';
+                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
+                    return;
+                }
+
+                pageData.forEach((row, i) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-800/40 transition';
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-amber-500/10 text-amber-400 rounded">${row.putawayZone || '-'}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.source || '-'}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold cursor-pointer hover:underline" onclick="event.stopPropagation(); state.selectedUser = '${row.user}'; state.pagination.page = 1; renderAll();" title="Filtruj tego pracownika">${row.user || '-'}</td>`;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} wierszy`;
+                document.getElementById('prevPageBtn').disabled = page === 1;
+                document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+            } else if (state.activeCategory === 'ClosedPA') {
                 let data = getUniqueClosedPAs();
                 const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
                 const total = filtered.length;
@@ -1335,8 +1480,8 @@
             document.getElementById('exportCsvBtn').addEventListener('click', () => {
                 const data = getActiveFilteredData();
                 if (!data.length) return;
-                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Skad;Sztuki;Docel;User;PA;TypPA\n';
-                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${r.putawayZone || ''}";"${r.sku || ''}";"${r.source || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.paValue || ''}";"${r.paType || ''}"\n`);
+                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Skad;Sztuki;Docel;User;PA;TypPA;Kontener\n';
+                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${r.putawayZone || ''}";"${r.sku || ''}";"${r.source || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.paValue || ''}";"${r.paType || ''}";"${r.container || ''}"\n`);
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `WMS_EXPORT_${new Date().toISOString().slice(0,10)}.csv`; a.click();
