@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.45-WORKERS-TIMELINE-CLEAN</title>
+    <title>WMS Cyberpunk Hub v0.5.46-WORKERS-COLUMN-FILTERS</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.45-WORKERS-TIMELINE-CLEAN</div>
+            <div class="font-bold text-white">Wersja v0.5.46-WORKERS-COLUMN-FILTERS</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.45-TIMELINE-CLEAN</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.46-COL-FILTERS</span>
                 </div>
             </div>
 
@@ -152,7 +152,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.45 (Workers Timeline Clean)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.46 (Workers Column Filters)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -300,9 +300,14 @@
             <section id="detailsSection" class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <h3 id="tableSectionTitle" class="text-xs font-bold uppercase tracking-wider text-slate-300">Szczegółowa Tabela Operacji</h3>
-                    <div class="relative">
-                        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400"></i>
-                        <input type="text" id="searchInput" placeholder="Szukaj..." class="bg-slate-950 border border-cyber-border text-xs rounded-xl pl-9 pr-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+                    <div class="flex items-center gap-2">
+                        <button onclick="clearColumnFilters()" class="px-2.5 py-1 bg-slate-950 hover:bg-slate-900 border border-cyber-border text-slate-400 hover:text-amber-400 text-[10px] rounded-xl flex items-center gap-1 transition" title="Wyczyść filtry kolumn">
+                            <i data-lucide="filter-x" class="w-3 h-3"></i> Wyczyść filtry
+                        </button>
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400"></i>
+                            <input type="text" id="searchInput" placeholder="Szukaj ogólnie..." class="bg-slate-950 border border-cyber-border text-xs rounded-xl pl-9 pr-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+                        </div>
                     </div>
                 </div>
                 
@@ -351,10 +356,23 @@
             expandedContainers: {},
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
-            sortDir: 'desc'
+            sortDir: 'desc',
+            columnFilters: { time: '', code: '', sku: '', source: '', target: '', pa: '', user: '' }
         };
 
         let isBaseLocked = true;
+
+        function clearColumnFilters() {
+            state.columnFilters = { time: '', code: '', sku: '', source: '', target: '', pa: '', user: '' };
+            state.pagination.page = 1;
+            renderDetailsTable();
+        }
+
+        function handleColFilterInput(colName, value) {
+            state.columnFilters[colName] = value;
+            state.pagination.page = 1;
+            renderDetailsTable();
+        }
 
         function toggleBaseLock() {
             isBaseLocked = !isBaseLocked;
@@ -614,7 +632,7 @@
                         saveDataToLocalStorage(records);
                     }
                 }
-                showToast(`Wczytano wersję v0.5.45-WORKERS-TIMELINE-CLEAN`);
+                showToast(`Wczytano wersję v0.5.46-WORKERS-COLUMN-FILTERS`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -1221,7 +1239,7 @@
             const totalGapMin = Math.round(totalGapSec / 60);
             const workMin = Math.max(0, totalShiftMin - totalGapMin);
 
-            // 1. Proporcjonalny Pasek Stanu Zmiany (100% szerokości bez przewijania)
+            // 1. Proporcjonalny Pasek Stanu Zmiany (100% szerokości)
             let barSegmentsHtml = '';
             timelineSegments.forEach(seg => {
                 if (seg.isGap) {
@@ -1233,7 +1251,7 @@
                 }
             });
 
-            // 2. Chronologiczne Wiersze Aktywności i Przerw (Wyraźny układ)
+            // 2. Chronologiczne Wiersze Aktywności i Przerw
             let listHtml = '';
             timelineSegments.forEach((seg, idx) => {
                 if (seg.isGap) {
@@ -1276,7 +1294,6 @@
 
             container.innerHTML = `
                 <div class="space-y-4">
-                    <!-- Nagłówek i Statystyki -->
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-cyber-border pb-3">
                         <div class="flex items-center gap-2">
                             <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
@@ -1289,7 +1306,6 @@
                         </div>
                     </div>
 
-                    <!-- PROPORCJONALNY PASEK ZMIANY -->
                     <div class="space-y-1">
                         <div class="flex justify-between text-[10px] font-mono text-slate-400">
                             <span>Początek: ${sorted[0].time}</span>
@@ -1301,7 +1317,6 @@
                         </div>
                     </div>
 
-                    <!-- CHRONOLOGICZNA LISTA AKTYWNOŚCI Z WYRÓŻNIONYMI PRZERWAMI -->
                     <div class="space-y-2 max-h-[260px] overflow-y-auto custom-scrollbar pr-1">
                         ${listHtml}
                     </div>
@@ -1318,6 +1333,11 @@
             const titleEl = document.getElementById('tableSectionTitle');
             tbody.innerHTML = '';
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
+
+            // Zapamiętanie aktywnego pola tekstowego, aby nie tracić kursorów przy filtrowaniu
+            const activeId = document.activeElement ? document.activeElement.id : null;
+            const selStart = document.activeElement ? document.activeElement.selectionStart : null;
+            const selEnd = document.activeElement ? document.activeElement.selectionEnd : null;
 
             if (state.activeCategory === 'Pracownicy') {
                 const userOpsMap = {};
@@ -1348,17 +1368,14 @@
                     userOptionsHtml += `<option value="${u}" ${state.selectedWorkerUser === u ? 'selected' : ''}>${u} (${userOpsMap[u].total} ops)</option>`;
                 });
 
-                // Kody bezpośrednio z kolumny A do filtrowania
                 const sortedColACodes = Array.from(allColACodes).filter(c => c.length > 0).sort();
                 let processOptionsHtml = `<option value="ALL" ${state.workerProcessFilter==='ALL'?'selected':''}>Wszystkie procesy</option>`;
                 
-                // Grupy ogólne
                 processOptionsHtml += `<option value="GRP_Putaway" ${state.workerProcessFilter==='GRP_Putaway'?'selected':''}>[Grupa] Putaway</option>`;
                 processOptionsHtml += `<option value="GRP_Relocate" ${state.workerProcessFilter==='GRP_Relocate'?'selected':''}>[Grupa] Relokacje</option>`;
                 processOptionsHtml += `<option value="GRP_Receipt" ${state.workerProcessFilter==='GRP_Receipt'?'selected':''}>[Grupa] Przyjęcia</option>`;
                 processOptionsHtml += `<option value="GRP_Adjustment" ${state.workerProcessFilter==='GRP_Adjustment'?'selected':''}>[Grupa] Adjustment</option>`;
                 
-                // Konkretne kody z Kolumny A
                 sortedColACodes.forEach(codeVal => {
                     processOptionsHtml += `<option value="${codeVal}" ${state.workerProcessFilter === codeVal ? 'selected' : ''}>${codeVal}</option>`;
                 });
@@ -1381,7 +1398,20 @@
                     }
                 }
 
-                const filtered = workerData.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+                // FILTRACJA PO KOLUMNACH & OGÓLNYM WYSZUKIWANIU
+                const cf = state.columnFilters;
+                const filtered = workerData.filter(item => {
+                    if (search && !JSON.stringify(item).toLowerCase().includes(search)) return false;
+                    if (cf.time && !`${item.date || ''} ${item.time || ''}`.toLowerCase().includes(cf.time.toLowerCase())) return false;
+                    if (cf.code && !`${item.code || ''} ${item.preAdvStatusCol || ''}`.toLowerCase().includes(cf.code.toLowerCase())) return false;
+                    if (cf.sku && !`${item.sku || ''}`.toLowerCase().includes(cf.sku.toLowerCase())) return false;
+                    if (cf.source && !`${item.source || ''}`.toLowerCase().includes(cf.source.toLowerCase())) return false;
+                    if (cf.target && !`${item.target || ''}`.toLowerCase().includes(cf.target.toLowerCase())) return false;
+                    if (cf.pa && !`${item.paValue || ''} ${item.container || ''}`.toLowerCase().includes(cf.pa.toLowerCase())) return false;
+                    if (cf.user && !`${item.user || ''}`.toLowerCase().includes(cf.user.toLowerCase())) return false;
+                    return true;
+                });
+
                 const total = filtered.length;
 
                 const selectedStats = (state.selectedWorkerUser && state.selectedWorkerUser !== 'ALL' && userOpsMap[state.selectedWorkerUser]) 
@@ -1398,7 +1428,7 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[11px] text-slate-400 font-bold uppercase">FILTR PROCESU:</span>
-                            <select onchange="state.workerProcessFilter=this.value; state.pagination.page=1; renderDetailsTable(); font-mono" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-2.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono">
+                            <select onchange="state.workerProcessFilter=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-2.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono">
                                 ${processOptionsHtml}
                             </select>
                         </div>
@@ -1412,10 +1442,33 @@
                     </div>
                 </div>`;
 
-                // GENERUJ WYKRES / ANALIZĘ DLA PRACOWNIKA
                 renderWorkerTimeline(workerData, state.selectedWorkerUser);
 
-                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">KOD / PROCES</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD (SOURCE)</th><th class="py-3 px-3">GDZIE (TARGET)</th><th class="py-3 px-3 text-right">SZTUK</th><th class="py-3 px-3">DOKUMENT / PA</th><th class="py-3 px-3">OPERATOR</th></tr>`;
+                // GENERALNY NAGŁÓWEK TABELI Z WERSJAMI PÓL FILTRUJĄCYCH KOLUMNY
+                thead.innerHTML = `
+                    <tr>
+                        <th class="py-2.5 px-3">Lp.</th>
+                        <th class="py-2.5 px-3">Data / Czas</th>
+                        <th class="py-2.5 px-3">KOD / PROCES</th>
+                        <th class="py-2.5 px-3">SKU</th>
+                        <th class="py-2.5 px-3">SKĄD (SOURCE)</th>
+                        <th class="py-2.5 px-3">GDZIE (TARGET)</th>
+                        <th class="py-2.5 px-3 text-right">SZTUK</th>
+                        <th class="py-2.5 px-3">DOKUMENT / PA</th>
+                        <th class="py-2.5 px-3">OPERATOR</th>
+                    </tr>
+                    <tr class="bg-slate-950/90 border-b border-cyber-border/80">
+                        <td class="p-1"></td>
+                        <td class="p-1"><input type="text" id="colFilterTime" value="${cf.time}" placeholder="Szukaj..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('time', this.value)"></td>
+                        <td class="p-1"><input type="text" id="colFilterCode" value="${cf.code}" placeholder="Kod..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('code', this.value)"></td>
+                        <td class="p-1"><input type="text" id="colFilterSku" value="${cf.sku}" placeholder="SKU..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('sku', this.value)"></td>
+                        <td class="p-1"><input type="text" id="colFilterSource" value="${cf.source}" placeholder="Skąd..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('source', this.value)"></td>
+                        <td class="p-1"><input type="text" id="colFilterTarget" value="${cf.target}" placeholder="Gdzie..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('target', this.value)"></td>
+                        <td class="p-1"></td>
+                        <td class="p-1"><input type="text" id="colFilterPa" value="${cf.pa}" placeholder="Dokument..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('pa', this.value)"></td>
+                        <td class="p-1"><input type="text" id="colFilterUser" value="${cf.user}" placeholder="Operator..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('user', this.value)"></td>
+                    </tr>
+                `;
 
                 const { page, pageSize } = state.pagination;
                 const start = (page - 1) * pageSize;
@@ -1426,6 +1479,11 @@
                     document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                     document.getElementById('prevPageBtn').disabled = true;
                     document.getElementById('nextPageBtn').disabled = true;
+                    
+                    if (activeId) {
+                        const el = document.getElementById(activeId);
+                        if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                    }
                     return;
                 }
 
@@ -1459,6 +1517,12 @@
                 document.getElementById('prevPageBtn').disabled = page === 1;
                 document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
 
+                // Przywrócenie focusa w polu filtrowania po przeładowaniu tabeli
+                if (activeId) {
+                    const el = document.getElementById(activeId);
+                    if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                }
+
             } else {
                 const timelineContainer = document.getElementById('workerTimelineContainer');
                 if (timelineContainer) timelineContainer.classList.add('hidden');
@@ -1466,7 +1530,18 @@
                 if (state.activeCategory === 'Receipt') {
                     let data = getActiveFilteredData();
                     if (state.selectedUser) data = data.filter(d => d.user === state.selectedUser);
-                    const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+                    
+                    const cf = state.columnFilters;
+                    const filtered = data.filter(item => {
+                        if (search && !JSON.stringify(item).toLowerCase().includes(search)) return false;
+                        if (cf.time && !`${item.date || ''} ${item.time || ''}`.toLowerCase().includes(cf.time.toLowerCase())) return false;
+                        if (cf.code && !`${item.code || ''}`.toLowerCase().includes(cf.code.toLowerCase())) return false;
+                        if (cf.sku && !`${item.sku || ''}`.toLowerCase().includes(cf.sku.toLowerCase())) return false;
+                        if (cf.source && !`${item.source || ''}`.toLowerCase().includes(cf.source.toLowerCase())) return false;
+                        if (cf.target && !`${item.target || ''}`.toLowerCase().includes(cf.target.toLowerCase())) return false;
+                        if (cf.user && !`${item.user || ''}`.toLowerCase().includes(cf.user.toLowerCase())) return false;
+                        return true;
+                    });
                     const total = filtered.length;
 
                     let userFilterSuffix = state.selectedUser ? ` (Filtruję pracownika: <strong class="text-amber-400">${state.selectedUser}</strong> <button onclick="clearUserSelection()" class="ml-2 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded transition">Pokaż wszystkich</button>)` : '';
@@ -1575,13 +1650,31 @@
                     const start = (page - 1) * pageSize;
                     const pageData = filtered.slice(start, start + pageSize);
 
-                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>`;
+                    thead.innerHTML = `
+                        <tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>
+                        <tr class="bg-slate-950/90 border-b border-cyber-border/80">
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterTime" value="${cf.time}" placeholder="Szukaj..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('time', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterCode" value="${cf.code}" placeholder="Kod..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('code', this.value)"></td>
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterSku" value="${cf.sku}" placeholder="SKU..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('sku', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterSource" value="${cf.source}" placeholder="Skąd..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('source', this.value)"></td>
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterTarget" value="${cf.target}" placeholder="Gdzie..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('target', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterUser" value="${cf.user}" placeholder="Operator..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('user', this.value)"></td>
+                        </tr>
+                    `;
 
                     if (!pageData.length) {
                         tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Brak wierszy przyjęć.</td></tr>';
                         document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                         document.getElementById('prevPageBtn').disabled = true;
                         document.getElementById('nextPageBtn').disabled = true;
+                        
+                        if (activeId) {
+                            const el = document.getElementById(activeId);
+                            if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                        }
                         return;
                     }
 
@@ -1595,6 +1688,11 @@
                     document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} wierszy`;
                     document.getElementById('prevPageBtn').disabled = page === 1;
                     document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+                    if (activeId) {
+                        const el = document.getElementById(activeId);
+                        if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                    }
 
                 } else if (state.activeCategory === 'ClosedPA') {
                     let data = getUniqueClosedPAs();
@@ -1861,7 +1959,20 @@
                 } else {
                     let data = getActiveFilteredData();
                     if (state.selectedUser) data = data.filter(d => d.user === state.selectedUser);
-                    const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+                    
+                    const cf = state.columnFilters;
+                    const filtered = data.filter(item => {
+                        if (search && !JSON.stringify(item).toLowerCase().includes(search)) return false;
+                        if (cf.time && !`${item.date || ''} ${item.time || ''}`.toLowerCase().includes(cf.time.toLowerCase())) return false;
+                        if (cf.code && !`${item.code || ''}`.toLowerCase().includes(cf.code.toLowerCase())) return false;
+                        if (cf.sku && !`${item.sku || ''}`.toLowerCase().includes(cf.sku.toLowerCase())) return false;
+                        if (cf.source && !`${item.source || ''}`.toLowerCase().includes(cf.source.toLowerCase())) return false;
+                        if (cf.target && !`${item.target || ''}`.toLowerCase().includes(cf.target.toLowerCase())) return false;
+                        if (cf.pa && !`${item.paValue || ''} ${item.container || ''}`.toLowerCase().includes(cf.pa.toLowerCase())) return false;
+                        if (cf.user && !`${item.user || ''}`.toLowerCase().includes(cf.user.toLowerCase())) return false;
+                        return true;
+                    });
+
                     const total = filtered.length;
                     const { page, pageSize } = state.pagination;
                     const start = (page - 1) * pageSize;
@@ -1869,13 +1980,32 @@
 
                     let titleSuffix = state.selectedUser ? ` (Filtruję pracownika: <strong class="text-amber-400">${state.selectedUser}</strong> <button onclick="clearUserSelection()" class="ml-2 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded transition">Pokaż wszystkich</button>)` : '';
                     titleEl.innerHTML = `Szczegóły Operacji <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} ops</span>${titleSuffix}`;
-                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>`;
+                    
+                    thead.innerHTML = `
+                        <tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>
+                        <tr class="bg-slate-950/90 border-b border-cyber-border/80">
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterTime" value="${cf.time}" placeholder="Szukaj..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('time', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterCode" value="${cf.code}" placeholder="Kod..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('code', this.value)"></td>
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterSku" value="${cf.sku}" placeholder="SKU..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('sku', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterSource" value="${cf.source}" placeholder="Skąd..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('source', this.value)"></td>
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterTarget" value="${cf.target}" placeholder="Gdzie..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('target', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterUser" value="${cf.user}" placeholder="Operator..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('user', this.value)"></td>
+                        </tr>
+                    `;
 
                     if (!pageData.length) {
                         tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Brak wierszy.</td></tr>';
                         document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                         document.getElementById('prevPageBtn').disabled = true;
                         document.getElementById('nextPageBtn').disabled = true;
+                        
+                        if (activeId) {
+                            const el = document.getElementById(activeId);
+                            if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                        }
                         return;
                     }
 
@@ -1888,6 +2018,11 @@
                     document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} wierszy`;
                     document.getElementById('prevPageBtn').disabled = page === 1;
                     document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+                    if (activeId) {
+                        const el = document.getElementById(activeId);
+                        if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                    }
                 }
             }
         }
