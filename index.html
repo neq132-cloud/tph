@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.37-CONTAINER-FIX</title>
+    <title>WMS Cyberpunk Hub v0.5.38-PERSIST-FIX</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.37-CONTAINER-FIX</div>
+            <div class="font-bold text-white">Wersja v0.5.38-PERSIST-FIX</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.37-CONTAINER-FIX</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.38-PERSIST-FIX</span>
                 </div>
             </div>
 
@@ -148,7 +148,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.37 (Container Fix)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.38 (Persist Fix)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -324,6 +324,8 @@
     </div>
 
     <script>
+        const CURRENT_STORAGE_KEY = 'wms_cyber_test_records_v38_persistfix';
+
         const state = {
             rawRows: [],
             parsedData: [],
@@ -334,7 +336,7 @@
             selectedOdbiciaUser: null,
             selectedOdbiciaActivity: 'ALL',
             receiptSubView: 'ALL', // 'ALL' lub 'CONTAINERS'
-            expandedContainers: {}, // id rozwijanych kontenerów
+            expandedContainers: {},
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
             sortDir: 'desc'
@@ -368,12 +370,17 @@
         function clearAllData() {
             if (confirm("Czy na pewno chcesz wyczyścić całą bazę danych i zapamiętane wpisy?")) {
                 state.parsedData = [];
-                localStorage.removeItem('wms_cyber_test_records_v37_containerfix');
-                localStorage.removeItem('wms_cyber_test_records_v36_kontenery');
-                localStorage.removeItem('wms_cyber_test_records_v35_userfilter');
-                localStorage.removeItem('wms_cyber_test_records_v34_colfix');
-                localStorage.removeItem('wms_cyber_test_records_v33_pagfix');
-                localStorage.removeItem('wms_cyber_test_records_v32_pafix');
+                const keysToRemove = [
+                    CURRENT_STORAGE_KEY,
+                    'wms_cyber_test_records_v37_containerfix',
+                    'wms_cyber_test_records_v36_kontenery',
+                    'wms_cyber_test_records_v35_userfilter',
+                    'wms_cyber_test_records_v34_colfix',
+                    'wms_cyber_test_records_v33_pagfix',
+                    'wms_cyber_test_records_v32_pafix'
+                ];
+                keysToRemove.forEach(k => localStorage.removeItem(k));
+
                 document.getElementById('pasteBaseArea').value = '';
                 document.getElementById('countBase').textContent = '0 w.';
                 document.getElementById('pasteFreshArea').value = '';
@@ -561,17 +568,42 @@
 
         function loadDataFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem('wms_cyber_test_records_v37_containerfix') || localStorage.getItem('wms_cyber_test_records_v36_kontenery') || localStorage.getItem('wms_cyber_test_records_v35_userfilter') || localStorage.getItem('wms_cyber_test_records_v34_colfix') || localStorage.getItem('wms_cyber_test_records_v33_pagfix') || localStorage.getItem('wms_cyber_test_records_v32_pafix');
+                const oldKeys = [
+                    'wms_cyber_test_records_v37_containerfix',
+                    'wms_cyber_test_records_v36_kontenery',
+                    'wms_cyber_test_records_v35_userfilter',
+                    'wms_cyber_test_records_v34_colfix',
+                    'wms_cyber_test_records_v33_pagfix',
+                    'wms_cyber_test_records_v32_pafix'
+                ];
+
+                let savedData = localStorage.getItem(CURRENT_STORAGE_KEY);
+                if (!savedData) {
+                    for (const oldKey of oldKeys) {
+                        const legacy = localStorage.getItem(oldKey);
+                        if (legacy) {
+                            savedData = legacy;
+                            break;
+                        }
+                    }
+                }
+
+                // Usuń stare klucze i zwolnij pamięć przeglądarki!
+                oldKeys.forEach(k => localStorage.removeItem(k));
+
                 if (savedData) {
                     const records = JSON.parse(savedData);
                     if (records && records.length > 0) {
                         state.parsedData = records;
-                        const textRows = records.map(d => `${d.preAdvStatusCol}\t${d.sku}\t\t\t\t\t${d.qty}\t${d.source || ''}\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusVal}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}\t${d.container || '-'}`).join('\n');
+                        const textRows = records.map(d => `${d.preAdvStatusCol || 'PreAdv Status'}\t${d.sku}\t\t\t\t\t${d.qty}\t${d.source || ''}\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusVal}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}\t${d.container || '-'}`).join('\n');
                         document.getElementById('pasteBaseArea').value = textRows;
                         document.getElementById('countBase').textContent = `${records.length} w.`;
+                        
+                        // Zapisz od razu do aktualnego czystego klucza
+                        saveDataToLocalStorage(records);
                     }
                 }
-                showToast(`Wczytano wersję v0.5.37-CONTAINER-FIX`);
+                showToast(`Wczytano wersję v0.5.38-PERSIST-FIX`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -580,9 +612,10 @@
 
         function saveDataToLocalStorage(records) {
             try {
-                localStorage.setItem('wms_cyber_test_records_v37_containerfix', JSON.stringify(records));
+                localStorage.setItem(CURRENT_STORAGE_KEY, JSON.stringify(records));
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
+                showToast('Uwaga: Pamięć przeglądarki jest pełna!');
             }
         }
 
@@ -690,64 +723,29 @@
         }
 
         function processBothAreas() {
-            const baseText = document.getElementById('pasteBaseArea').value;
-            const freshText = document.getElementById('pasteFreshArea').value;
+            const freshText = document.getElementById('pasteFreshArea').value.trim();
+            const baseText = document.getElementById('pasteBaseArea').value.trim();
 
-            const combinedRaw = (baseText.trim() + '\n' + freshText.trim()).trim();
-            if (!combinedRaw) return;
-
-            const lines = combinedRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            
-            if (combinedRaw.includes('\t')) {
-                const matrixRows = lines.map(l => l.split('\t'));
-                processMatrix(matrixRows);
-                return;
-            }
+            if (!freshText && !baseText) return;
 
             let records = [...state.parsedData];
             let existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}|${r.paValue}`));
-            
-            let currentRecord = { code: 'PreAdv Status', sku: '-', qty: 1, source: '-', target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: 'BULK', container: '-' };
 
-            lines.forEach((line) => {
-                const up = line.toUpperCase();
-                
-                const cMatch = extractContainerCode(line);
-                if (cMatch && (!currentRecord.container || currentRecord.container === '-')) {
-                    currentRecord.container = cMatch;
+            const freshLines = freshText ? freshText.split('\n').map(l => l.trim()).filter(l => l.length > 0) : [];
+
+            if (freshLines.length > 0) {
+                if (freshText.includes('\t')) {
+                    const matrixRows = freshLines.map(l => l.split('\t'));
+                    parseMatrixRowsIntoRecords(matrixRows, records, existingKeys);
+                } else {
+                    parseRawLinesIntoRecords(freshLines, records, existingKeys);
                 }
-
-                if (line === 'PreAdv Status' || up.includes('PLTTI')) {
-                    if (currentRecord.paValue || currentRecord.container !== '-') {
-                        const rowKey = `${currentRecord.date}|${currentRecord.time}|${currentRecord.user}|${currentRecord.sku}|${currentRecord.target}|${currentRecord.code}|${currentRecord.qty}|${currentRecord.paValue}`;
-                        if (!existingKeys.has(rowKey)) {
-                            existingKeys.add(rowKey);
-                            records.push({ ...currentRecord, id: records.length + 1, isClosedPAValid: true, taskType: 'Putaway', putawayZone: 'BULK' });
-                        }
-                    }
-                    currentRecord = { code: 'PreAdv Status', sku: '-', qty: 1, source: '-', target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: 'BULK', container: '-' };
-                }
-
-                const digits = line.replace(/\D/g, '');
-                if (digits.length >= 10 && !currentRecord.paValue) {
-                    const cand = digits.substring(0, 10);
-                    if (cand.startsWith('018') || cand.startsWith('48') || cand.startsWith('45') || cand.startsWith('47') || cand.startsWith('0084')) {
-                        currentRecord.paValue = cand;
-                        currentRecord.paType = (cand.startsWith('018')) ? 'ASN' : 'PO';
-                    }
-                }
-
-                if (/^\d{2}\/\d{2}\/\d{4}$/.test(line)) currentRecord.date = line;
-                if (/^\d{2}:\d{2}:\d{2}$/.test(line)) currentRecord.time = line;
-                if (/^[A-Z0-9]{5,}$/.test(line) && !up.includes('PROGRESS') && !up.includes('COMPLETE') && !up.includes('PLTTI') && !cMatch) {
-                    if (currentRecord.user === 'BRAK_USERA') currentRecord.user = line;
-                }
-            });
-
-            if (currentRecord.paValue || currentRecord.container !== '-') {
-                const rowKey = `${currentRecord.date}|${currentRecord.time}|${currentRecord.user}|${currentRecord.sku}|${currentRecord.target}|${currentRecord.code}|${currentRecord.qty}|${currentRecord.paValue}`;
-                if (!existingKeys.has(rowKey)) {
-                    records.push({ ...currentRecord, id: records.length + 1, isClosedPAValid: true, taskType: 'Putaway', putawayZone: 'BULK' });
+            } else if (!isBaseLocked && baseText) {
+                if (baseText.includes('\t')) {
+                    const matrixRows = baseText.split('\n').map(l => l.trim()).filter(l => l.length > 0).map(l => l.split('\t'));
+                    records = [];
+                    existingKeys = new Set();
+                    parseMatrixRowsIntoRecords(matrixRows, records, existingKeys);
                 }
             }
 
@@ -765,13 +763,74 @@
 
             saveDataToLocalStorage(records);
             renderAll();
-            showToast(`Przetworzono dane. Unikalnych wierszy: ${records.length}`);
+            showToast(`Przetworzono dane. Unikalnych wierszy w bazie: ${records.length}`);
         }
 
-        function processMatrix(matrix) {
-            const records = [...state.parsedData];
-            const existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}|${r.paValue}`));
+        function parseRawLinesIntoRecords(lines, records, existingKeys) {
+            let currentRecord = { code: 'Putaway', sku: '-', qty: 1, source: '-', target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: 'BULK', container: '-' };
+            let hasData = false;
 
+            lines.forEach((line) => {
+                const up = line.toUpperCase();
+                
+                const cMatch = extractContainerCode(line);
+                if (cMatch && (!currentRecord.container || currentRecord.container === '-')) {
+                    currentRecord.container = cMatch;
+                    hasData = true;
+                }
+
+                if (line === 'PreAdv Status' || up.includes('PLTTI') || up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.startsWith('PUTAWAY') || up.startsWith('RECEIPT') || up.startsWith('RELOCATE')) {
+                    if (hasData) {
+                        commitRawRecord(currentRecord, records, existingKeys);
+                    }
+                    currentRecord = { code: line, sku: '-', qty: 1, source: '-', target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: line, container: '-' };
+                    hasData = true;
+                }
+
+                const digits = line.replace(/\D/g, '');
+                if (digits.length >= 10 && !currentRecord.paValue) {
+                    const cand = digits.substring(0, 10);
+                    if (cand.startsWith('018') || cand.startsWith('48') || cand.startsWith('45') || cand.startsWith('47') || cand.startsWith('0084')) {
+                        currentRecord.paValue = cand;
+                        currentRecord.paType = (cand.startsWith('018')) ? 'ASN' : 'PO';
+                        hasData = true;
+                    }
+                }
+
+                if (/^\d{2}\/\d{2}\/\d{4}$/.test(line)) { currentRecord.date = line; hasData = true; }
+                if (/^\d{2}:\d{2}:\d{2}$/.test(line)) { currentRecord.time = line; hasData = true; }
+                if (/^[A-Z0-9]{5,}$/.test(line) && !up.includes('PROGRESS') && !up.includes('COMPLETE') && !up.includes('PLTTI') && !cMatch) {
+                    if (currentRecord.user === 'BRAK_USERA') { currentRecord.user = line; hasData = true; }
+                }
+            });
+
+            if (hasData) {
+                commitRawRecord(currentRecord, records, existingKeys);
+            }
+        }
+
+        function commitRawRecord(rec, records, existingKeys) {
+            const taskType = classifyTaskType(rec.code);
+            const putawayZone = classifyPutawayZone(rec.target, taskType);
+            const combinedStatusText = `${rec.statusVal} ${rec.code}`.toUpperCase();
+            const isExactClosedStatus = (combinedStatusText.includes('IN PROGRESS') && combinedStatusText.includes('COMPLETE')) && !combinedStatusText.includes('SHIPPED');
+            const isClosedPAValid = isExactClosedStatus && (rec.paType === 'ASN' || rec.paType === 'PO');
+
+            const rowKey = `${rec.date}|${rec.time}|${rec.user}|${rec.sku}|${rec.target}|${rec.code}|${rec.qty}|${rec.paValue}`;
+            if (!existingKeys.has(rowKey)) {
+                existingKeys.add(rowKey);
+                records.push({
+                    ...rec,
+                    id: records.length + 1,
+                    taskType,
+                    putawayZone,
+                    isClosedPAValid,
+                    preAdvStatusCol: rec.code
+                });
+            }
+        }
+
+        function parseMatrixRowsIntoRecords(matrix, records, existingKeys) {
             let containerColIdx = -1;
             if (matrix.length > 0 && Array.isArray(matrix[0])) {
                 const headerRow = matrix[0].map(c => cleanRawString(c).toUpperCase());
@@ -800,26 +859,17 @@
                 const rawPaVal = getCol(16);
 
                 let container = '-';
-                if (containerColIdx !== -1) {
-                    container = getCol(containerColIdx) || '-';
-                }
-                if (container === '-' && r.length > 91) {
-                    container = getCol(91) || '-';
-                }
-
+                if (containerColIdx !== -1) container = getCol(containerColIdx) || '-';
+                if (container === '-' && r.length > 91) container = getCol(91) || '-';
                 if (container === '-') {
                     for (let cell of r) {
                         const code = extractContainerCode(cell);
-                        if (code) {
-                            container = code;
-                            break;
-                        }
+                        if (code) { container = code; break; }
                     }
                 }
 
                 const combinedStatusText = `${statusVal} ${preAdvStatusCol}`.toUpperCase();
-                const isExactClosedStatus = (combinedStatusText.includes('IN PROGRESS') && combinedStatusText.includes('COMPLETE')) &&
-                                           !combinedStatusText.includes('SHIPPED');
+                const isExactClosedStatus = (combinedStatusText.includes('IN PROGRESS') && combinedStatusText.includes('COMPLETE')) && !combinedStatusText.includes('SHIPPED');
 
                 let paValue = '';
                 const digitsInQ = rawPaVal.replace(/\D/g, '');
@@ -856,13 +906,19 @@
                     });
                 }
             });
+        }
 
+        function processMatrix(matrix) {
+            let records = [...state.parsedData];
+            let existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}|${r.paValue}`));
+
+            parseMatrixRowsIntoRecords(matrix, records, existingKeys);
             records.forEach((rec, index) => { rec.id = index + 1; });
 
             state.parsedData = records;
             saveDataToLocalStorage(records);
             renderAll();
-            showToast(`Przetworzono dane. Unikalnych wierszy w bazie: ${records.length}`);
+            showToast(`Przetworzono plik. Unikalnych wierszy w bazie: ${records.length}`);
         }
 
         function getActiveFilteredData() {
