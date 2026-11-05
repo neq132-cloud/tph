@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.39-JOB-STATUS</title>
+    <title>WMS Cyberpunk Hub v0.5.41-WORKERS-TAB</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.39-JOB-STATUS</div>
+            <div class="font-bold text-white">Wersja v0.5.41-WORKERS-TAB</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.39-JOB-STATUS</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.41-WORKERS-TAB</span>
                 </div>
             </div>
 
@@ -109,6 +109,11 @@
                 <button onclick="switchCategory('Odbicia')" id="navOdbicia" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                     <span class="flex items-center gap-3"><i data-lucide="user-check" class="w-4 h-4"></i> Odbicia (Live)</span>
                     <span id="badgeOdbicia" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <!-- NOWA ZAKŁADKA PRACOWNICY -->
+                <button onclick="switchCategory('Pracownicy')" id="navPracownicy" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="users" class="w-4 h-4"></i> Pracownicy</span>
+                    <span id="badgePracownicy" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
                 </button>
             </nav>
         </div>
@@ -148,7 +153,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.39 (Job Status Fix)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.41 (Workers Tab)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -334,8 +339,10 @@
             selectedUser: null,
             selectedTtiUser: null,
             selectedOdbiciaUser: null,
+            selectedWorkerUser: null,
+            workerProcessFilter: 'ALL',
             selectedOdbiciaActivity: 'ALL',
-            receiptSubView: 'ALL', // 'ALL' lub 'CONTAINERS'
+            receiptSubView: 'ALL',
             expandedContainers: {},
             pagination: { page: 1, pageSize: 50 },
             sortField: 'date',
@@ -602,7 +609,7 @@
                         saveDataToLocalStorage(records);
                     }
                 }
-                showToast(`Wczytano wersję v0.5.39-JOB-STATUS`);
+                showToast(`Wczytano wersję v0.5.41-WORKERS-TAB`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -647,7 +654,7 @@
             state.selectedOdbiciaUser = null;
             state.selectedOdbiciaActivity = 'ALL';
 
-            ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'TtiAdd', 'Odbicia'].forEach(c => {
+            ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'TtiAdd', 'Odbicia', 'Pracownicy'].forEach(c => {
                 const btn = document.getElementById(`nav${c}`);
                 if (btn) {
                     if (c === cat) {
@@ -658,11 +665,12 @@
                 }
             });
 
-            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'Adjustment': 'Adjustment', 'ClosedPA': 'Zamknięte PA', 'TtiAdd': 'TTI ADD', 'Odbicia': 'Odbicia (Live)' };
+            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'Adjustment': 'Adjustment', 'ClosedPA': 'Zamknięte PA', 'TtiAdd': 'TTI ADD', 'Odbicia': 'Odbicia (Live)', 'Pracownicy': 'Analiza Pracowników' };
             document.getElementById('activeCatLabel').textContent = labels[cat];
             
-            document.getElementById('kpiContainer').style.display = (cat === 'Odbicia' || cat === 'TtiAdd') ? 'none' : 'grid';
-            document.getElementById('workersSection').style.display = (cat === 'Odbicia' || cat === 'TtiAdd') ? 'none' : 'grid';
+            const hideHeaderSections = (cat === 'Odbicia' || cat === 'TtiAdd' || cat === 'Pracownicy');
+            document.getElementById('kpiContainer').style.display = hideHeaderSections ? 'none' : 'grid';
+            document.getElementById('workersSection').style.display = hideHeaderSections ? 'none' : 'grid';
 
             state.pagination.page = 1;
             renderAll();
@@ -935,6 +943,8 @@
                 data = state.parsedData.filter(d => d.isClosedPAValid);
             } else if (state.activeCategory === 'TtiAdd') {
                 data = getTtiAddSessions();
+            } else if (state.activeCategory === 'Pracownicy') {
+                data = state.parsedData.filter(d => d.user && d.user !== 'BRAK_USERA');
             } else if (state.activeCategory === 'Odbicia') {
                 let odbiciaRows = state.parsedData.filter(d => {
                     const up = (d.code || '').toUpperCase();
@@ -1032,11 +1042,7 @@
             const closedPACount = getUniqueClosedPAs().length;
             const ttiAddCount = calculateTtiAddSessions().length;
             
-            const odbiciaRows = state.parsedData.filter(d => {
-                const up = (d.code || '').toUpperCase();
-                return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('PLTTI');
-            });
-            const uniqueWorkers = new Set(odbiciaRows.map(d => d.user).filter(u => u && u !== 'BRAK_USERA'));
+            const allWorkers = new Set(state.parsedData.map(d => d.user).filter(u => u && u !== 'BRAK_USERA'));
 
             document.getElementById('badgePutaway').textContent = putawayCount;
             document.getElementById('badgeRelocate').textContent = relocateCount;
@@ -1044,11 +1050,12 @@
             document.getElementById('badgeAdjustment').textContent = adjustmentCount;
             document.getElementById('badgeClosedPA').textContent = closedPACount;
             document.getElementById('badgeTtiAdd').textContent = ttiAddCount;
-            document.getElementById('badgeOdbicia').textContent = uniqueWorkers.size || odbiciaRows.length;
+            document.getElementById('badgeOdbicia').textContent = allWorkers.size;
+            document.getElementById('badgePracownicy').textContent = allWorkers.size;
         }
 
         function renderDashboardCards() {
-            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Pracownicy') return;
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
             const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
@@ -1080,7 +1087,7 @@
         }
 
         function renderWorkers() {
-            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Pracownicy') return;
             const activeData = getActiveFilteredData();
             const userMap = {};
             activeData.forEach(d => userMap[d.user] = (userMap[d.user] || 0) + 1);
@@ -1118,7 +1125,7 @@
         function clearUserSelection() { state.selectedUser = null; renderAll(); }
 
         function renderDrilldown() {
-            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Pracownicy') return;
             const nameEl = document.getElementById('selectedUserName');
             const clearBtn = document.getElementById('clearUserBtn');
             const tbody = document.getElementById('drilldownTableBody');
@@ -1153,7 +1160,107 @@
             tbody.innerHTML = '';
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
 
-            if (state.activeCategory === 'Receipt') {
+            if (state.activeCategory === 'Pracownicy') {
+                const userOpsMap = {};
+                state.parsedData.forEach(d => {
+                    if (d.user && d.user !== 'BRAK_USERA') {
+                        if (!userOpsMap[d.user]) {
+                            userOpsMap[d.user] = { total: 0, putaway: 0, relocate: 0, receipt: 0, adjustment: 0 };
+                        }
+                        userOpsMap[d.user].total++;
+                        if (d.taskType === 'Putaway' || d.code.toUpperCase().includes('PUTAWAY')) userOpsMap[d.user].putaway++;
+                        else if (d.taskType === 'Relocate') userOpsMap[d.user].relocate++;
+                        else if (d.taskType === 'Receipt') userOpsMap[d.user].receipt++;
+                        else if (d.taskType === 'Adjustment') userOpsMap[d.user].adjustment++;
+                    }
+                });
+
+                const sortedUsers = Object.keys(userOpsMap).sort((a,b) => userOpsMap[b].total - userOpsMap[a].total);
+
+                if (!state.selectedWorkerUser && sortedUsers.length > 0) {
+                    state.selectedWorkerUser = sortedUsers[0];
+                }
+
+                let userOptionsHtml = '';
+                sortedUsers.forEach(u => {
+                    userOptionsHtml += `<option value="${u}" ${state.selectedWorkerUser === u ? 'selected' : ''}>${u} (${userOpsMap[u].total} ops)</option>`;
+                });
+
+                let workerData = state.parsedData.filter(d => d.user === state.selectedWorkerUser);
+
+                if (state.workerProcessFilter !== 'ALL') {
+                    if (state.workerProcessFilter === 'Putaway') {
+                        workerData = workerData.filter(d => d.taskType === 'Putaway' || d.code.toUpperCase().includes('PUTAWAY'));
+                    } else {
+                        workerData = workerData.filter(d => d.taskType === state.workerProcessFilter);
+                    }
+                }
+
+                const filtered = workerData.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+                const total = filtered.length;
+
+                const selectedStats = userOpsMap[state.selectedWorkerUser] || { total: 0, putaway: 0, relocate: 0, receipt: 0, adjustment: 0 };
+
+                titleEl.innerHTML = `<div class="flex flex-col space-y-3 w-full">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span>Wybór Pracownika:</span>
+                            <select onchange="state.selectedWorkerUser=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-3 py-1.5 text-amber-400 font-bold focus:outline-none focus:border-amber-500 font-mono">
+                                ${userOptionsHtml || '<option value="">Brak pracowników</option>'}
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-slate-400">Filtr procesu:</span>
+                            <select onchange="state.workerProcessFilter=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-2.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono">
+                                <option value="ALL" ${state.workerProcessFilter==='ALL'?'selected':''}>Wszystkie procesy</option>
+                                <option value="Putaway" ${state.workerProcessFilter==='Putaway'?'selected':''}>Putaway</option>
+                                <option value="Relocate" ${state.workerProcessFilter==='Relocate'?'selected':''}>Relokacje</option>
+                                <option value="Receipt" ${state.workerProcessFilter==='Receipt'?'selected':''}>Przyjęcia</option>
+                                <option value="Adjustment" ${state.workerProcessFilter==='Adjustment'?'selected':''}>Adjustment</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-mono pt-1">
+                        <span class="bg-slate-950 border border-cyber-border px-2.5 py-1 rounded-xl text-slate-300">Łącznie: <strong class="text-white">${selectedStats.total}</strong> ops</span>
+                        <span class="bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-xl text-emerald-400">Putaway: <strong>${selectedStats.putaway}</strong></span>
+                        <span class="bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-xl text-amber-300">Relokacje: <strong>${selectedStats.relocate}</strong></span>
+                        <span class="bg-indigo-500/10 border border-indigo-500/30 px-2.5 py-1 rounded-xl text-indigo-300">Przyjęcia: <strong>${selectedStats.receipt}</strong></span>
+                        <span class="bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-xl text-rose-300">Adjustment: <strong>${selectedStats.adjustment}</strong></span>
+                    </div>
+                </div>`;
+
+                thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod / Proces</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD (Source)</th><th class="py-3 px-3">GDZIE (Target)</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Dokument / PA</th><th class="py-3 px-3">Operator</th></tr>`;
+
+                const { page, pageSize } = state.pagination;
+                const start = (page - 1) * pageSize;
+                const pageData = filtered.slice(start, start + pageSize);
+
+                if (!pageData.length) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Brak zarejestrowanych ruchów dla wybranego pracownika.</td></tr>';
+                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
+                    return;
+                }
+
+                pageData.forEach((row, i) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-800/40 transition';
+                    const codeUpper = (row.code || '').toUpperCase();
+                    let processBadge = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+                    if (row.taskType === 'Relocate') processBadge = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
+                    else if (row.taskType === 'Receipt') processBadge = 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30';
+                    else if (row.taskType === 'Adjustment') processBadge = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400 font-mono">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] border rounded font-mono font-bold ${processBadge}">${row.code || '-'}</span></td><td class="py-2.5 px-3 text-emerald-400 font-mono">${row.sku || '-'}</td><td class="py-2.5 px-3 text-slate-300 font-mono">${row.source || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.target || '-'}</td><td class="py-2.5 px-3 font-bold text-emerald-400 text-right font-mono">${row.qty || 1}</td><td class="py-2.5 px-3 text-slate-400 font-mono text-[11px]">${row.paValue || row.container || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold">${row.user || '-'}</td>`;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} ruchów pracownika ${state.selectedWorkerUser}`;
+                document.getElementById('prevPageBtn').disabled = page === 1;
+                document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+            } else if (state.activeCategory === 'Receipt') {
                 let data = getActiveFilteredData();
                 if (state.selectedUser) data = data.filter(d => d.user === state.selectedUser);
                 const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
