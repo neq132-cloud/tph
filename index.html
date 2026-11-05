@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.36-KONTENERY</title>
+    <title>WMS Cyberpunk Hub v0.5.37-CONTAINER-FIX</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.36-KONTENERY</div>
+            <div class="font-bold text-white">Wersja v0.5.37-CONTAINER-FIX</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.36-KONTENERY</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.37-CONTAINER-FIX</span>
                 </div>
             </div>
 
@@ -148,7 +148,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.36 (Kontenery CN)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.37 (Container Fix)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -368,6 +368,7 @@
         function clearAllData() {
             if (confirm("Czy na pewno chcesz wyczyścić całą bazę danych i zapamiętane wpisy?")) {
                 state.parsedData = [];
+                localStorage.removeItem('wms_cyber_test_records_v37_containerfix');
                 localStorage.removeItem('wms_cyber_test_records_v36_kontenery');
                 localStorage.removeItem('wms_cyber_test_records_v35_userfilter');
                 localStorage.removeItem('wms_cyber_test_records_v34_colfix');
@@ -451,6 +452,12 @@
             if (up.startsWith('V1-IN') || up.startsWith('V2-IN') || up.startsWith('V1IN') || up.startsWith('V2IN')) return 'VIN';
             if (up.startsWith('V1') || up.startsWith('V2')) return 'VNA';
             return 'BULK';
+        }
+
+        function extractContainerCode(text) {
+            if (!text) return '';
+            const match = String(text).toUpperCase().match(/\b[A-Z]{4}\d{6,7}\b/);
+            return match ? match[0] : '';
         }
 
         function getUniqueClosedPAs() {
@@ -554,17 +561,17 @@
 
         function loadDataFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem('wms_cyber_test_records_v36_kontenery') || localStorage.getItem('wms_cyber_test_records_v35_userfilter') || localStorage.getItem('wms_cyber_test_records_v34_colfix') || localStorage.getItem('wms_cyber_test_records_v33_pagfix') || localStorage.getItem('wms_cyber_test_records_v32_pafix');
+                const savedData = localStorage.getItem('wms_cyber_test_records_v37_containerfix') || localStorage.getItem('wms_cyber_test_records_v36_kontenery') || localStorage.getItem('wms_cyber_test_records_v35_userfilter') || localStorage.getItem('wms_cyber_test_records_v34_colfix') || localStorage.getItem('wms_cyber_test_records_v33_pagfix') || localStorage.getItem('wms_cyber_test_records_v32_pafix');
                 if (savedData) {
                     const records = JSON.parse(savedData);
                     if (records && records.length > 0) {
                         state.parsedData = records;
-                        const textRows = records.map(d => `${d.preAdvStatusCol}\t${d.sku}\t\t\t\t\t${d.qty}\t${d.source || ''}\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusVal}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}`).join('\n');
+                        const textRows = records.map(d => `${d.preAdvStatusCol}\t${d.sku}\t\t\t\t\t${d.qty}\t${d.source || ''}\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusVal}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}\t${d.container || '-'}`).join('\n');
                         document.getElementById('pasteBaseArea').value = textRows;
                         document.getElementById('countBase').textContent = `${records.length} w.`;
                     }
                 }
-                showToast(`Wczytano wersję v0.5.36-KONTENERY`);
+                showToast(`Wczytano wersję v0.5.37-CONTAINER-FIX`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -573,7 +580,7 @@
 
         function saveDataToLocalStorage(records) {
             try {
-                localStorage.setItem('wms_cyber_test_records_v36_kontenery', JSON.stringify(records));
+                localStorage.setItem('wms_cyber_test_records_v37_containerfix', JSON.stringify(records));
             } catch(e) {
                 console.error('Błąd zapisu localStorage:', e);
             }
@@ -705,8 +712,13 @@
             lines.forEach((line) => {
                 const up = line.toUpperCase();
                 
+                const cMatch = extractContainerCode(line);
+                if (cMatch && (!currentRecord.container || currentRecord.container === '-')) {
+                    currentRecord.container = cMatch;
+                }
+
                 if (line === 'PreAdv Status' || up.includes('PLTTI')) {
-                    if (currentRecord.paValue) {
+                    if (currentRecord.paValue || currentRecord.container !== '-') {
                         const rowKey = `${currentRecord.date}|${currentRecord.time}|${currentRecord.user}|${currentRecord.sku}|${currentRecord.target}|${currentRecord.code}|${currentRecord.qty}|${currentRecord.paValue}`;
                         if (!existingKeys.has(rowKey)) {
                             existingKeys.add(rowKey);
@@ -727,12 +739,12 @@
 
                 if (/^\d{2}\/\d{2}\/\d{4}$/.test(line)) currentRecord.date = line;
                 if (/^\d{2}:\d{2}:\d{2}$/.test(line)) currentRecord.time = line;
-                if (/^[A-Z0-9]{5,}$/.test(line) && !up.includes('PROGRESS') && !up.includes('COMPLETE') && !up.includes('PLTTI')) {
+                if (/^[A-Z0-9]{5,}$/.test(line) && !up.includes('PROGRESS') && !up.includes('COMPLETE') && !up.includes('PLTTI') && !cMatch) {
                     if (currentRecord.user === 'BRAK_USERA') currentRecord.user = line;
                 }
             });
 
-            if (currentRecord.paValue) {
+            if (currentRecord.paValue || currentRecord.container !== '-') {
                 const rowKey = `${currentRecord.date}|${currentRecord.time}|${currentRecord.user}|${currentRecord.sku}|${currentRecord.target}|${currentRecord.code}|${currentRecord.qty}|${currentRecord.paValue}`;
                 if (!existingKeys.has(rowKey)) {
                     records.push({ ...currentRecord, id: records.length + 1, isClosedPAValid: true, taskType: 'Putaway', putawayZone: 'BULK' });
@@ -745,7 +757,7 @@
             state.selectedTtiUser = null;
             state.selectedOdbiciaUser = null;
 
-            const textRows = records.map(d => `${d.preAdvStatusCol || 'PreAdv Status'}\t${d.sku}\t\t\t\t\t${d.qty}\t${d.source || ''}\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusVal}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}`).join('\n');
+            const textRows = records.map(d => `${d.preAdvStatusCol || 'PreAdv Status'}\t${d.sku}\t\t\t\t\t${d.qty}\t${d.source || ''}\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusVal}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}\t${d.container || '-'}`).join('\n');
             document.getElementById('pasteBaseArea').value = textRows;
             document.getElementById('countBase').textContent = `${records.length} w.`;
             document.getElementById('pasteFreshArea').value = '';
@@ -760,21 +772,50 @@
             const records = [...state.parsedData];
             const existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}|${r.paValue}`));
 
+            let containerColIdx = -1;
+            if (matrix.length > 0 && Array.isArray(matrix[0])) {
+                const headerRow = matrix[0].map(c => cleanRawString(c).toUpperCase());
+                const foundIdx = headerRow.findIndex(h => h === 'CN' || h === 'CONTAINER' || h === 'KONTENER' || h === 'EQUIPMENT' || h === 'CONTAINER NO');
+                if (foundIdx !== -1) containerColIdx = foundIdx;
+            }
+
             matrix.forEach((r, idx) => {
                 if (!r || !r.length) return;
-                const getCol = (i) => cleanRawString(r[i]);
+                const getCol = (i) => i >= 0 && i < r.length ? cleanRawString(r[i]) : '';
+
+                if (idx === 0 && matrix.length > 1) {
+                    const h0 = cleanRawString(r[0]).toUpperCase();
+                    if (h0.includes('STATUS') || h0 === 'CN' || h0 === 'PREADV STATUS') return;
+                }
 
                 const preAdvStatusCol = getCol(0);
                 const sku = getCol(1) || '-';
                 const qty = parseQty(r[6]);
-                const source = getCol(7) || '-'; // Kolumna H (SKĄD)
-                const target = getCol(8) || 'BULK'; // Kolumna I (DOCELOWA)
+                const source = getCol(7) || '-';
+                const target = getCol(8) || 'BULK';
                 const time = getCol(10) || '00:00:00';
                 const date = getCol(12) || '02/11/2026';
                 const user = getCol(13) || 'BRAK_USERA';
                 const statusVal = getCol(14);
                 const rawPaVal = getCol(16);
-                const container = getCol(91) || '-'; // Kolumna CN (KONTENER)
+
+                let container = '-';
+                if (containerColIdx !== -1) {
+                    container = getCol(containerColIdx) || '-';
+                }
+                if (container === '-' && r.length > 91) {
+                    container = getCol(91) || '-';
+                }
+
+                if (container === '-') {
+                    for (let cell of r) {
+                        const code = extractContainerCode(cell);
+                        if (code) {
+                            container = code;
+                            break;
+                        }
+                    }
+                }
 
                 const combinedStatusText = `${statusVal} ${preAdvStatusCol}`.toUpperCase();
                 const isExactClosedStatus = (combinedStatusText.includes('IN PROGRESS') && combinedStatusText.includes('COMPLETE')) &&
@@ -1081,7 +1122,6 @@
                         return;
                     }
 
-                    // Grupowanie po numerze kontenera
                     const containerGroups = {};
                     filtered.forEach(r => {
                         const cKey = (r.container && r.container !== '-') ? r.container : 'Brak Kontenera / Inne';
@@ -1119,7 +1159,6 @@
                         tbody.appendChild(trHead);
 
                         if (isExpanded) {
-                            // Sub-table z pozycjami z kontenera
                             const trSubTable = document.createElement('tr');
                             trSubTable.className = 'bg-slate-950/50 border-b border-cyber-border/60';
                             
@@ -1162,7 +1201,6 @@
                     return;
                 }
 
-                // Domyślny widok WSZYSTKIE przyjęcia
                 const { page, pageSize } = state.pagination;
                 const start = (page - 1) * pageSize;
                 const pageData = filtered.slice(start, start + pageSize);
