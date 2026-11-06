@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.46-WORKERS-COLUMN-FILTERS</title>
+    <title>WMS Cyberpunk Hub v0.5.47-LIVE-ELAPSED-TIME</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.46-WORKERS-COLUMN-FILTERS</div>
+            <div class="font-bold text-white">Wersja v0.5.47-LIVE-ELAPSED-TIME</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.46-COL-FILTERS</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.47-ELAPSED-TIME</span>
                 </div>
             </div>
 
@@ -152,7 +152,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.46 (Workers Column Filters)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.47 (Live Elapsed Time)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -372,6 +372,28 @@
             state.columnFilters[colName] = value;
             state.pagination.page = 1;
             renderDetailsTable();
+        }
+
+        function getElapsedTimeFromStart(dStr, tStr) {
+            if (!dStr || !tStr) return '-';
+            const parts = dStr.split('/');
+            if (parts.length === 3) {
+                const startDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T${tStr}`);
+                if (!isNaN(startDate.getTime())) {
+                    const now = new Date();
+                    let diffSec = Math.floor((now.getTime() - startDate.getTime()) / 1000);
+                    if (diffSec < 0) diffSec = 0;
+                    const h = Math.floor(diffSec / 3600);
+                    const m = Math.floor((diffSec % 3600) / 60);
+                    const s = diffSec % 60;
+                    let res = '';
+                    if (h > 0) res += `${h}g `;
+                    if (m > 0 || h > 0) res += `${m}m `;
+                    res += `${s}s`;
+                    return res.trim() || '0s';
+                }
+            }
+            return '-';
         }
 
         function toggleBaseLock() {
@@ -632,7 +654,7 @@
                         saveDataToLocalStorage(records);
                     }
                 }
-                showToast(`Wczytano wersję v0.5.46-WORKERS-COLUMN-FILTERS`);
+                showToast(`Wczytano wersję v0.5.47-LIVE-ELAPSED-TIME`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -1176,7 +1198,6 @@
             renderDetailsTable();
         }
 
-        // CZYSTY I WYRAŹNY WYKRES PROPORCJI I LISTA PRZERW DLA PRACOWNIKA
         function renderWorkerTimeline(workerRows, selectedUser) {
             const container = document.getElementById('workerTimelineContainer');
             if (!container) return;
@@ -1239,7 +1260,6 @@
             const totalGapMin = Math.round(totalGapSec / 60);
             const workMin = Math.max(0, totalShiftMin - totalGapMin);
 
-            // 1. Proporcjonalny Pasek Stanu Zmiany (100% szerokości)
             let barSegmentsHtml = '';
             timelineSegments.forEach(seg => {
                 if (seg.isGap) {
@@ -1251,7 +1271,6 @@
                 }
             });
 
-            // 2. Chronologiczne Wiersze Aktywności i Przerw
             let listHtml = '';
             timelineSegments.forEach((seg, idx) => {
                 if (seg.isGap) {
@@ -1334,7 +1353,6 @@
             tbody.innerHTML = '';
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
 
-            // Zapamiętanie aktywnego pola tekstowego, aby nie tracić kursorów przy filtrowaniu
             const activeId = document.activeElement ? document.activeElement.id : null;
             const selStart = document.activeElement ? document.activeElement.selectionStart : null;
             const selEnd = document.activeElement ? document.activeElement.selectionEnd : null;
@@ -1398,7 +1416,6 @@
                     }
                 }
 
-                // FILTRACJA PO KOLUMNACH & OGÓLNYM WYSZUKIWANIU
                 const cf = state.columnFilters;
                 const filtered = workerData.filter(item => {
                     if (search && !JSON.stringify(item).toLowerCase().includes(search)) return false;
@@ -1444,7 +1461,6 @@
 
                 renderWorkerTimeline(workerData, state.selectedWorkerUser);
 
-                // GENERALNY NAGŁÓWEK TABELI Z WERSJAMI PÓL FILTRUJĄCYCH KOLUMNY
                 thead.innerHTML = `
                     <tr>
                         <th class="py-2.5 px-3">Lp.</th>
@@ -1517,7 +1533,6 @@
                 document.getElementById('prevPageBtn').disabled = page === 1;
                 document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
 
-                // Przywrócenie focusa w polu filtrowania po przeładowaniu tabeli
                 if (activeId) {
                     const el = document.getElementById(activeId);
                     if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
@@ -1869,10 +1884,10 @@
                         });
 
                         titleEl.innerHTML = `Historia wbić / aktywności dla pracownika: <strong class="text-amber-400">${state.selectedOdbiciaUser}</strong> <button onclick="state.selectedOdbiciaUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 text-slate-200 text-xs rounded hover:bg-slate-700">Powrót</button>`;
-                        thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">CZAS TRWANIA</th><th class="py-3 px-3">Status</th></tr>`;
+                        thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Czas na zadaniu</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">CZAS TRWANIA</th><th class="py-3 px-3">Status</th></tr>`;
 
                         if (!rawUserEvents.length) {
-                            tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak zarejestrowanych odbić Job Start / Job End dla tego pracownika.</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-500">Brak zarejestrowanych odbić Job Start / Job End dla tego pracownika.</td></tr>';
                             document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                             document.getElementById('prevPageBtn').disabled = true;
                             document.getElementById('nextPageBtn').disabled = true;
@@ -1882,7 +1897,17 @@
                         rawUserEvents.forEach((row, i) => {
                             const tr = document.createElement('tr');
                             tr.className = 'hover:bg-slate-800/40 transition';
-                            tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row._durationText || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
+                            const codeUp = (row.code || '').toUpperCase();
+                            const isAct = codeUp.includes('JOB START') || codeUp.includes('START');
+                            const elapsedText = isAct ? getElapsedTimeFromStart(row.date, row.time) : 'Zakończono';
+
+                            tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td>
+                                <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
+                                <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td>
+                                <td class="py-2.5 px-3 font-mono font-bold text-amber-400">${elapsedText}</td>
+                                <td class="py-2.5 px-3 text-cyan-300 font-mono font-bold">${row.activity || row.target || '-'}</td>
+                                <td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row._durationText || '-'}</td>
+                                <td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
                             tbody.appendChild(tr);
                         });
                         document.getElementById('pageInfo').textContent = `Pokazuję ${rawUserEvents.length} zdarzeń dla ${state.selectedOdbiciaUser}`;
@@ -1928,10 +1953,10 @@
                         </select>
                     </div>`;
 
-                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Status</th><th class="py-3 px-3">Aktywność</th><th class="py-3 px-3">Pracownik</th></tr>`;
+                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Status</th><th class="py-3 px-3">Czas na zadaniu</th><th class="py-3 px-3">Aktywność</th><th class="py-3 px-3">Pracownik</th></tr>`;
 
                     if (!pageData.length) {
-                        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych o odbiciach.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak danych o odbiciach.</td></tr>';
                         document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
                         document.getElementById('prevPageBtn').disabled = true;
                         document.getElementById('nextPageBtn').disabled = true;
@@ -1949,7 +1974,15 @@
                             : 'bg-rose-500/20 text-rose-400 border-rose-500/40';
                         const statusLabel = isActive ? (row.code || 'Job Start') : (row.code || 'Job Stop');
 
-                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] border rounded font-mono font-bold ${badgeClass}">${statusLabel}</span></td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user || '-'}</td>`;
+                        const elapsedText = isActive ? getElapsedTimeFromStart(row.date, row.time) : 'Zakończono';
+                        const elapsedBadgeClass = isActive ? 'text-amber-400 font-bold font-mono' : 'text-slate-500 font-mono text-[11px]';
+
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
+                            <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
+                            <td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] border rounded font-mono font-bold ${badgeClass}">${statusLabel}</span></td>
+                            <td class="py-2.5 px-3 ${elapsedBadgeClass}">${elapsedText}</td>
+                            <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || row.target || '-'}</td>
+                            <td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user || '-'}</td>`;
                         tbody.appendChild(tr);
                     });
                     document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
