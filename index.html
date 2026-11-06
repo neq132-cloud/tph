@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS Cyberpunk Hub v0.5.47-LIVE-ELAPSED-TIME</title>
+    <title>WMS Cyberpunk Hub v0.5.49-OKLEJANIE-ONLY</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -62,7 +62,7 @@
             <i data-lucide="flask-conical" class="w-4 h-4"></i>
         </div>
         <div>
-            <div class="font-bold text-white">Wersja v0.5.47-LIVE-ELAPSED-TIME</div>
+            <div class="font-bold text-white">Wersja v0.5.49-OKLEJANIE-ONLY</div>
             <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
         </div>
     </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
-                    <span class="text-[10px] font-mono text-amber-400">v0.5.47-ELAPSED-TIME</span>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.49-OKLEJANIE</span>
                 </div>
             </div>
 
@@ -105,6 +105,10 @@
                 <button onclick="switchCategory('TtiAdd')" id="navTtiAdd" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                     <span class="flex items-center gap-3"><i data-lucide="clock" class="w-4 h-4"></i> TTI ADD</span>
                     <span id="badgeTtiAdd" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <button onclick="switchCategory('Oklejanie')" id="navOklejanie" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="tags" class="w-4 h-4"></i> OKLEJANIE</span>
+                    <span id="badgeOklejanie" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
                 </button>
                 <button onclick="switchCategory('Odbicia')" id="navOdbicia" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                     <span class="flex items-center gap-3"><i data-lucide="user-check" class="w-4 h-4"></i> Odbicia (Live)</span>
@@ -152,7 +156,7 @@
                             <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
                             <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
                         </div>
-                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.47 (Live Elapsed Time)</span>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.49 (OKLEJANIE)</span>
                     </div>
 
                     <!-- Paste Tab -->
@@ -348,6 +352,7 @@
             activeZone: 'ALL',
             selectedUser: null,
             selectedTtiUser: null,
+            selectedOklejanieUser: null,
             selectedOdbiciaUser: null,
             selectedWorkerUser: null,
             workerProcessFilter: 'ALL',
@@ -543,7 +548,7 @@
             return Object.values(paMap);
         }
 
-        function calculateTtiAddSessions() {
+        function calculateTaskSessions(taskKeywords) {
             const sorted = [...state.parsedData].sort((a, b) => {
                 const tA = parseDateTime(a.date, a.time);
                 const tB = parseDateTime(b.date, b.time);
@@ -551,6 +556,7 @@
             });
 
             const userSessions = {};
+            const keywords = Array.isArray(taskKeywords) ? taskKeywords.map(k => k.toUpperCase()) : [taskKeywords.toUpperCase()];
 
             sorted.forEach(row => {
                 const user = row.user;
@@ -559,9 +565,9 @@
                 const targetUp = (row.target || '').toUpperCase();
                 const actUp = (row.activity || '').toUpperCase();
 
-                const isTtiTarget = targetUp.includes('TTIADD') || actUp.includes('TTIADD') || targetUp === 'TTI' || actUp === 'TTI';
-                const isStart = (codeUp.includes('JOB START') || codeUp.includes('START')) && isTtiTarget;
-                const isEnd = (codeUp.includes('JOB END') || codeUp.includes('JOB STOP') || codeUp.includes('COMPLETE')) && isTtiTarget;
+                const isTargetMatch = keywords.some(kw => targetUp.includes(kw) || actUp.includes(kw) || targetUp === kw || actUp === kw);
+                const isStart = (codeUp.includes('JOB START') || codeUp.includes('START')) && isTargetMatch;
+                const isEnd = (codeUp.includes('JOB END') || codeUp.includes('JOB STOP') || codeUp.includes('COMPLETE')) && isTargetMatch;
 
                 if (!isStart && !isEnd) return;
 
@@ -604,6 +610,14 @@
             });
 
             return result;
+        }
+
+        function calculateTtiAddSessions() {
+            return calculateTaskSessions(['TTIADD', 'TTI']);
+        }
+
+        function calculateOklejanieSessions() {
+            return calculateTaskSessions(['OKLEJANIE']);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -654,7 +668,7 @@
                         saveDataToLocalStorage(records);
                     }
                 }
-                showToast(`Wczytano wersję v0.5.47-LIVE-ELAPSED-TIME`);
+                showToast(`Wczytano wersję v0.5.49-OKLEJANIE-ONLY`);
                 renderAll();
             } catch (err) {
                 console.error('Błąd wczytywania localStorage:', err);
@@ -696,10 +710,11 @@
             state.activeZone = 'ALL';
             state.selectedUser = null;
             state.selectedTtiUser = null;
+            state.selectedOklejanieUser = null;
             state.selectedOdbiciaUser = null;
             state.selectedOdbiciaActivity = 'ALL';
 
-            ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'TtiAdd', 'Odbicia', 'Pracownicy'].forEach(c => {
+            ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'TtiAdd', 'Oklejanie', 'Odbicia', 'Pracownicy'].forEach(c => {
                 const btn = document.getElementById(`nav${c}`);
                 if (btn) {
                     if (c === cat) {
@@ -710,10 +725,10 @@
                 }
             });
 
-            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'Adjustment': 'Adjustment', 'ClosedPA': 'Zamknięte PA', 'TtiAdd': 'TTI ADD', 'Odbicia': 'Odbicia (Live)', 'Pracownicy': 'Analiza Pracowników' };
+            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'Adjustment': 'Adjustment', 'ClosedPA': 'Zamknięte PA', 'TtiAdd': 'TTI ADD', 'Oklejanie': 'OKLEJANIE', 'Odbicia': 'Odbicia (Live)', 'Pracownicy': 'Analiza Pracowników' };
             document.getElementById('activeCatLabel').textContent = labels[cat];
             
-            const hideHeaderSections = (cat === 'Odbicia' || cat === 'TtiAdd' || cat === 'Pracownicy');
+            const hideHeaderSections = (cat === 'Odbicia' || cat === 'TtiAdd' || cat === 'Oklejanie' || cat === 'Pracownicy');
             document.getElementById('kpiContainer').style.display = hideHeaderSections ? 'none' : 'grid';
             document.getElementById('workersSection').style.display = hideHeaderSections ? 'none' : 'grid';
 
@@ -805,6 +820,7 @@
             state.parsedData = records;
             state.selectedUser = null;
             state.selectedTtiUser = null;
+            state.selectedOklejanieUser = null;
             state.selectedOdbiciaUser = null;
 
             const textRows = records.map(d => `${d.preAdvStatusCol || 'PreAdv Status'}\t${d.sku}\t\t\t\t\t${d.qty}\t${d.source || ''}\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusVal}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}\t${d.container || '-'}`).join('\n');
@@ -988,6 +1004,8 @@
                 data = state.parsedData.filter(d => d.isClosedPAValid);
             } else if (state.activeCategory === 'TtiAdd') {
                 data = getTtiAddSessions();
+            } else if (state.activeCategory === 'Oklejanie') {
+                data = getOklejanieSessions();
             } else if (state.activeCategory === 'Pracownicy') {
                 data = state.parsedData.filter(d => d.user && d.user !== 'BRAK_USERA');
             } else if (state.activeCategory === 'Odbicia') {
@@ -1066,6 +1084,10 @@
             return calculateTtiAddSessions();
         }
 
+        function getOklejanieSessions() {
+            return calculateOklejanieSessions();
+        }
+
         function initFilters() {
             document.getElementById('searchInput').addEventListener('input', () => { state.pagination.page = 1; renderDetailsTable(); });
         }
@@ -1086,6 +1108,7 @@
             const adjustmentCount = state.parsedData.filter(d => d.taskType === 'Adjustment').length;
             const closedPACount = getUniqueClosedPAs().length;
             const ttiAddCount = calculateTtiAddSessions().length;
+            const oklejanieCount = calculateOklejanieSessions().length;
             
             const allWorkers = new Set(state.parsedData.map(d => d.user).filter(u => u && u !== 'BRAK_USERA'));
 
@@ -1095,12 +1118,13 @@
             document.getElementById('badgeAdjustment').textContent = adjustmentCount;
             document.getElementById('badgeClosedPA').textContent = closedPACount;
             document.getElementById('badgeTtiAdd').textContent = ttiAddCount;
+            document.getElementById('badgeOklejanie').textContent = oklejanieCount;
             document.getElementById('badgeOdbicia').textContent = allWorkers.size;
             document.getElementById('badgePracownicy').textContent = allWorkers.size;
         }
 
         function renderDashboardCards() {
-            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Pracownicy') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy') return;
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
             const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
@@ -1132,7 +1156,7 @@
         }
 
         function renderWorkers() {
-            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Pracownicy') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy') return;
             const activeData = getActiveFilteredData();
             const userMap = {};
             activeData.forEach(d => userMap[d.user] = (userMap[d.user] || 0) + 1);
@@ -1170,7 +1194,7 @@
         function clearUserSelection() { state.selectedUser = null; renderAll(); }
 
         function renderDrilldown() {
-            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Pracownicy') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy') return;
             const nameEl = document.getElementById('selectedUserName');
             const clearBtn = document.getElementById('clearUserBtn');
             const tbody = document.getElementById('drilldownTableBody');
@@ -1813,6 +1837,89 @@
                         const tr = document.createElement('tr');
                         tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
                         tr.onclick = () => { state.selectedTtiUser = row.user; renderDetailsTable(); };
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.durationText}</td><td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row.decimalText}</td><td class="py-2.5 px-3 text-right font-mono text-slate-300">${row.sessionsCount}</td>`;
+                        tbody.appendChild(tr);
+                    });
+
+                    const trSum = document.createElement('tr');
+                    trSum.className = 'bg-slate-950/80 font-bold border-t border-cyber-border';
+                    trSum.innerHTML = `<td colspan="3" class="py-2.5 px-3 text-right text-slate-400 uppercase text-[10px]">Suma całkowita:</td><td class="py-2.5 px-3 text-emerald-400 font-mono">${sumDecimalStr}</td><td></td>`;
+                    tbody.appendChild(trSum);
+
+                    document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
+                    document.getElementById('prevPageBtn').disabled = page === 1;
+                    document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+                } else if (state.activeCategory === 'Oklejanie') {
+                    if (state.selectedOklejanieUser) {
+                        let rawUserEvents = [];
+                        state.parsedData.forEach(d => {
+                            if (d.user === state.selectedOklejanieUser) {
+                                const up = (d.code || '').toUpperCase();
+                                const targetUp = (d.target || '').toUpperCase();
+                                const actUp = (d.activity || '').toUpperCase();
+
+                                const isJobCode = up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
+                                const isOklejanieTarget = targetUp.includes('OKLEJANIE') || actUp.includes('OKLEJANIE');
+
+                                if (isJobCode && isOklejanieTarget) {
+                                    rawUserEvents.push(d);
+                                }
+                            }
+                        });
+
+                        titleEl.innerHTML = `Szczegóły wbić/wybić OKLEJANIE dla pracownika: <strong class="text-amber-400">${state.selectedOklejanieUser}</strong> <button onclick="state.selectedOklejanieUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 text-slate-200 text-xs rounded hover:bg-slate-700">Powrót</button>`;
+                        thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">Status</th></tr>`;
+
+                        if (!rawUserEvents.length) {
+                            tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak szczegółowych zdarzeń OKLEJANIE dla tego pracownika.</td></tr>';
+                            document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                            document.getElementById('prevPageBtn').disabled = true;
+                            document.getElementById('nextPageBtn').disabled = true;
+                            return;
+                        }
+
+                        rawUserEvents.forEach((row, i) => {
+                            const tr = document.createElement('tr');
+                            tr.className = 'hover:bg-slate-800/40 transition';
+                            tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
+                            tbody.appendChild(tr);
+                        });
+                        document.getElementById('pageInfo').textContent = `Pokazuję ${rawUserEvents.length} zdarzeń`;
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        return;
+                    }
+
+                    let data = getActiveFilteredData();
+                    const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+                    const total = filtered.length;
+
+                    let sumDecimal = filtered.reduce((acc, item) => {
+                        let val = parseFloat(String(item.decimalText).replace(',', '.')) || 0;
+                        return acc + val;
+                    }, 0);
+                    let sumDecimalStr = sumDecimal.toFixed(2).replace('.', ',');
+
+                    const { page, pageSize } = state.pagination;
+                    const start = (page - 1) * pageSize;
+                    const pageData = filtered.slice(start, start + pageSize);
+
+                    titleEl.innerHTML = `Aktywność OKLEJANIE (Kliknij w pracownika, aby zobaczyć szczegóły wbić/wybić) <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób | Suma godzin: ${sumDecimalStr}</span>`;
+                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Pracownik</th><th class="py-3 px-3">Czas trwania (Format)</th><th class="py-3 px-3">Wartość dziesiętna</th><th class="py-3 px-3 text-right">Sesji</th></tr>`;
+
+                    if (!pageData.length) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych OKLEJANIE.</td></tr>';
+                        document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        return;
+                    }
+
+                    pageData.forEach((row, i) => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
+                        tr.onclick = () => { state.selectedOklejanieUser = row.user; renderDetailsTable(); };
                         tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.durationText}</td><td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row.decimalText}</td><td class="py-2.5 px-3 text-right font-mono text-slate-300">${row.sessionsCount}</td>`;
                         tbody.appendChild(tr);
                     });
