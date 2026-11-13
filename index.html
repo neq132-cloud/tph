@@ -1,1 +1,2505 @@
+<!DOCTYPE html>
+<html lang="pl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS Cyberpunk Hub v0.5.50-CLOSEDPA-FIX</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#050b14',
+                            card: '#0a1628',
+                            border: '#1e293b',
+                            accent: '#00f2fe',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- SheetJS (xlsx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #050b14; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
+        .cyber-glow { box-shadow: 0 0 20px rgba(245, 158, 11, 0.05); }
+        
+        body {
+            background-image: linear-gradient(to right, rgba(5, 11, 20, 0.95), rgba(10, 22, 40, 0.88)), 
+                              url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
 
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        .toast-enter { animation: slideIn 0.3s ease forwards; }
+        .toast-exit { animation: fadeOut 0.5s ease forwards; }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen font-sans antialiased flex" ondblclick="if(event.target.tagName==='TD'||event.target.tagName==='TR') event.stopPropagation();">
+
+    <!-- Dyskretny powiadomiacz -->
+    <div id="toastNotification" class="fixed top-5 right-5 z-50 hidden bg-slate-900/95 border border-amber-500/50 backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl shadow-amber-500/10 flex items-center gap-3 text-xs text-slate-200">
+        <div class="p-1.5 bg-amber-500/20 text-amber-400 rounded-xl">
+            <i data-lucide="flask-conical" class="w-4 h-4"></i>
+        </div>
+        <div>
+            <div class="font-bold text-white">Wersja v0.5.50-CLOSEDPA-FIX</div>
+            <div id="toastTimeSub" class="text-[10px] text-slate-400 font-mono">-</div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="w-64 bg-cyber-card/90 border-r border-cyber-border backdrop-blur-md flex flex-col justify-between hidden md:flex sticky top-0 h-screen z-40">
+        <div class="p-5 space-y-6">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-tr from-amber-500 to-orange-600 rounded-xl text-slate-950 shadow-lg shadow-amber-500/20">
+                    <i data-lucide="flask-conical" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="text-xs font-black tracking-wider text-white">CYBER WMS</h1>
+                    <span class="text-[10px] font-mono text-amber-400">v0.5.50-CLOSEDPA</span>
+                </div>
+            </div>
+
+            <!-- Menu Links -->
+            <nav class="space-y-1.5">
+                <button onclick="switchCategory('Putaway')" id="navPutaway" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="arrow-up-right" class="w-4 h-4"></i> Putaway & SHELF</span>
+                    <span id="badgePutaway" class="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <button onclick="switchCategory('Relocate')" id="navRelocate" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="repeat" class="w-4 h-4"></i> Relokacje</span>
+                    <span id="badgeRelocate" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <button onclick="switchCategory('Receipt')" id="navReceipt" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="arrow-down-left" class="w-4 h-4"></i> Przyjęcia</span>
+                    <span id="badgeReceipt" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <button onclick="switchCategory('Adjustment')" id="navAdjustment" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="sliders" class="w-4 h-4"></i> Adjustment</span>
+                    <span id="badgeAdjustment" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <button onclick="switchCategory('ClosedPA')" id="navClosedPA" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="check-circle-2" class="w-4 h-4"></i> Zamknięte PA</span>
+                    <span id="badgeClosedPA" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <button onclick="switchCategory('TtiAdd')" id="navTtiAdd" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="clock" class="w-4 h-4"></i> TTI ADD</span>
+                    <span id="badgeTtiAdd" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <button onclick="switchCategory('Oklejanie')" id="navOklejanie" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="tags" class="w-4 h-4"></i> OKLEJANIE</span>
+                    <span id="badgeOklejanie" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <button onclick="switchCategory('Odbicia')" id="navOdbicia" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="user-check" class="w-4 h-4"></i> Odbicia (Live)</span>
+                    <span id="badgeOdbicia" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <button onclick="switchCategory('Pracownicy')" id="navPracownicy" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="users" class="w-4 h-4"></i> Pracownicy</span>
+                    <span id="badgePracownicy" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+                <button onclick="switchCategory('Movetask')" id="navMovetask" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="layers" class="w-4 h-4"></i> MOVETASK</span>
+                    <span id="badgeMovetask" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Sidebar Footer Action -->
+        <div class="p-5 border-t border-cyber-border space-y-3">
+            <button id="exportCsvBtn" disabled class="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> Eksport CSV
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col min-w-0">
+        
+        <!-- Top Header Bar -->
+        <header class="h-16 bg-cyber-card/80 border-b border-cyber-border backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
+            <div class="flex items-center gap-4">
+                <span class="text-xs font-mono text-slate-400 uppercase tracking-widest">Widok: <strong id="activeCatLabel" class="text-amber-400">Putaway</strong></span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-mono bg-slate-900/90 px-3 py-1.5 rounded-xl border border-cyber-border text-slate-300">
+                    Obecność: <strong id="totalPresenceCount" class="text-emerald-400">0</strong> os.
+                </span>
+            </div>
+        </header>
+
+        <main class="p-6 space-y-6 max-w-7xl mx-auto w-full">
+
+            <!-- BENTO GRID TOP: Import & Presence -->
+            <div id="topBentoGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Import Card (2 okienka) -->
+                <div class="lg:col-span-2 bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
+                    <div class="flex items-center justify-between border-b border-cyber-border pb-3">
+                        <div class="flex gap-2">
+                            <button id="tabPasteBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition">Wklejanie</button>
+                            <button id="tabFileBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition">Plik</button>
+                        </div>
+                        <span id="systemStatusLabel" class="text-[10px] text-amber-400 font-mono">v0.5.50 (CLOSEDPA-FIX)</span>
+                    </div>
+
+                    <!-- Paste Tab -->
+                    <div id="tabPasteContent" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Okno 1: Baza Główna -->
+                        <div class="bg-slate-950/90 p-3 rounded-xl border border-cyber-border space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-[11px] font-semibold text-amber-400">Baza Główna</label>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="clearAllData()" class="px-2 py-0.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded text-[9px] flex items-center gap-1 transition" title="Wyczyść całą bazę danych">
+                                        <i data-lucide="trash-2" class="w-2.5 h-2.5"></i> Wyczyść
+                                    </button>
+                                    <button id="toggleLockBtn" onclick="toggleBaseLock()" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[9px] flex items-center gap-1">
+                                        <i id="lockIcon" data-lucide="lock" class="w-2.5 h-2.5"></i> <span id="lockText">Zablokowane</span>
+                                    </button>
+                                    <span id="countBase" class="text-[9px] font-mono text-slate-400">0 w.</span>
+                                </div>
+                            </div>
+                            <textarea id="pasteBaseArea" readonly rows="3" placeholder="Główna baza operacji..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-300 custom-scrollbar resize-y cursor-not-allowed focus:outline-none focus:border-amber-500"></textarea>
+                        </div>
+
+                        <!-- Okno 2: Świeże dane -->
+                        <div class="bg-slate-950/90 p-3 rounded-xl border border-cyber-border space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-[11px] font-semibold text-emerald-400">Świeże dane (dopisywane)</label>
+                                <span id="countFresh" class="text-[9px] font-mono text-slate-400">0 w.</span>
+                            </div>
+                            <textarea id="pasteFreshArea" rows="3" placeholder="Wklej świeże wiersze..." class="w-full bg-slate-900 border border-cyber-border rounded-lg p-2 text-[11px] font-mono text-slate-200 custom-scrollbar resize-y focus:outline-none focus:border-amber-500"></textarea>
+                        </div>
+
+                        <div class="sm:col-span-2 flex justify-end">
+                            <button id="processPasteBtn" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center gap-2">
+                                <i data-lucide="cpu" class="w-3.5 h-3.5"></i> Przetwarzaj Dane
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- File Tab -->
+                    <div id="tabFileContent" class="hidden space-y-3">
+                        <div id="dropZone" class="border-2 border-dashed border-cyber-border hover:border-amber-500 bg-slate-950/70 rounded-xl p-6 text-center cursor-pointer transition">
+                            <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
+                            <p class="text-xs text-slate-300">Przeciągnij plik Excel/CSV lub kliknij tutaj</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kadry Card -->
+                <div class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow flex flex-col justify-between space-y-4">
+                    <div class="border-b border-cyber-border pb-2">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Obecność Kadrowa</h3>
+                    </div>
+                    <div class="space-y-2.5">
+                        <div class="bg-slate-950/90 p-2.5 rounded-xl border border-cyber-border flex items-center justify-between">
+                            <span class="text-[11px] text-cyan-300">DSV</span>
+                            <input type="number" id="presenceDsv" min="0" placeholder="0" class="w-14 bg-slate-900 border border-cyber-border rounded-lg p-1 text-center text-xs font-bold text-white">
+                        </div>
+                        <div class="bg-slate-950/90 p-2.5 rounded-xl border border-cyber-border flex items-center justify-between">
+                            <span class="text-[11px] text-amber-300">DSVSERVICES</span>
+                            <input type="number" id="presenceServices" min="0" placeholder="0" class="w-14 bg-slate-900 border border-cyber-border rounded-lg p-1 text-center text-xs font-bold text-white">
+                        </div>
+                        <div class="bg-slate-950/90 p-2.5 rounded-xl border border-cyber-border flex items-center justify-between">
+                            <span class="text-[11px] text-purple-300">QLEVEL</span>
+                            <input type="number" id="presenceQlevel" min="0" placeholder="0" class="w-14 bg-slate-900 border border-cyber-border rounded-lg p-1 text-center text-xs font-bold text-white">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- KPI DASHBOARD TILES -->
+            <div id="kpiContainer" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+                <div onclick="switchZone('VNA')" class="bg-cyber-card/90 backdrop-blur-md border border-emerald-500/30 hover:border-emerald-500 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition"><span class="text-[9px] font-bold text-emerald-400 uppercase">Putaway VNA</span><span id="dashVnaOps" class="text-lg font-black text-white mt-1">0</span></div>
+                <div onclick="switchZone('BULK')" class="bg-cyber-card/90 backdrop-blur-md border border-amber-500/30 hover:border-amber-500 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition"><span class="text-[9px] font-bold text-amber-400 uppercase">Putaway BULK</span><span id="dashBulkOps" class="text-lg font-black text-white mt-1">0</span></div>
+                <div onclick="switchZone('VIN')" class="bg-cyber-card/90 backdrop-blur-md border border-sky-500/30 hover:border-sky-500 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition"><span class="text-[9px] font-bold text-sky-400 uppercase">Putaway VIN</span><span id="dashVinOps" class="text-lg font-black text-white mt-1">0</span></div>
+                <div onclick="switchZone('SHELF')" class="bg-cyber-card/90 backdrop-blur-md border border-purple-500/30 hover:border-purple-500 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition"><span class="text-[9px] font-bold text-purple-400 uppercase">Putaway SHELF</span><span id="dashShelfOps" class="text-lg font-black text-white mt-1">0</span></div>
+                <div onclick="switchZone('ALL')" class="bg-cyber-card/90 backdrop-blur-md border border-cyan-500/40 hover:border-cyan-500 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition"><span class="text-[9px] font-bold text-cyan-400 uppercase">Suma Put.+Rel.</span><span id="dashPutawayRelocateSum" class="text-lg font-black text-white mt-1">0</span></div>
+                
+                <div class="bg-cyber-card/90 backdrop-blur-md border border-indigo-500/50 rounded-xl p-3 flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[9px] font-bold text-indigo-300 uppercase">Receipt (Ops)</span>
+                        <span id="dashReceiptOps" class="text-sm font-black text-white">0</span>
+                    </div>
+                    <div class="border-t border-indigo-500/20 pt-1.5 mt-1.5 flex justify-between items-center">
+                        <span class="text-[8px] text-slate-400 uppercase font-mono">Sztuk:</span>
+                        <span id="dashReceiptQty" class="text-xs font-black text-emerald-400 font-mono">0</span>
+                    </div>
+                </div>
+
+                <!-- Kafelek Zamknięte PA (ASN / PO) -->
+                <div onclick="switchCategory('ClosedPA')" class="bg-cyber-card/90 backdrop-blur-md border border-teal-500/50 hover:border-teal-400 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[9px] font-bold text-teal-400 uppercase">Zamknięte PA</span>
+                        <span id="dashTotalPa" class="text-xs font-black text-white font-mono">0</span>
+                    </div>
+                    <div class="border-t border-teal-500/20 pt-1 mt-1 flex justify-between items-center text-[9px] font-mono">
+                        <span class="text-purple-300">ASN: <strong id="dashAsnCount">0</strong></span>
+                        <span class="text-blue-300">PO: <strong id="dashPoCount">0</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WORKERS & DRILLDOWN SECTION -->
+            <section id="workersSection" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Workers List with 8h rate -->
+                <div class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Pracownicy (Tempo / 8h)</h3>
+                        <div class="flex items-center gap-2">
+                            <span id="catTotalOps" class="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">0 ops</span>
+                            <span id="catWorkersCount" class="text-xs text-slate-400">0 osób</span>
+                        </div>
+                    </div>
+                    <div class="overflow-y-auto max-h-[320px] custom-scrollbar border border-cyber-border rounded-xl">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-950 text-slate-400 font-medium sticky top-0 z-10 border-b border-cyber-border">
+                                <tr><th class="py-2.5 px-3">Pracownik</th><th class="py-2.5 px-3 text-right">Ops</th><th class="py-2.5 px-3 text-right">Tempo / 8h</th></tr>
+                            </thead>
+                            <tbody id="categoryWorkersBody" class="divide-y divide-cyber-border">
+                                <tr><td colspan="3" class="py-6 text-center text-slate-500">Brak danych</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Drilldown Details -->
+                <div class="lg:col-span-2 bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-3">
+                    <div class="flex items-center justify-between border-b border-cyber-border pb-3">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-white">Ruchy operatora: <span id="selectedUserName" class="text-amber-400">-</span></h3>
+                        <button onclick="clearUserSelection()" id="clearUserBtn" class="hidden px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-xl transition">Wszyscy</button>
+                    </div>
+                    <div class="overflow-x-auto custom-scrollbar border border-cyber-border rounded-xl max-h-[280px]">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-950 text-slate-400 font-medium sticky top-0 z-10 border-b border-cyber-border">
+                                <tr><th class="py-2.5 px-3">Lp.</th><th class="py-2.5 px-3">Data / Czas</th><th class="py-2.5 px-3">Kod</th><th class="py-2.5 px-3">Strefa</th><th class="py-2.5 px-3">SKU</th><th class="py-2.5 px-3">Docelowa</th></tr>
+                            </thead>
+                            <tbody id="drilldownTableBody" class="divide-y divide-cyber-border">
+                                <tr><td colspan="6" class="py-8 text-center text-slate-500">Wybierz pracownika z listy.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DETAILED OPERATIONS TABLE -->
+            <section id="detailsSection" class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <h3 id="tableSectionTitle" class="text-xs font-bold uppercase tracking-wider text-slate-300">Szczegółowa Tabela Operacji</h3>
+                    <div class="flex items-center gap-2">
+                        <button onclick="clearColumnFilters()" class="px-2.5 py-1 bg-slate-950 hover:bg-slate-900 border border-cyber-border text-slate-400 hover:text-amber-400 text-[10px] rounded-xl flex items-center gap-1 transition" title="Wyczyść filtry kolumn">
+                            <i data-lucide="filter-x" class="w-3 h-3"></i> Wyczyść filtry
+                        </button>
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400"></i>
+                            <input type="text" id="searchInput" placeholder="Szukaj ogólnie..." class="bg-slate-950 border border-cyber-border text-xs rounded-xl pl-9 pr-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- KONTENER NA WYKRES AKTYWNOŚCI / TIMELINE DLA PRACOWNIKA -->
+                <div id="workerTimelineContainer" class="hidden space-y-3 bg-slate-950/80 p-4 rounded-xl border border-cyber-border">
+                    <!-- Wykres i Legenda będą generowane dynamicznie -->
+                </div>
+
+                <div class="overflow-x-auto custom-scrollbar border border-cyber-border rounded-xl">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead id="tableHead" class="bg-slate-950 text-slate-400 font-medium uppercase tracking-wider border-b border-cyber-border">
+                            <tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>
+                        </thead>
+                        <tbody id="detailsTableBody" class="divide-y divide-cyber-border">
+                            <tr><td colspan="9" class="py-8 text-center text-slate-500">Brak wierszy. Wklej dane powyżej.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-400 pt-2">
+                    <span id="pageInfo">Pokazuję 0 z 0 wierszy</span>
+                    <div class="flex items-center gap-2">
+                        <button id="prevPageBtn" disabled class="px-3 py-1 bg-slate-950 border border-cyber-border rounded-lg disabled:opacity-40">Poprzednia</button>
+                        <button id="nextPageBtn" disabled class="px-3 py-1 bg-slate-950 border border-cyber-border rounded-lg disabled:opacity-40">Następna</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEKCJA MOVETASK (NIEZALEŻNY MODUŁ) -->
+            <div id="movetaskSection" class="hidden space-y-6">
+                <!-- Panel Wklejania -->
+                <section class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-cyber-border pb-3">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clipboard-paste" class="w-4 h-4 text-amber-400"></i>
+                            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Wklej dane z Excela (MOVETASK)</h2>
+                        </div>
+                        <div class="flex items-center gap-3 text-[11px] font-mono text-slate-400">
+                            <span>Kol. A: <strong class="text-white">PUTAWAY</strong></span>
+                            <span>•</span>
+                            <span>Kol. I: <strong class="text-white">Strefa (REC / V1IN / V2IN)</strong></span>
+                            <span>•</span>
+                            <span>Kol. P: <strong class="text-white">Warunek SHELF</strong></span>
+                        </div>
+                    </div>
+
+                    <textarea id="movetaskInput" rows="5" placeholder="Zaznacz wiersze w Excelu (od kolumny A przynajmniej do kolumny P), skopiuj (Ctrl+C) i wklej tutaj (Ctrl+V)..." class="w-full bg-slate-950/90 border border-cyber-border rounded-xl p-3 text-xs font-mono text-slate-200 custom-scrollbar focus:outline-none focus:border-amber-500"></textarea>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <span id="mtRawLinesInfo" class="text-xs font-mono text-slate-400">Wklejono wierszy: 0</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="clearMovetask()" class="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Wyczyść
+                            </button>
+                            <button onclick="processMovetask()" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center gap-2">
+                                <i data-lucide="cpu" class="w-4 h-4"></i> Przelicz Strefy
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Kafelki Stref -->
+                <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Wszystkie -->
+                    <div onclick="setMtZoneFilter('ALL')" id="mtCardALL" class="bg-cyber-card/90 backdrop-blur-md border-2 border-amber-500 rounded-2xl p-5 cursor-pointer transition hover:scale-[1.01] flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Wszystkie Palety</span>
+                            <div class="p-2 bg-amber-500/10 text-amber-400 rounded-xl"><i data-lucide="package" class="w-4 h-4"></i></div>
+                        </div>
+                        <div class="mt-3 flex items-baseline justify-between">
+                            <span id="mtCountAll" class="text-3xl font-black text-white font-mono">0</span>
+                            <span class="text-[11px] font-mono text-slate-400">PUTAWAY łącznie</span>
+                        </div>
+                    </div>
+
+                    <!-- Strefa REC -->
+                    <div onclick="setMtZoneFilter('REC')" id="mtCardREC" class="bg-cyber-card/90 backdrop-blur-md border border-cyan-500/40 hover:border-cyan-400 rounded-2xl p-5 cursor-pointer transition hover:scale-[1.01] flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">Strefa REC</span>
+                            <div class="p-2 bg-cyan-500/10 text-cyan-400 rounded-xl"><i data-lucide="arrow-down-to-line" class="w-4 h-4"></i></div>
+                        </div>
+                        <div class="mt-3 flex items-baseline justify-between">
+                            <span id="mtCountRec" class="text-3xl font-black text-white font-mono">0</span>
+                            <span class="text-[10px] font-mono text-cyan-300/80">I: REC* | P: puste</span>
+                        </div>
+                    </div>
+
+                    <!-- Strefa VNA (V1IN / V2IN) -->
+                    <div onclick="setMtZoneFilter('VNA')" id="mtCardVNA" class="bg-cyber-card/90 backdrop-blur-md border border-emerald-500/40 hover:border-emerald-400 rounded-2xl p-5 cursor-pointer transition hover:scale-[1.01] flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Strefa V1 / V2IN</span>
+                            <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl"><i data-lucide="forklift" class="w-4 h-4"></i></div>
+                        </div>
+                        <div class="mt-3 flex items-baseline justify-between">
+                            <span id="mtCountVna" class="text-3xl font-black text-white font-mono">0</span>
+                            <span class="text-[10px] font-mono text-emerald-300/80">I: V1IN / V2IN</span>
+                        </div>
+                    </div>
+
+                    <!-- Strefa SHELF -->
+                    <div onclick="setMtZoneFilter('SHELF')" id="mtCardSHELF" class="bg-cyber-card/90 backdrop-blur-md border border-purple-500/40 hover:border-purple-400 rounded-2xl p-5 cursor-pointer transition hover:scale-[1.01] flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Strefa SHELF</span>
+                            <div class="p-2 bg-purple-500/10 text-purple-400 rounded-xl"><i data-lucide="grid" class="w-4 h-4"></i></div>
+                        </div>
+                        <div class="mt-3 flex items-baseline justify-between">
+                            <span id="mtCountShelf" class="text-3xl font-black text-white font-mono">0</span>
+                            <span class="text-[10px] font-mono text-purple-300/80">I: REC* | P: wypełnione</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tabela Podglądu -->
+                <section class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyber-border pb-3">
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Podgląd Zadań MOVETASK</h3>
+                            <span id="mtActiveFilterBadge" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">Wszystkie</span>
+                        </div>
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400"></i>
+                            <input type="text" id="mtSearchInput" oninput="renderMovetaskTable()" placeholder="Szukaj w tabeli..." class="bg-slate-950 border border-cyber-border text-xs rounded-xl pl-9 pr-3 py-1.5 text-slate-200 focus:outline-none focus:border-amber-500">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto custom-scrollbar border border-cyber-border rounded-xl max-h-[450px]">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-950 text-slate-400 font-medium uppercase tracking-wider border-b border-cyber-border sticky top-0 z-10">
+                                <tr>
+                                    <th class="py-3 px-3">Lp.</th>
+                                    <th class="py-3 px-3">Zakwalifikowana Strefa</th>
+                                    <th class="py-3 px-3">Kol. A (Kod)</th>
+                                    <th class="py-3 px-3">Kol. B (SKU / Info)</th>
+                                    <th class="py-3 px-3">Kol. I (Lokalizacja)</th>
+                                    <th class="py-3 px-3">Kol. P (Wartość)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movetaskTableBody" class="divide-y divide-cyber-border">
+                                <tr><td colspan="6" class="py-8 text-center text-slate-500">Brak danych. Wklej wiersze z Excela powyżej.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const CURRENT_STORAGE_KEY = 'wms_cyber_main_database';
+
+        const state = {
+            rawRows: [],
+            parsedData: [],
+            activeCategory: 'Putaway',
+            activeZone: 'ALL',
+            selectedUser: null,
+            selectedTtiUser: null,
+            selectedOklejanieUser: null,
+            selectedOdbiciaUser: null,
+            selectedWorkerUser: null,
+            workerProcessFilter: 'ALL',
+            selectedOdbiciaActivity: 'ALL',
+            receiptSubView: 'ALL',
+            expandedContainers: {},
+            pagination: { page: 1, pageSize: 50 },
+            sortField: 'date',
+            sortDir: 'desc',
+            columnFilters: { time: '', code: '', sku: '', source: '', target: '', pa: '', user: '' }
+        };
+
+        let isBaseLocked = true;
+
+        function clearColumnFilters() {
+            state.columnFilters = { time: '', code: '', sku: '', source: '', target: '', pa: '', user: '' };
+            state.pagination.page = 1;
+            renderDetailsTable();
+        }
+
+        function handleColFilterInput(colName, value) {
+            state.columnFilters[colName] = value;
+            state.pagination.page = 1;
+            renderDetailsTable();
+        }
+
+        function getElapsedTimeFromStart(dStr, tStr) {
+            if (!dStr || !tStr) return '-';
+            const parts = dStr.split('/');
+            if (parts.length === 3) {
+                const startDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T${tStr}`);
+                if (!isNaN(startDate.getTime())) {
+                    const now = new Date();
+                    let diffSec = Math.floor((now.getTime() - startDate.getTime()) / 1000);
+                    if (diffSec < 0) diffSec = 0;
+                    const h = Math.floor(diffSec / 3600);
+                    const m = Math.floor((diffSec % 3600) / 60);
+                    const s = diffSec % 60;
+                    let res = '';
+                    if (h > 0) res += `${h}g `;
+                    if (m > 0 || h > 0) res += `${m}m `;
+                    res += `${s}s`;
+                    return res.trim() || '0s';
+                }
+            }
+            return '-';
+        }
+
+        function toggleBaseLock() {
+            isBaseLocked = !isBaseLocked;
+            const textarea = document.getElementById('pasteBaseArea');
+            const lockIcon = document.getElementById('lockIcon');
+            const lockText = document.getElementById('lockText');
+            const toggleBtn = document.getElementById('toggleLockBtn');
+
+            if (isBaseLocked) {
+                textarea.setAttribute('readonly', true);
+                textarea.classList.add('cursor-not-allowed');
+                toggleBtn.className = 'px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[9px] flex items-center gap-1';
+                lockText.textContent = 'Zablokowane';
+                lockIcon.setAttribute('data-lucide', 'lock');
+            } else {
+                textarea.removeAttribute('readonly');
+                textarea.classList.remove('cursor-not-allowed');
+                toggleBtn.className = 'px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-[9px] flex items-center gap-1';
+                lockText.textContent = 'Odblokowane';
+                lockIcon.setAttribute('data-lucide', 'unlock');
+            }
+            lucide.createIcons();
+        }
+
+        function clearAllData() {
+            if (confirm("Czy na pewno chcesz wyczyścić całą bazę danych i zapamiętane wpisy?")) {
+                state.parsedData = [];
+                const keysToRemove = [
+                    CURRENT_STORAGE_KEY,
+                    'wms_cyber_test_records_v38_persistfix',
+                    'wms_cyber_test_records_v37_containerfix',
+                    'wms_cyber_test_records_v36_kontenery',
+                    'wms_cyber_test_records_v35_userfilter',
+                    'wms_cyber_test_records_v34_colfix',
+                    'wms_cyber_test_records_v33_pagfix',
+                    'wms_cyber_test_records_v32_pafix'
+                ];
+                keysToRemove.forEach(k => localStorage.removeItem(k));
+
+                document.getElementById('pasteBaseArea').value = '';
+                document.getElementById('countBase').textContent = '0 w.';
+                document.getElementById('pasteFreshArea').value = '';
+                document.getElementById('countFresh').textContent = '0 w.';
+                renderAll();
+                showToast("Wyczyszczono całą bazę danych.");
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastTimeSub').textContent = message;
+            toast.classList.remove('hidden', 'toast-exit');
+            toast.classList.add('toast-enter');
+
+            setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.classList.add('hidden'), 500);
+            }, 4000);
+        }
+
+        function cleanRawString(val) {
+            if (val === null || val === undefined) return '';
+            let str = String(val).trim();
+            if (/^\d+(\.\d+)?e\+\d+$/i.test(str)) {
+                try { str = BigInt(Math.round(Number(str))).toString(); } catch(e) {}
+            }
+            return str;
+        }
+
+        function parseQty(val) {
+            if (val === null || val === undefined || val === '') return 1;
+            let num = Number(String(val).replace(/\s+/g, '').replace(',', '.'));
+            return isNaN(num) || num <= 0 ? 1 : num;
+        }
+
+        function parseDateTime(dStr, tStr) {
+            if (!dStr) return '';
+            const parts = dStr.split('/');
+            if (parts.length === 3) {
+                return `${parts[2]}-${parts[1]}-${parts[0]} ${tStr || '00:00:00'}`;
+            }
+            return `${dStr} ${tStr || '00:00:00'}`;
+        }
+
+        function parseDateTimeInSeconds(dStr, tStr) {
+            if (!tStr) return 0;
+            const parts = tStr.split(':');
+            const h = parseInt(parts[0]) || 0;
+            const m = parseInt(parts[1]) || 0;
+            const s = parseInt(parts[2]) || 0;
+            let daySec = h * 3600 + m * 60 + s;
+            if (dStr) {
+                const dParts = dStr.split('/');
+                if (dParts.length === 3) {
+                    const day = parseInt(dParts[0]) || 1;
+                    daySec += day * 86400;
+                }
+            }
+            return daySec;
+        }
+
+        function classifyTaskType(codeStr) {
+            const upper = codeStr.toUpperCase().trim();
+            if (upper.includes('ADJUSTMENT') || upper.includes('KOREKTA')) return 'Adjustment';
+            if (upper.includes('RECEIPT') || upper.includes('PRZYJECIE') || upper.includes('PRZYJĘCIE')) return 'Receipt';
+            if (upper.includes('RELOCATE') || upper.includes('RELOKACJA')) return 'Relocate';
+            return 'Putaway';
+        }
+
+        function classifyPutawayZone(targetStr, taskType) {
+            const up = targetStr.toUpperCase().trim();
+            if (up.startsWith('AS')) return 'SHELF';
+            if (taskType === 'Relocate' || taskType === 'Adjustment') return 'RELOCATE_OTHER';
+            if (up.startsWith('V1-IN') || up.startsWith('V2-IN') || up.startsWith('V1IN') || up.startsWith('V2IN')) return 'VIN';
+            if (up.startsWith('V1') || up.startsWith('V2')) return 'VNA';
+            return 'BULK';
+        }
+
+        function extractContainerCode(text) {
+            if (!text) return '';
+            const match = String(text).toUpperCase().match(/\b[A-Z]{4}\d{6,7}\b/);
+            return match ? match[0] : '';
+        }
+
+        function getUniqueClosedPAs() {
+            const rawClosed = state.parsedData.filter(d => d.isClosedPAValid && d.paValue);
+            const paMap = {};
+            rawClosed.forEach(r => {
+                const uniqueKey = r.paValue;
+                if (!paMap[uniqueKey]) {
+                    paMap[uniqueKey] = {
+                        paValue: r.paValue,
+                        paType: r.paType,
+                        statusFound: r.statusVal || r.preAdvStatusCol || 'In Progress --> Complete',
+                        date: r.date,
+                        time: r.time,
+                        lineCount: 1,
+                        totalQty: r.qty || 0
+                    };
+                } else {
+                    paMap[uniqueKey].lineCount++;
+                    paMap[uniqueKey].totalQty += (r.qty || 0);
+                }
+            });
+            return Object.values(paMap);
+        }
+
+        function calculateTaskSessions(taskKeywords) {
+            const sorted = [...state.parsedData].sort((a, b) => {
+                const tA = parseDateTime(a.date, a.time);
+                const tB = parseDateTime(b.date, b.time);
+                return tA.localeCompare(tB);
+            });
+
+            const userSessions = {};
+            const keywords = Array.isArray(taskKeywords) ? taskKeywords.map(k => k.toUpperCase()) : [taskKeywords.toUpperCase()];
+
+            sorted.forEach(row => {
+                const user = row.user;
+                if (!user || user === 'BRAK_USERA') return;
+                const codeUp = (row.code || '').toUpperCase();
+                const targetUp = (row.target || '').toUpperCase();
+                const actUp = (row.activity || '').toUpperCase();
+
+                const isTargetMatch = keywords.some(kw => targetUp.includes(kw) || actUp.includes(kw) || targetUp === kw || actUp === kw);
+                const isStart = (codeUp.includes('JOB START') || codeUp.includes('START')) && isTargetMatch;
+                const isEnd = (codeUp.includes('JOB END') || codeUp.includes('JOB STOP') || codeUp.includes('COMPLETE')) && isTargetMatch;
+
+                if (!isStart && !isEnd) return;
+
+                if (!userSessions[user]) {
+                    userSessions[user] = { activeStart: null, totalSeconds: 0, sessionsCount: 0, lastStartStr: '-' };
+                }
+
+                const timeParts = (row.time || '00:00:00').split(':');
+                const seconds = (parseInt(timeParts[0]) || 0) * 3600 + (parseInt(timeParts[1]) || 0) * 60 + (parseInt(timeParts[2]) || 0);
+
+                if (isStart && !userSessions[user].activeStart) {
+                    userSessions[user].activeStart = seconds;
+                    userSessions[user].lastStartStr = `${row.date || ''} ${row.time || ''}`;
+                } else if (isEnd && userSessions[user].activeStart !== null) {
+                    let diff = seconds - userSessions[user].activeStart;
+                    if (diff < 0) diff += 86400;
+                    userSessions[user].totalSeconds += diff;
+                    userSessions[user].sessionsCount++;
+                    userSessions[user].activeStart = null;
+                }
+            });
+
+            const result = [];
+            Object.keys(userSessions).forEach(user => {
+                const data = userSessions[user];
+                const totalSec = data.totalSeconds;
+                const hours = Math.floor(totalSec / 3600);
+                const minutes = Math.floor((totalSec % 3600) / 60);
+                const decimalHours = (totalSec / 3600).toFixed(2).replace('.', ',');
+
+                if (totalSec > 0 || data.sessionsCount > 0) {
+                    result.push({
+                        user: user,
+                        durationText: `${hours} godzina ${minutes} minut`,
+                        decimalText: decimalHours,
+                        sessionsCount: data.sessionsCount,
+                        lastStart: data.lastStartStr
+                    });
+                }
+            });
+
+            return result;
+        }
+
+        function calculateTtiAddSessions() {
+            return calculateTaskSessions(['TTIADD', 'TTI']);
+        }
+
+        function calculateOklejanieSessions() {
+            return calculateTaskSessions(['OKLEJANIE']);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initTabs();
+            initFileUpload();
+            initDualPaste();
+            initFilters();
+            initPaginationControls();
+            initExport();
+            initPresenceModule();
+            initMovetaskModule();
+
+            loadDataFromLocalStorage();
+        });
+
+        function loadDataFromLocalStorage() {
+            try {
+                const oldKeys = [
+                    'wms_cyber_test_records_v38_persistfix',
+                    'wms_cyber_test_records_v37_containerfix',
+                    'wms_cyber_test_records_v36_kontenery',
+                    'wms_cyber_test_records_v35_userfilter',
+                    'wms_cyber_test_records_v34_colfix',
+                    'wms_cyber_test_records_v33_pagfix',
+                    'wms_cyber_test_records_v32_pafix'
+                ];
+
+                let savedData = localStorage.getItem(CURRENT_STORAGE_KEY);
+                if (!savedData) {
+                    for (const oldKey of oldKeys) {
+                        const legacy = localStorage.getItem(oldKey);
+                        if (legacy) {
+                            savedData = legacy;
+                            break;
+                        }
+                    }
+                }
+
+                oldKeys.forEach(k => localStorage.removeItem(k));
+
+                if (savedData) {
+                    const records = JSON.parse(savedData);
+                    if (records && records.length > 0) {
+                        state.parsedData = records;
+                        const textRows = records.map(d => `${d.preAdvStatusCol || 'PreAdv Status'}\t${d.sku}\t\t\t\t\t${d.qty}\t${d.source || ''}\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusVal}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}\t${d.container || '-'}`).join('\n');
+                        document.getElementById('pasteBaseArea').value = textRows;
+                        document.getElementById('countBase').textContent = `${records.length} w.`;
+                        saveDataToLocalStorage(records);
+                    }
+                }
+                showToast(`Wczytano wersję v0.5.50-CLOSEDPA-FIX`);
+                renderAll();
+            } catch (err) {
+                console.error('Błąd wczytywania localStorage:', err);
+            }
+        }
+
+        function saveDataToLocalStorage(records) {
+            try {
+                localStorage.setItem(CURRENT_STORAGE_KEY, JSON.stringify(records));
+            } catch(e) {
+                console.error('Błąd zapisu localStorage:', e);
+                showToast('Uwaga: Pamięć przeglądarki jest pełna!');
+            }
+        }
+
+        function initPresenceModule() {
+            ['presenceDsv', 'presenceServices', 'presenceQlevel'].forEach(id => {
+                const el = document.getElementById(id);
+                const val = localStorage.getItem(`wms_cyber_test_${id}`);
+                if (val !== null) el.value = val;
+                el.addEventListener('input', () => {
+                    localStorage.setItem(`wms_cyber_test_${id}`, el.value);
+                    updateTotalPresence();
+                });
+            });
+            updateTotalPresence();
+        }
+
+        function updateTotalPresence() {
+            const total = (parseInt(document.getElementById('presenceDsv').value) || 0) +
+                          (parseInt(document.getElementById('presenceServices').value) || 0) +
+                          (parseInt(document.getElementById('presenceQlevel').value) || 0);
+            document.getElementById('totalPresenceCount').textContent = total;
+            return total;
+        }
+
+        function switchCategory(cat) {
+            state.activeCategory = cat;
+            state.activeZone = 'ALL';
+            state.selectedUser = null;
+            state.selectedTtiUser = null;
+            state.selectedOklejanieUser = null;
+            state.selectedOdbiciaUser = null;
+            state.selectedOdbiciaActivity = 'ALL';
+
+            ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'TtiAdd', 'Oklejanie', 'Odbicia', 'Pracownicy', 'Movetask'].forEach(c => {
+                const btn = document.getElementById(`nav${c}`);
+                if (btn) {
+                    if (c === cat) {
+                        btn.className = 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 transition';
+                    } else {
+                        btn.className = 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+                    }
+                }
+            });
+
+            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'Adjustment': 'Adjustment', 'ClosedPA': 'Zamknięte PA', 'TtiAdd': 'TTI ADD', 'Oklejanie': 'OKLEJANIE', 'Odbicia': 'Odbicia (Live)', 'Pracownicy': 'Analiza Pracowników', 'Movetask': 'MOVETASK (Strefy)' };
+            document.getElementById('activeCatLabel').textContent = labels[cat];
+
+            if (cat === 'Movetask') {
+                document.getElementById('topBentoGrid').style.display = 'none';
+                document.getElementById('kpiContainer').style.display = 'none';
+                document.getElementById('workersSection').style.display = 'none';
+                document.getElementById('detailsSection').style.display = 'none';
+                document.getElementById('movetaskSection').classList.remove('hidden');
+                updateMovetaskUI();
+                return;
+            } else {
+                document.getElementById('movetaskSection').classList.add('hidden');
+                document.getElementById('topBentoGrid').style.display = 'grid';
+                document.getElementById('detailsSection').style.display = 'block';
+            }
+            
+            const hideHeaderSections = (cat === 'Odbicia' || cat === 'TtiAdd' || cat === 'Oklejanie' || cat === 'Pracownicy');
+            document.getElementById('kpiContainer').style.display = hideHeaderSections ? 'none' : 'grid';
+            document.getElementById('workersSection').style.display = hideHeaderSections ? 'none' : 'grid';
+
+            state.pagination.page = 1;
+            renderAll();
+        }
+
+        function switchZone(zone) {
+            state.activeZone = zone;
+            state.selectedUser = null;
+            state.pagination.page = 1;
+            renderAll();
+        }
+
+        function initTabs() {
+            document.getElementById('tabPasteBtn').addEventListener('click', () => {
+                document.getElementById('tabPasteBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition';
+                document.getElementById('tabFileBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition';
+                document.getElementById('tabPasteContent').classList.remove('hidden');
+                document.getElementById('tabFileContent').classList.add('hidden');
+            });
+            document.getElementById('tabFileBtn').addEventListener('click', () => {
+                document.getElementById('tabFileBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-slate-950 transition';
+                document.getElementById('tabPasteBtn').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white transition';
+                document.getElementById('tabFileContent').classList.remove('hidden');
+                document.getElementById('tabPasteContent').classList.add('hidden');
+            });
+        }
+
+        function initFileUpload() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', e => e.preventDefault());
+            dropZone.addEventListener('drop', e => { e.preventDefault(); if (e.target.files.length) handleFile(e.target.files[0]); });
+            fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+        }
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array', raw: false, cellText: true });
+                let sheetName = workbook.SheetNames.find(name => name.trim().toUpperCase() === 'INV') || workbook.SheetNames[0];
+                const matrixRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: false, defval: '' });
+                processMatrix(matrixRows);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function initDualPaste() {
+            document.getElementById('processPasteBtn').addEventListener('click', processBothAreas);
+            
+            document.getElementById('pasteFreshArea').addEventListener('input', (e) => {
+                const text = e.target.value;
+                const lines = text.trim() ? text.split('\n').filter(l => l.trim().length > 0).length : 0;
+                document.getElementById('countFresh').textContent = `${lines} w.`;
+            });
+        }
+
+        function processBothAreas() {
+            const freshText = document.getElementById('pasteFreshArea').value.trim();
+            const baseText = document.getElementById('pasteBaseArea').value.trim();
+
+            if (!freshText && !baseText) return;
+
+            let records = [...state.parsedData];
+            let existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}|${r.paValue}`));
+
+            const freshLines = freshText ? freshText.split('\n').map(l => l.trim()).filter(l => l.length > 0) : [];
+
+            if (freshLines.length > 0) {
+                if (freshText.includes('\t')) {
+                    const matrixRows = freshLines.map(l => l.split('\t'));
+                    parseMatrixRowsIntoRecords(matrixRows, records, existingKeys);
+                } else {
+                    parseRawLinesIntoRecords(freshLines, records, existingKeys);
+                }
+            } else if (!isBaseLocked && baseText) {
+                if (baseText.includes('\t')) {
+                    const matrixRows = baseText.split('\n').map(l => l.trim()).filter(l => l.length > 0).map(l => l.split('\t'));
+                    records = [];
+                    existingKeys = new Set();
+                    parseMatrixRowsIntoRecords(matrixRows, records, existingKeys);
+                }
+            }
+
+            records.forEach((rec, index) => { rec.id = index + 1; });
+            state.parsedData = records;
+            state.selectedUser = null;
+            state.selectedTtiUser = null;
+            state.selectedOklejanieUser = null;
+            state.selectedOdbiciaUser = null;
+
+            const textRows = records.map(d => `${d.preAdvStatusCol || 'PreAdv Status'}\t${d.sku}\t\t\t\t\t${d.qty}\t${d.source || ''}\t${d.target}\t\t${d.time}\t\t${d.date}\t${d.user}\t${d.statusVal}\t\t${d.paValue}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t${d.activity}\t${d.container || '-'}`).join('\n');
+            document.getElementById('pasteBaseArea').value = textRows;
+            document.getElementById('countBase').textContent = `${records.length} w.`;
+            document.getElementById('pasteFreshArea').value = '';
+            document.getElementById('countFresh').textContent = '0 w.';
+
+            saveDataToLocalStorage(records);
+            renderAll();
+            showToast(`Przetworzono dane. Unikalnych wierszy w bazie: ${records.length}`);
+        }
+
+        function parseRawLinesIntoRecords(lines, records, existingKeys) {
+            let currentRecord = { code: 'Putaway', sku: '-', qty: 1, source: '-', target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: 'BULK', container: '-' };
+            let hasData = false;
+
+            lines.forEach((line) => {
+                const up = line.toUpperCase();
+                
+                const cMatch = extractContainerCode(line);
+                if (cMatch && (!currentRecord.container || currentRecord.container === '-')) {
+                    currentRecord.container = cMatch;
+                    hasData = true;
+                }
+
+                if (line === 'PreAdv Status' || up.includes('PLTTI') || up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.startsWith('PUTAWAY') || up.startsWith('RECEIPT') || up.startsWith('RELOCATE')) {
+                    if (hasData) {
+                        commitRawRecord(currentRecord, records, existingKeys);
+                    }
+                    currentRecord = { code: line, sku: '-', qty: 1, source: '-', target: 'BULK', time: '00:00:00', date: '02/11/2026', user: 'BRAK_USERA', statusVal: 'In Progress --> Complete', paValue: '', paType: 'INNE', activity: line, container: '-' };
+                    hasData = true;
+                }
+
+                const digits = line.replace(/\D/g, '');
+                if (digits.length >= 10 && !currentRecord.paValue) {
+                    const cand = digits.substring(0, 10);
+                    if (cand.startsWith('018') || cand.startsWith('48') || cand.startsWith('45') || cand.startsWith('47') || cand.startsWith('0084')) {
+                        currentRecord.paValue = cand;
+                        currentRecord.paType = (cand.startsWith('018')) ? 'ASN' : 'PO';
+                        hasData = true;
+                    }
+                }
+
+                if (/^\d{2}\/\d{2}\/\d{4}$/.test(line)) { currentRecord.date = line; hasData = true; }
+                if (/^\d{2}:\d{2}:\d{2}$/.test(line)) { currentRecord.time = line; hasData = true; }
+                if (/^[A-Z0-9]{5,}$/.test(line) && !up.includes('PROGRESS') && !up.includes('COMPLETE') && !up.includes('PLTTI') && !cMatch) {
+                    if (currentRecord.user === 'BRAK_USERA') { currentRecord.user = line; hasData = true; }
+                }
+            });
+
+            if (hasData) {
+                commitRawRecord(currentRecord, records, existingKeys);
+            }
+        }
+
+        function commitRawRecord(rec, records, existingKeys) {
+            const taskType = classifyTaskType(rec.code);
+            const putawayZone = classifyPutawayZone(rec.target, taskType);
+            const combinedStatusText = `${rec.statusVal} ${rec.code}`.toUpperCase();
+            const inProgIdx = combinedStatusText.indexOf('IN PROGRESS');
+            const compIdx = combinedStatusText.indexOf('COMPLETE');
+            const isExactClosedStatus = (inProgIdx !== -1 && compIdx !== -1 && inProgIdx < compIdx) && !combinedStatusText.includes('SHIPPED');
+            const isClosedPAValid = isExactClosedStatus && (rec.paType === 'ASN' || rec.paType === 'PO');
+
+            const rowKey = `${rec.date}|${rec.time}|${rec.user}|${rec.sku}|${rec.target}|${rec.code}|${rec.qty}|${rec.paValue}`;
+            if (!existingKeys.has(rowKey)) {
+                existingKeys.add(rowKey);
+                records.push({
+                    ...rec,
+                    id: records.length + 1,
+                    taskType,
+                    putawayZone,
+                    isClosedPAValid,
+                    preAdvStatusCol: rec.code
+                });
+            }
+        }
+
+        function parseMatrixRowsIntoRecords(matrix, records, existingKeys) {
+            let containerColIdx = -1;
+            if (matrix.length > 0 && Array.isArray(matrix[0])) {
+                const headerRow = matrix[0].map(c => cleanRawString(c).toUpperCase());
+                const foundIdx = headerRow.findIndex(h => h === 'CN' || h === 'CONTAINER' || h === 'KONTENER' || h === 'EQUIPMENT' || h === 'CONTAINER NO');
+                if (foundIdx !== -1) containerColIdx = foundIdx;
+            }
+
+            matrix.forEach((r, idx) => {
+                if (!r || !r.length) return;
+                const getCol = (i) => i >= 0 && i < r.length ? cleanRawString(r[i]) : '';
+
+                if (idx === 0 && matrix.length > 1) {
+                    const h0 = cleanRawString(r[0]).toUpperCase();
+                    if (h0.includes('STATUS') || h0 === 'CN' || h0 === 'PREADV STATUS') return;
+                }
+
+                const preAdvStatusCol = getCol(0);
+                const sku = getCol(1) || '-';
+                const qty = parseQty(r[6]);
+                const source = getCol(7) || '-';
+                const target = getCol(8) || 'BULK';
+                const time = getCol(10) || '00:00:00';
+                const date = getCol(12) || '02/11/2026';
+                const user = getCol(13) || 'BRAK_USERA';
+                const statusVal = getCol(14);
+                const rawPaVal = getCol(16);
+
+                let container = '-';
+                if (containerColIdx !== -1) container = getCol(containerColIdx) || '-';
+                if (container === '-' && r.length > 91) container = getCol(91) || '-';
+                if (container === '-') {
+                    for (let cell of r) {
+                        const code = extractContainerCode(cell);
+                        if (code) { container = code; break; }
+                    }
+                }
+
+                const combinedStatusText = `${statusVal} ${preAdvStatusCol}`.toUpperCase();
+                const inProgIdx = combinedStatusText.indexOf('IN PROGRESS');
+                const compIdx = combinedStatusText.indexOf('COMPLETE');
+                const isExactClosedStatus = (inProgIdx !== -1 && compIdx !== -1 && inProgIdx < compIdx) && !combinedStatusText.includes('SHIPPED');
+
+                let paValue = '';
+                const digitsInQ = rawPaVal.replace(/\D/g, '');
+                if (digitsInQ.length >= 10) {
+                    const first10 = digitsInQ.substring(0, 10);
+                    if (first10.startsWith('018') || first10.startsWith('48') || first10.startsWith('45') || first10.startsWith('47') || first10.startsWith('0084')) {
+                        paValue = first10;
+                    }
+                }
+
+                let paType = 'INNE';
+                if (paValue && paValue.length === 10) {
+                    if (paValue.startsWith('018')) paType = 'ASN';
+                    else paType = 'PO';
+                }
+
+                const isClosedPAValid = isExactClosedStatus && (paType === 'ASN' || paType === 'PO');
+                const activity = getCol(42) || target;
+                const code = preAdvStatusCol || 'Putaway';
+                const taskType = classifyTaskType(code);
+                const putawayZone = classifyPutawayZone(target, taskType);
+
+                const rowKey = `${date}|${time}|${user}|${sku}|${target}|${code}|${qty}|${paValue}`;
+
+                if (!existingKeys.has(rowKey)) {
+                    existingKeys.add(rowKey);
+                    records.push({
+                        id: records.length + 1,
+                        code, sku, qty, source, target, time, date, user,
+                        taskType, putawayZone, isClosedPAValid,
+                        paValue, paType, preAdvStatusCol,
+                        statusVal: statusVal || preAdvStatusCol || 'In Progress --> Complete',
+                        activity, container
+                    });
+                }
+            });
+        }
+
+        function processMatrix(matrix) {
+            let records = [...state.parsedData];
+            let existingKeys = new Set(records.map(r => `${r.date}|${r.time}|${r.user}|${r.sku}|${r.target}|${r.code}|${r.qty}|${r.paValue}`));
+
+            parseMatrixRowsIntoRecords(matrix, records, existingKeys);
+            records.forEach((rec, index) => { rec.id = index + 1; });
+
+            state.parsedData = records;
+            saveDataToLocalStorage(records);
+            renderAll();
+            showToast(`Przetworzono plik. Unikalnych wierszy w bazie: ${records.length}`);
+        }
+
+        function getActiveFilteredData() {
+            let data = [];
+            if (state.activeCategory === 'Putaway') {
+                data = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
+                if (state.activeZone !== 'ALL') data = data.filter(d => d.putawayZone === state.activeZone);
+            } else if (state.activeCategory === 'Receipt') {
+                data = state.parsedData.filter(d => d.taskType === 'Receipt');
+            } else if (state.activeCategory === 'Adjustment') {
+                data = state.parsedData.filter(d => d.taskType === 'Adjustment');
+            } else if (state.activeCategory === 'Relocate') {
+                data = state.parsedData.filter(d => d.taskType === 'Relocate');
+            } else if (state.activeCategory === 'ClosedPA') {
+                data = state.parsedData.filter(d => d.isClosedPAValid);
+            } else if (state.activeCategory === 'TtiAdd') {
+                data = getTtiAddSessions();
+            } else if (state.activeCategory === 'Oklejanie') {
+                data = getOklejanieSessions();
+            } else if (state.activeCategory === 'Pracownicy') {
+                data = state.parsedData.filter(d => d.user && d.user !== 'BRAK_USERA');
+            } else if (state.activeCategory === 'Odbicia') {
+                let odbiciaRows = state.parsedData.filter(d => {
+                    const up = (d.code || '').toUpperCase();
+                    return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('USER') || up.includes('PLTTI');
+                });
+
+                if (state.selectedOdbiciaUser) {
+                    data = odbiciaRows.filter(d => d.user === state.selectedOdbiciaUser);
+                } else {
+                    const userGroups = {};
+                    odbiciaRows.forEach(d => {
+                        if (d.user && d.user !== 'BRAK_USERA') {
+                            if (!userGroups[d.user]) userGroups[d.user] = [];
+                            userGroups[d.user].push(d);
+                        }
+                    });
+
+                    const userActiveList = [];
+
+                    Object.keys(userGroups).forEach(user => {
+                        const events = userGroups[user].sort((a, b) => {
+                            const tA = parseDateTime(a.date, a.time);
+                            const tB = parseDateTime(b.date, b.time);
+                            return tA.localeCompare(tB);
+                        });
+
+                        const activeStack = [];
+                        let lastEvent = null;
+
+                        events.forEach(row => {
+                            lastEvent = row;
+                            const codeUp = (row.code || '').toUpperCase();
+                            const actUp = (row.activity || row.target || '').trim().toUpperCase();
+                            const isStart = codeUp.includes('JOB START') || codeUp.includes('START');
+                            const isEnd = codeUp.includes('JOB END') || codeUp.includes('JOB STOP') || codeUp.includes('COMPLETE');
+
+                            if (isStart) {
+                                activeStack.push({ act: actUp, row: row });
+                            } else if (isEnd) {
+                                const idx = activeStack.map(s => s.act).lastIndexOf(actUp);
+                                if (idx !== -1) {
+                                    activeStack.splice(idx, 1);
+                                } else if (activeStack.length > 0) {
+                                    activeStack.pop();
+                                }
+                            }
+                        });
+
+                        const isCurrentlyActive = activeStack.length > 0;
+                        const currentActiveRow = isCurrentlyActive ? activeStack[activeStack.length - 1].row : lastEvent;
+
+                        if (currentActiveRow) {
+                            userActiveList.push({
+                                ...currentActiveRow,
+                                _isActive: isCurrentlyActive
+                            });
+                        }
+                    });
+
+                    data = userActiveList;
+
+                    if (state.selectedOdbiciaActivity && state.selectedOdbiciaActivity !== 'ALL') {
+                        data = data.filter(d => {
+                            const act = (d.activity || d.target || '').toUpperCase();
+                            return act === state.selectedOdbiciaActivity.toUpperCase();
+                        });
+                    }
+                }
+            }
+            return data;
+        }
+
+        function getTtiAddSessions() {
+            return calculateTtiAddSessions();
+        }
+
+        function getOklejanieSessions() {
+            return calculateOklejanieSessions();
+        }
+
+        function initFilters() {
+            document.getElementById('searchInput').addEventListener('input', () => { state.pagination.page = 1; renderDetailsTable(); });
+        }
+
+        function renderAll() {
+            renderSidebarBadges();
+            if (state.activeCategory === 'Movetask') return;
+            renderDashboardCards();
+            renderWorkers();
+            renderDrilldown();
+            renderDetailsTable();
+            document.getElementById('exportCsvBtn').disabled = !state.parsedData.length;
+        }
+
+        function renderSidebarBadges() {
+            const putawayCount = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF').length;
+            const relocateCount = state.parsedData.filter(d => d.taskType === 'Relocate').length;
+            const receiptCount = state.parsedData.filter(d => d.taskType === 'Receipt').length;
+            const adjustmentCount = state.parsedData.filter(d => d.taskType === 'Adjustment').length;
+            const closedPACount = getUniqueClosedPAs().length;
+            const ttiAddCount = calculateTtiAddSessions().length;
+            const oklejanieCount = calculateOklejanieSessions().length;
+            
+            const allWorkers = new Set(state.parsedData.map(d => d.user).filter(u => u && u !== 'BRAK_USERA'));
+
+            document.getElementById('badgePutaway').textContent = putawayCount;
+            document.getElementById('badgeRelocate').textContent = relocateCount;
+            document.getElementById('badgeReceipt').textContent = receiptCount;
+            document.getElementById('badgeAdjustment').textContent = adjustmentCount;
+            document.getElementById('badgeClosedPA').textContent = closedPACount;
+            document.getElementById('badgeTtiAdd').textContent = ttiAddCount;
+            document.getElementById('badgeOklejanie').textContent = oklejanieCount;
+            document.getElementById('badgeOdbicia').textContent = allWorkers.size;
+            document.getElementById('badgePracownicy').textContent = allWorkers.size;
+            document.getElementById('badgeMovetask').textContent = mtTasksData.length;
+        }
+
+        function renderDashboardCards() {
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy' || state.activeCategory === 'Movetask') return;
+            const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
+            const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
+            const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
+            
+            const uniquePAs = getUniqueClosedPAs();
+            const asnTotal = uniquePAs.filter(p => p.paType === 'ASN').length;
+            const poTotal = uniquePAs.filter(p => p.paType === 'PO').length;
+
+            let vna = 0, bulk = 0, vin = 0, shelf = 0;
+            putawayItems.forEach(d => {
+                if (d.putawayZone === 'VNA') vna++;
+                else if (d.putawayZone === 'BULK') bulk++;
+                else if (d.putawayZone === 'VIN') vin++;
+                else if (d.putawayZone === 'SHELF') shelf++;
+            });
+
+            const purePutaway = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY')).length;
+            document.getElementById('dashVnaOps').textContent = vna;
+            document.getElementById('dashBulkOps').textContent = bulk;
+            document.getElementById('dashVinOps').textContent = vin;
+            document.getElementById('dashShelfOps').textContent = shelf;
+            document.getElementById('dashPutawayRelocateSum').textContent = purePutaway + relocateItems.length;
+            document.getElementById('dashReceiptOps').textContent = receiptItems.length;
+            document.getElementById('dashReceiptQty').textContent = receiptItems.reduce((s, d) => s + d.qty, 0);
+            
+            document.getElementById('dashTotalPa').textContent = uniquePAs.length;
+            document.getElementById('dashAsnCount').textContent = asnTotal;
+            document.getElementById('dashPoCount').textContent = poTotal;
+        }
+
+        function renderWorkers() {
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy' || state.activeCategory === 'Movetask') return;
+            const activeData = getActiveFilteredData();
+            const userMap = {};
+            activeData.forEach(d => userMap[d.user] = (userMap[d.user] || 0) + 1);
+            const sorted = Object.entries(userMap).sort((a,b) => b[1] - a[1]);
+
+            document.getElementById('catWorkersCount').textContent = `${sorted.length} osób`;
+            document.getElementById('catTotalOps').textContent = `${activeData.length} ops`;
+
+            const tbody = document.getElementById('categoryWorkersBody');
+            tbody.innerHTML = '';
+            if (!sorted.length) {
+                tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-500">Brak danych</td></tr>`;
+                return;
+            }
+
+            sorted.forEach(([user, count]) => {
+                const isSelected = state.selectedUser === user;
+                const ratePer8h = (count / 8).toFixed(1);
+                const tr = document.createElement('tr');
+                tr.className = `hover:bg-slate-800/50 transition cursor-pointer ${isSelected ? 'bg-amber-500/20 border-l-4 border-amber-400' : ''}`;
+                tr.onclick = () => { 
+                    if (state.selectedUser === user) {
+                        state.selectedUser = null;
+                    } else {
+                        state.selectedUser = user; 
+                    }
+                    state.pagination.page = 1;
+                    renderAll(); 
+                };
+                tr.innerHTML = `<td class="py-2.5 px-3 font-semibold text-white">${user}</td><td class="py-2.5 px-3 text-right font-bold text-amber-400">${count}</td><td class="py-2.5 px-3 text-right font-mono text-emerald-400 text-[11px]">${ratePer8h} /8h</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function clearUserSelection() { state.selectedUser = null; renderAll(); }
+
+        function renderDrilldown() {
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy' || state.activeCategory === 'Movetask') return;
+            const nameEl = document.getElementById('selectedUserName');
+            const clearBtn = document.getElementById('clearUserBtn');
+            const tbody = document.getElementById('drilldownTableBody');
+            tbody.innerHTML = '';
+            
+            if (!state.selectedUser) {
+                nameEl.textContent = '-';
+                if (clearBtn) clearBtn.classList.add('hidden');
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Wybierz pracownika z listy.</td></tr>';
+                return;
+            }
+            if (clearBtn) clearBtn.classList.remove('hidden');
+            nameEl.textContent = state.selectedUser;
+            
+            getActiveFilteredData().filter(d => d.user === state.selectedUser).forEach((m, i) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/40 transition';
+                tr.innerHTML = `<td class="py-2 px-3 text-slate-500">${i+1}</td><td class="py-2 px-3 text-slate-400">${m.date} ${m.time}</td><td class="py-2 px-3 text-slate-300">${m.code}</td><td class="py-2 px-3"><span class="px-2 py-0.5 text-[10px] bg-amber-500/10 text-amber-400 rounded">${m.putawayZone}</span></td><td class="py-2 px-3 text-emerald-400">${m.sku}</td><td class="py-2 px-3 text-slate-200">${m.target}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function toggleContainerExpand(cName) {
+            state.expandedContainers[cName] = !state.expandedContainers[cName];
+            renderDetailsTable();
+        }
+
+        function renderWorkerTimeline(workerRows, selectedUser) {
+            const container = document.getElementById('workerTimelineContainer');
+            if (!container) return;
+
+            if (!selectedUser || selectedUser === 'ALL' || !workerRows.length) {
+                container.classList.add('hidden');
+                container.innerHTML = '';
+                return;
+            }
+
+            const sorted = [...workerRows].sort((a, b) => {
+                const tA = parseDateTimeInSeconds(a.date, a.time);
+                const tB = parseDateTimeInSeconds(b.date, b.time);
+                return tA - tB;
+            });
+
+            const firstSec = parseDateTimeInSeconds(sorted[0].date, sorted[0].time);
+            const lastSec = parseDateTimeInSeconds(sorted[sorted.length - 1].date, sorted[sorted.length - 1].time);
+            let totalRangeSec = lastSec - firstSec;
+
+            if (totalRangeSec <= 0) totalRangeSec = 3600;
+
+            const GAP_THRESHOLD_SEC = 600; // 10 minut
+            const timelineSegments = [];
+            let totalGapSec = 0;
+            let gapCount = 0;
+
+            for (let i = 0; i < sorted.length; i++) {
+                const curr = sorted[i];
+                const currSec = parseDateTimeInSeconds(curr.date, curr.time);
+
+                if (i > 0) {
+                    const prev = sorted[i - 1];
+                    const prevSec = parseDateTimeInSeconds(prev.date, prev.time);
+                    const diff = currSec - prevSec;
+
+                    if (diff >= GAP_THRESHOLD_SEC) {
+                        const gapMin = Math.floor(diff / 60);
+                        totalGapSec += diff;
+                        gapCount++;
+                        timelineSegments.push({
+                            isGap: true,
+                            startSec: prevSec,
+                            endSec: currSec,
+                            durationMin: gapMin,
+                            startTimeStr: prev.time,
+                            endTimeStr: curr.time
+                        });
+                    }
+                }
+
+                timelineSegments.push({
+                    isGap: false,
+                    sec: currSec,
+                    row: curr
+                });
+            }
+
+            const totalShiftMin = Math.round(totalRangeSec / 60);
+            const totalGapMin = Math.round(totalGapSec / 60);
+            const workMin = Math.max(0, totalShiftMin - totalGapMin);
+
+            let barSegmentsHtml = '';
+            timelineSegments.forEach(seg => {
+                if (seg.isGap) {
+                    const widthPct = ((seg.endSec - seg.startSec) / totalRangeSec) * 100;
+                    barSegmentsHtml += `<div style="width: ${widthPct.toFixed(2)}%" class="h-full bg-rose-500 hover:bg-rose-400 transition cursor-pointer relative group" title="PRZERWA: ${seg.startTimeStr} - ${seg.endTimeStr} (${seg.durationMin} min)"></div>`;
+                } else {
+                    const widthPct = (120 / totalRangeSec) * 100;
+                    barSegmentsHtml += `<div style="width: ${Math.max(widthPct, 0.4).toFixed(2)}%" class="h-full bg-emerald-500/80 hover:bg-emerald-400 transition cursor-pointer" title="[${seg.row.time}] ${seg.row.code || 'Akcja'}"></div>`;
+                }
+            });
+
+            let listHtml = '';
+            timelineSegments.forEach((seg, idx) => {
+                if (seg.isGap) {
+                    listHtml += `
+                        <div class="flex items-center gap-3 bg-rose-500/10 border border-rose-500/40 p-2.5 rounded-xl font-mono text-xs text-rose-300">
+                            <div class="p-1.5 bg-rose-500/20 rounded-lg text-rose-400">
+                                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                            </div>
+                            <div class="flex-1 flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <strong class="text-rose-200 uppercase">PRZERWA / LUKA W PRACY:</strong>
+                                    <span class="ml-2 text-slate-300 font-bold">${seg.startTimeStr} ➔ ${seg.endTimeStr}</span>
+                                </div>
+                                <span class="px-2.5 py-0.5 bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg font-bold">${seg.durationMin} min braku operacji</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const r = seg.row;
+                    const codeDisplay = r.code || r.preAdvStatusCol || 'Akcja';
+                    const codeUpper = codeDisplay.toUpperCase();
+                    
+                    let badgeStyle = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+                    if (codeUpper.includes('START')) badgeStyle = 'bg-amber-500/10 border-amber-500/30 text-amber-400';
+                    else if (codeUpper.includes('END') || codeUpper.includes('STOP')) badgeStyle = 'bg-blue-500/10 border-blue-500/30 text-blue-400';
+                    else if (codeUpper.includes('RECEIPT')) badgeStyle = 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400';
+                    else if (codeUpper.includes('RELOCATE')) badgeStyle = 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400';
+
+                    listHtml += `
+                        <div class="flex items-center gap-3 bg-slate-900/60 border border-cyber-border/80 p-2 rounded-xl text-xs font-mono">
+                            <span class="text-slate-400 font-bold w-16">${r.time || '-'}</span>
+                            <span class="px-2 py-0.5 border rounded-md text-[10px] font-bold ${badgeStyle}">${codeDisplay}</span>
+                            <span class="text-slate-300 truncate">SKU: <strong class="text-emerald-400">${r.sku || '-'}</strong></span>
+                            <span class="text-slate-400 truncate hidden sm:inline">Cel: <strong class="text-amber-300">${r.target || '-'}</strong></span>
+                            <span class="ml-auto text-slate-500 text-[10px]">#${r.id || idx+1}</span>
+                        </div>
+                    `;
+                }
+            });
+
+            container.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-cyber-border pb-3">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">ANALIZA AKTYWNOŚCI I PRZERW: <strong class="text-amber-400 font-mono">${selectedUser}</strong></span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+                            <span class="bg-slate-900 border border-cyber-border px-2.5 py-1 rounded-lg text-slate-300">Zmiana: <strong class="text-white">${sorted[0].time} - ${sorted[sorted.length-1].time}</strong></span>
+                            <span class="bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg text-emerald-400">Aktywność: <strong>~${workMin} min</strong></span>
+                            <span class="bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-lg text-rose-300">Przerwy/Luki: <strong>${totalGapMin} min (${gapCount} przerw)</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                            <span>Początek: ${sorted[0].time}</span>
+                            <span class="text-amber-400 font-bold">Wizualny Pasek Zmiany (Zielony = Aktywność | Czerwony = Luka >10 min)</span>
+                            <span>Koniec: ${sorted[sorted.length-1].time}</span>
+                        </div>
+                        <div class="w-full h-3.5 bg-slate-900 border border-cyber-border rounded-lg overflow-hidden flex items-center">
+                            ${barSegmentsHtml}
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 max-h-[260px] overflow-y-auto custom-scrollbar pr-1">
+                        ${listHtml}
+                    </div>
+                </div>
+            `;
+
+            container.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function renderDetailsTable() {
+            if (state.activeCategory === 'Movetask') return;
+            const tbody = document.getElementById('detailsTableBody');
+            const thead = document.getElementById('tableHead');
+            const titleEl = document.getElementById('tableSectionTitle');
+            tbody.innerHTML = '';
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
+
+            const activeId = document.activeElement ? document.activeElement.id : null;
+            const selStart = document.activeElement ? document.activeElement.selectionStart : null;
+            const selEnd = document.activeElement ? document.activeElement.selectionEnd : null;
+
+            if (state.activeCategory === 'Pracownicy') {
+                const userOpsMap = {};
+                const allColACodes = new Set();
+
+                state.parsedData.forEach(d => {
+                    if (d.user && d.user !== 'BRAK_USERA') {
+                        if (!userOpsMap[d.user]) {
+                            userOpsMap[d.user] = { total: 0, putaway: 0, relocate: 0, receipt: 0, adjustment: 0 };
+                        }
+                        userOpsMap[d.user].total++;
+                        if (d.taskType === 'Putaway' || (d.code && d.code.toUpperCase().includes('PUTAWAY'))) userOpsMap[d.user].putaway++;
+                        else if (d.taskType === 'Relocate') userOpsMap[d.user].relocate++;
+                        else if (d.taskType === 'Receipt') userOpsMap[d.user].receipt++;
+                        else if (d.taskType === 'Adjustment') userOpsMap[d.user].adjustment++;
+                    }
+                    if (d.code) allColACodes.add(d.code.trim());
+                });
+
+                const sortedUsers = Object.keys(userOpsMap).sort((a,b) => userOpsMap[b].total - userOpsMap[a].total);
+
+                if (!state.selectedWorkerUser && sortedUsers.length > 0) {
+                    state.selectedWorkerUser = sortedUsers[0];
+                }
+
+                let userOptionsHtml = `<option value="ALL" ${state.selectedWorkerUser === 'ALL' ? 'selected' : ''}>Wszyscy Operatorzy (${state.parsedData.length} ops)</option>`;
+                sortedUsers.forEach(u => {
+                    userOptionsHtml += `<option value="${u}" ${state.selectedWorkerUser === u ? 'selected' : ''}>${u} (${userOpsMap[u].total} ops)</option>`;
+                });
+
+                const sortedColACodes = Array.from(allColACodes).filter(c => c.length > 0).sort();
+                let processOptionsHtml = `<option value="ALL" ${state.workerProcessFilter==='ALL'?'selected':''}>Wszystkie procesy</option>`;
+                
+                processOptionsHtml += `<option value="GRP_Putaway" ${state.workerProcessFilter==='GRP_Putaway'?'selected':''}>[Grupa] Putaway</option>`;
+                processOptionsHtml += `<option value="GRP_Relocate" ${state.workerProcessFilter==='GRP_Relocate'?'selected':''}>[Grupa] Relokacje</option>`;
+                processOptionsHtml += `<option value="GRP_Receipt" ${state.workerProcessFilter==='GRP_Receipt'?'selected':''}>[Grupa] Przyjęcia</option>`;
+                processOptionsHtml += `<option value="GRP_Adjustment" ${state.workerProcessFilter==='GRP_Adjustment'?'selected':''}>[Grupa] Adjustment</option>`;
+                
+                sortedColACodes.forEach(codeVal => {
+                    processOptionsHtml += `<option value="${codeVal}" ${state.workerProcessFilter === codeVal ? 'selected' : ''}>${codeVal}</option>`;
+                });
+
+                let workerData = state.parsedData;
+                if (state.selectedWorkerUser && state.selectedWorkerUser !== 'ALL') {
+                    workerData = workerData.filter(d => d.user === state.selectedWorkerUser);
+                }
+
+                if (state.workerProcessFilter && state.workerProcessFilter !== 'ALL') {
+                    if (state.workerProcessFilter.startsWith('GRP_')) {
+                        const grpName = state.workerProcessFilter.replace('GRP_', '');
+                        if (grpName === 'Putaway') {
+                            workerData = workerData.filter(d => d.taskType === 'Putaway' || (d.code && d.code.toUpperCase().includes('PUTAWAY')));
+                        } else {
+                            workerData = workerData.filter(d => d.taskType === grpName);
+                        }
+                    } else {
+                        workerData = workerData.filter(d => (d.code || '').trim() === state.workerProcessFilter);
+                    }
+                }
+
+                const cf = state.columnFilters;
+                const filtered = workerData.filter(item => {
+                    if (search && !JSON.stringify(item).toLowerCase().includes(search)) return false;
+                    if (cf.time && !`${item.date || ''} ${item.time || ''}`.toLowerCase().includes(cf.time.toLowerCase())) return false;
+                    if (cf.code && !`${item.code || ''} ${item.preAdvStatusCol || ''}`.toLowerCase().includes(cf.code.toLowerCase())) return false;
+                    if (cf.sku && !`${item.sku || ''}`.toLowerCase().includes(cf.sku.toLowerCase())) return false;
+                    if (cf.source && !`${item.source || ''}`.toLowerCase().includes(cf.source.toLowerCase())) return false;
+                    if (cf.target && !`${item.target || ''}`.toLowerCase().includes(cf.target.toLowerCase())) return false;
+                    if (cf.pa && !`${item.paValue || ''} ${item.container || ''}`.toLowerCase().includes(cf.pa.toLowerCase())) return false;
+                    if (cf.user && !`${item.user || ''}`.toLowerCase().includes(cf.user.toLowerCase())) return false;
+                    return true;
+                });
+
+                const total = filtered.length;
+
+                const selectedStats = (state.selectedWorkerUser && state.selectedWorkerUser !== 'ALL' && userOpsMap[state.selectedWorkerUser]) 
+                    ? userOpsMap[state.selectedWorkerUser] 
+                    : { total: state.parsedData.length, putaway: state.parsedData.filter(d=>d.taskType==='Putaway').length, relocate: state.parsedData.filter(d=>d.taskType==='Relocate').length, receipt: state.parsedData.filter(d=>d.taskType==='Receipt').length, adjustment: state.parsedData.filter(d=>d.taskType==='Adjustment').length };
+
+                titleEl.innerHTML = `<div class="flex flex-col space-y-3 w-full">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span>WYBÓR PRACOWNIKA:</span>
+                            <select onchange="state.selectedWorkerUser=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-3 py-1.5 text-amber-400 font-bold focus:outline-none focus:border-amber-500 font-mono">
+                                ${userOptionsHtml}
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-slate-400 font-bold uppercase">FILTR PROCESU:</span>
+                            <select onchange="state.workerProcessFilter=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-2.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono">
+                                ${processOptionsHtml}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-mono pt-1">
+                        <span class="bg-slate-950 border border-cyber-border px-3 py-1 rounded-xl text-slate-300">ŁĄCZNIE: <strong class="text-white">${selectedStats.total} OPS</strong></span>
+                        <span class="bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-xl text-emerald-400">PUTAWAY: <strong>${selectedStats.putaway}</strong></span>
+                        <span class="bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-xl text-amber-300">RELOKACJE: <strong>${selectedStats.relocate}</strong></span>
+                        <span class="bg-indigo-500/10 border border-indigo-500/30 px-3 py-1 rounded-xl text-indigo-300">PRZYJĘCIA: <strong>${selectedStats.receipt}</strong></span>
+                        <span class="bg-rose-500/10 border border-rose-500/30 px-3 py-1 rounded-xl text-rose-300">ADJUSTMENT: <strong>${selectedStats.adjustment}</strong></span>
+                    </div>
+                </div>`;
+
+                renderWorkerTimeline(workerData, state.selectedWorkerUser);
+
+                thead.innerHTML = `
+                    <tr>
+                        <th class="py-2.5 px-3">Lp.</th>
+                        <th class="py-2.5 px-3">Data / Czas</th>
+                        <th class="py-2.5 px-3">KOD / PROCES</th>
+                        <th class="py-2.5 px-3">SKU</th>
+                        <th class="py-2.5 px-3">SKĄD (SOURCE)</th>
+                        <th class="py-2.5 px-3">GDZIE (TARGET)</th>
+                        <th class="py-2.5 px-3 text-right">SZTUK</th>
+                        <th class="py-2.5 px-3">DOKUMENT / PA</th>
+                        <th class="py-2.5 px-3">OPERATOR</th>
+                    </tr>
+                    <tr class="bg-slate-950/90 border-b border-cyber-border/80">
+                        <td class="p-1"></td>
+                        <td class="p-1"><input type="text" id="colFilterTime" value="${cf.time}" placeholder="Szukaj..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('time', this.value)"></td>
+                        <td class="p-1"><input type="text" id="colFilterCode" value="${cf.code}" placeholder="Kod..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('code', this.value)"></td>
+                        <td class="p-1"><input type="text" id="colFilterSku" value="${cf.sku}" placeholder="SKU..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('sku', this.value)"></td>
+                        <td class="p-1"><input type="text" id="colFilterSource" value="${cf.source}" placeholder="Skąd..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('source', this.value)"></td>
+                        <td class="p-1"><input type="text" id="colFilterTarget" value="${cf.target}" placeholder="Gdzie..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('target', this.value)"></td>
+                        <td class="p-1"></td>
+                        <td class="p-1"><input type="text" id="colFilterPa" value="${cf.pa}" placeholder="Dokument..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('pa', this.value)"></td>
+                        <td class="p-1"><input type="text" id="colFilterUser" value="${cf.user}" placeholder="Operator..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('user', this.value)"></td>
+                    </tr>
+                `;
+
+                const { page, pageSize } = state.pagination;
+                const start = (page - 1) * pageSize;
+                const pageData = filtered.slice(start, start + pageSize);
+
+                if (!pageData.length) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Brak zarejestrowanych ruchów dla wybranych kryteriów.</td></tr>';
+                    document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
+                    
+                    if (activeId) {
+                        const el = document.getElementById(activeId);
+                        if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                    }
+                    return;
+                }
+
+                pageData.forEach((row, i) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-800/40 transition';
+                    
+                    const codeDisplay = row.code || row.preAdvStatusCol || '-';
+                    const codeUpper = codeDisplay.toUpperCase();
+                    
+                    let processBadge = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+                    if (codeUpper.includes('RECEIPT')) processBadge = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40';
+                    else if (codeUpper.includes('RELOCATE')) processBadge = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+                    else if (codeUpper.includes('ADJUSTMENT')) processBadge = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+                    else if (codeUpper.includes('PREADV')) processBadge = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+                    else if (codeUpper.includes('PUTAWAY')) processBadge = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+
+                    tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500 font-mono">${start + i + 1}</td>
+                        <td class="py-2.5 px-3 text-slate-400 font-mono">${row.date || '-'} ${row.time || '-'}</td>
+                        <td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] border rounded font-mono font-bold ${processBadge}">${codeDisplay}</span></td>
+                        <td class="py-2.5 px-3 text-emerald-400 font-mono">${row.sku || '-'}</td>
+                        <td class="py-2.5 px-3 text-slate-300 font-mono">${row.source || '-'}</td>
+                        <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.target || '-'}</td>
+                        <td class="py-2.5 px-3 font-bold text-emerald-400 text-right font-mono">${row.qty || 1}</td>
+                        <td class="py-2.5 px-3 text-slate-400 font-mono text-[11px]">${row.paValue || row.container || '-'}</td>
+                        <td class="py-2.5 px-3 text-cyan-300 font-semibold cursor-pointer hover:underline" onclick="state.selectedWorkerUser='${row.user}'; state.pagination.page=1; renderDetailsTable();">${row.user || '-'}</td>`;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} ruchów`;
+                document.getElementById('prevPageBtn').disabled = page === 1;
+                document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+                if (activeId) {
+                    const el = document.getElementById(activeId);
+                    if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                }
+
+            } else {
+                const timelineContainer = document.getElementById('workerTimelineContainer');
+                if (timelineContainer) timelineContainer.classList.add('hidden');
+
+                if (state.activeCategory === 'Receipt') {
+                    let data = getActiveFilteredData();
+                    if (state.selectedUser) data = data.filter(d => d.user === state.selectedUser);
+                    
+                    const cf = state.columnFilters;
+                    const filtered = data.filter(item => {
+                        if (search && !JSON.stringify(item).toLowerCase().includes(search)) return false;
+                        if (cf.time && !`${item.date || ''} ${item.time || ''}`.toLowerCase().includes(cf.time.toLowerCase())) return false;
+                        if (cf.code && !`${item.code || ''}`.toLowerCase().includes(cf.code.toLowerCase())) return false;
+                        if (cf.sku && !`${item.sku || ''}`.toLowerCase().includes(cf.sku.toLowerCase())) return false;
+                        if (cf.source && !`${item.source || ''}`.toLowerCase().includes(cf.source.toLowerCase())) return false;
+                        if (cf.target && !`${item.target || ''}`.toLowerCase().includes(cf.target.toLowerCase())) return false;
+                        if (cf.user && !`${item.user || ''}`.toLowerCase().includes(cf.user.toLowerCase())) return false;
+                        return true;
+                    });
+                    const total = filtered.length;
+
+                    let userFilterSuffix = state.selectedUser ? ` (Filtruję pracownika: <strong class="text-amber-400">${state.selectedUser}</strong> <button onclick="clearUserSelection()" class="ml-2 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded transition">Pokaż wszystkich</button>)` : '';
+
+                    titleEl.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3 w-full">
+                        <div class="flex items-center gap-3">
+                            <span>Przyjęcia (Receipts) <span class="ml-1 px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 rounded text-[10px] font-mono">${total} ops</span>${userFilterSuffix}</span>
+                        </div>
+                        <div class="flex bg-slate-950 p-1 rounded-xl border border-cyber-border gap-1 font-sans font-medium text-xs">
+                            <button onclick="state.receiptSubView='ALL'; state.pagination.page=1; renderDetailsTable();" class="px-3 py-1 rounded-lg transition ${state.receiptSubView!=='CONTAINERS'?'bg-amber-500 text-slate-950 font-bold shadow':'text-slate-400 hover:text-white'}">Wszystkie</button>
+                            <button onclick="state.receiptSubView='CONTAINERS'; renderDetailsTable();" class="px-3 py-1 rounded-lg transition ${state.receiptSubView==='CONTAINERS'?'bg-amber-500 text-slate-950 font-bold shadow':'text-slate-400 hover:text-white'}">Wg Kontenerów (CN)</button>
+                        </div>
+                    </div>`;
+
+                    if (state.receiptSubView === 'CONTAINERS') {
+                        thead.innerHTML = `<tr><th class="py-3 px-3" colspan="9">WIDOK GRUPOWANY WG KONTENERÓW (KOLUMNA CN)</th></tr>`;
+                        
+                        if (!filtered.length) {
+                            tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Brak przyjęć do wyświetlenia.</td></tr>';
+                            document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 kontenerów';
+                            document.getElementById('prevPageBtn').disabled = true;
+                            document.getElementById('nextPageBtn').disabled = true;
+                            return;
+                        }
+
+                        const containerGroups = {};
+                        filtered.forEach(r => {
+                            const cKey = (r.container && r.container !== '-') ? r.container : 'Brak Kontenera / Inne';
+                            if (!containerGroups[cKey]) containerGroups[cKey] = [];
+                            containerGroups[cKey].push(r);
+                        });
+
+                        const cKeys = Object.keys(containerGroups).sort();
+
+                        cKeys.forEach((cName, idx) => {
+                            const items = containerGroups[cName];
+                            const sumQty = items.reduce((acc, it) => acc + (it.qty || 0), 0);
+                            const isExpanded = !!state.expandedContainers[cName];
+
+                            const trHead = document.createElement('tr');
+                            trHead.className = 'bg-slate-950/90 border-b border-cyber-border hover:bg-slate-900 cursor-pointer transition';
+                            trHead.onclick = () => toggleContainerExpand(cName);
+                            trHead.innerHTML = `
+                                <td colspan="9" class="py-3 px-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="p-1.5 bg-amber-500/20 text-amber-400 rounded-lg">
+                                                <i data-lucide="${isExpanded ? 'chevron-down' : 'chevron-right'}" class="w-4 h-4"></i>
+                                            </div>
+                                            <span class="font-mono text-sm font-bold text-amber-400">${cName}</span>
+                                        </div>
+                                        <div class="flex items-center gap-4 text-xs font-mono">
+                                            <span class="text-slate-400">Pozycji: <strong class="text-white">${items.length}</strong></span>
+                                            <span class="text-slate-400">Łącznie sztuk: <strong class="text-emerald-400">${sumQty}</strong></span>
+                                            <span class="px-2 py-0.5 rounded text-[10px] ${isExpanded ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-400'}">${isExpanded ? 'Zwiń' : 'Rozwiń'}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                            `;
+                            tbody.appendChild(trHead);
+
+                            if (isExpanded) {
+                                const trSubTable = document.createElement('tr');
+                                trSubTable.className = 'bg-slate-950/50 border-b border-cyber-border/60';
+                                
+                                let subRowsHtml = items.map((subRow, sIdx) => `
+                                    <tr class="hover:bg-slate-800/30 transition border-b border-cyber-border/30">
+                                        <td class="py-2 px-3 text-slate-500 font-mono text-[11px]">${sIdx + 1}</td>
+                                        <td class="py-2 px-3 text-slate-400 text-[11px]">${subRow.date || '-'} ${subRow.time || '-'}</td>
+                                        <td class="py-2 px-3 text-slate-300 font-mono text-[11px]">${subRow.code || '-'}</td>
+                                        <td class="py-2 px-3"><span class="px-2 py-0.5 text-[9px] bg-indigo-500/20 text-indigo-300 rounded">${subRow.putawayZone || '-'}</span></td>
+                                        <td class="py-2 px-3 text-emerald-400 font-mono text-[11px]">${subRow.sku || '-'}</td>
+                                        <td class="py-2 px-3 text-slate-300 text-[11px]">${subRow.source || '-'}</td>
+                                        <td class="py-2 px-3 font-bold text-amber-300 text-right font-mono text-[11px]">${subRow.qty || '-'}</td>
+                                        <td class="py-2 px-3 text-slate-300 text-[11px]">${subRow.target || '-'}</td>
+                                        <td class="py-2 px-3 text-cyan-300 font-semibold text-[11px] cursor-pointer hover:underline" onclick="event.stopPropagation(); state.selectedUser = '${subRow.user}'; renderAll();">${subRow.user || '-'}</td>
+                                    </tr>
+                                `).join('');
+
+                                trSubTable.innerHTML = `
+                                    <td colspan="9" class="p-3">
+                                        <div class="border border-cyber-border/60 rounded-xl overflow-hidden bg-slate-900/60">
+                                            <table class="w-full text-left text-xs">
+                                                <thead class="bg-slate-950 text-slate-400 font-mono uppercase text-[10px] border-b border-cyber-border/40">
+                                                    <tr><th class="py-2 px-3">Lp.</th><th class="py-2 px-3">Data / Czas</th><th class="py-2 px-3">Kod</th><th class="py-2 px-3">Strefa</th><th class="py-2 px-3">SKU</th><th class="py-2 px-3">SKĄD</th><th class="py-2 px-3 text-right">Sztuk</th><th class="py-2 px-3">Docelowa</th><th class="py-2 px-3">Pracownik</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${subRowsHtml}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                `;
+                                tbody.appendChild(trSubTable);
+                            }
+                        });
+
+                        lucide.createIcons();
+                        document.getElementById('pageInfo').textContent = `Wyświetlam ${cKeys.length} kontenerów (${total} wszystkich pozycji)`;
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        return;
+                    }
+
+                    const { page, pageSize } = state.pagination;
+                    const start = (page - 1) * pageSize;
+                    const pageData = filtered.slice(start, start + pageSize);
+
+                    thead.innerHTML = `
+                        <tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>
+                        <tr class="bg-slate-950/90 border-b border-cyber-border/80">
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterTime" value="${cf.time}" placeholder="Szukaj..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('time', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterCode" value="${cf.code}" placeholder="Kod..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('code', this.value)"></td>
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterSku" value="${cf.sku}" placeholder="SKU..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('sku', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterSource" value="${cf.source}" placeholder="Skąd..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('source', this.value)"></td>
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterTarget" value="${cf.target}" placeholder="Gdzie..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('target', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterUser" value="${cf.user}" placeholder="Operator..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('user', this.value)"></td>
+                        </tr>
+                    `;
+
+                    if (!pageData.length) {
+                        tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Brak wierszy przyjęć.</td></tr>';
+                        document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        
+                        if (activeId) {
+                            const el = document.getElementById(activeId);
+                            if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                        }
+                        return;
+                    }
+
+                    pageData.forEach((row, i) => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-800/40 transition';
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-amber-500/10 text-amber-400 rounded">${row.putawayZone || '-'}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.source || '-'}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold cursor-pointer hover:underline" onclick="event.stopPropagation(); state.selectedUser = '${row.user}'; state.pagination.page = 1; renderAll();" title="Filtruj tego pracownika">${row.user || '-'}</td>`;
+                        tbody.appendChild(tr);
+                    });
+
+                    document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} wierszy`;
+                    document.getElementById('prevPageBtn').disabled = page === 1;
+                    document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+                    if (activeId) {
+                        const el = document.getElementById(activeId);
+                        if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                    }
+
+                } else if (state.activeCategory === 'ClosedPA') {
+                    let data = getUniqueClosedPAs();
+                    const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+                    const total = filtered.length;
+                    const asnLen = filtered.filter(p => p.paType === 'ASN').length;
+                    const poLen = filtered.filter(p => p.paType === 'PO').length;
+
+                    const { page, pageSize } = state.pagination;
+                    const start = (page - 1) * pageSize;
+                    const pageData = filtered.slice(start, start + pageSize);
+
+                    titleEl.innerHTML = `Zamknięte Pre-Advice (PA) - Unikalne Dokumenty <span class="ml-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded text-[10px] font-mono">Łącznie: ${total} (ASN: ${asnLen} | PO: ${poLen})</span>`;
+                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Typ PA</th><th class="py-3 px-3">Status</th><th class="py-3 px-3">Numer PA / Dokumentu</th><th class="py-3 px-3 text-right">Pozycji / Sztuk</th></tr>`;
+
+                    if (!pageData.length) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak zamkniętych PA.</td></tr>';
+                        document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        return;
+                    }
+
+                    pageData.forEach((row, i) => {
+                        const badgeClass = row.paType === 'ASN' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-800/40 transition';
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] border rounded font-mono font-bold ${badgeClass}">${row.paType}</span></td><td class="py-2.5 px-3 text-teal-400 font-semibold">${row.statusFound}</td><td class="py-2.5 px-3"><span class="px-2.5 py-1 text-xs font-mono font-bold border rounded-lg bg-teal-500/20 text-teal-300 border-teal-500/30">${row.paValue}</span></td><td class="py-2.5 px-3 text-right font-mono text-slate-300"><strong class="text-amber-400">${row.lineCount}</strong> poz. / <strong class="text-emerald-400">${row.totalQty}</strong> szt.</td>`;
+                        tbody.appendChild(tr);
+                    });
+
+                    document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} unikalnych PA`;
+                    document.getElementById('prevPageBtn').disabled = page === 1;
+                    document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+                } else if (state.activeCategory === 'TtiAdd') {
+                    if (state.selectedTtiUser) {
+                        let rawUserEvents = [];
+                        state.parsedData.forEach(d => {
+                            if (d.user === state.selectedTtiUser) {
+                                const up = (d.code || '').toUpperCase();
+                                const targetUp = (d.target || '').toUpperCase();
+                                const actUp = (d.activity || '').toUpperCase();
+
+                                const isJobCode = up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
+                                const isTtiTarget = targetUp.includes('TTIADD') || actUp.includes('TTIADD') || targetUp === 'TTI' || actUp === 'TTI';
+
+                                if (isJobCode && isTtiTarget) {
+                                    rawUserEvents.push(d);
+                                }
+                            }
+                        });
+
+                        titleEl.innerHTML = `Szczegóły wbić/wybić TTI dla pracownika: <strong class="text-amber-400">${state.selectedTtiUser}</strong> <button onclick="state.selectedTtiUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 text-slate-200 text-xs rounded hover:bg-slate-700">Powrót</button>`;
+                        thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">Status</th></tr>`;
+
+                        if (!rawUserEvents.length) {
+                            tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak szczegółowych zdarzeń TTI dla tego pracownika.</td></tr>';
+                            document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                            document.getElementById('prevPageBtn').disabled = true;
+                            document.getElementById('nextPageBtn').disabled = true;
+                            return;
+                        }
+
+                        rawUserEvents.forEach((row, i) => {
+                            const tr = document.createElement('tr');
+                            tr.className = 'hover:bg-slate-800/40 transition';
+                            tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
+                            tbody.appendChild(tr);
+                        });
+                        document.getElementById('pageInfo').textContent = `Pokazuję ${rawUserEvents.length} zdarzeń`;
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        return;
+                    }
+
+                    let data = getActiveFilteredData();
+                    const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+                    const total = filtered.length;
+
+                    let sumDecimal = filtered.reduce((acc, item) => {
+                        let val = parseFloat(String(item.decimalText).replace(',', '.')) || 0;
+                        return acc + val;
+                    }, 0);
+                    let sumDecimalStr = sumDecimal.toFixed(2).replace('.', ',');
+
+                    const { page, pageSize } = state.pagination;
+                    const start = (page - 1) * pageSize;
+                    const pageData = filtered.slice(start, start + pageSize);
+
+                    titleEl.innerHTML = `Aktywność TTI ADD (Kliknij w pracownika, aby zobaczyć szczegóły wbić/wybić) <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób | Suma godzin: ${sumDecimalStr}</span>`;
+                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Pracownik</th><th class="py-3 px-3">Czas trwania (Format)</th><th class="py-3 px-3">Wartość dziesiętna</th><th class="py-3 px-3 text-right">Sesji</th></tr>`;
+
+                    if (!pageData.length) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych TTI ADD.</td></tr>';
+                        document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        return;
+                    }
+
+                    pageData.forEach((row, i) => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
+                        tr.onclick = () => { state.selectedTtiUser = row.user; renderDetailsTable(); };
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.durationText}</td><td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row.decimalText}</td><td class="py-2.5 px-3 text-right font-mono text-slate-300">${row.sessionsCount}</td>`;
+                        tbody.appendChild(tr);
+                    });
+
+                    const trSum = document.createElement('tr');
+                    trSum.className = 'bg-slate-950/80 font-bold border-t border-cyber-border';
+                    trSum.innerHTML = `<td colspan="3" class="py-2.5 px-3 text-right text-slate-400 uppercase text-[10px]">Suma całkowita:</td><td class="py-2.5 px-3 text-emerald-400 font-mono">${sumDecimalStr}</td><td></td>`;
+                    tbody.appendChild(trSum);
+
+                    document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
+                    document.getElementById('prevPageBtn').disabled = page === 1;
+                    document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+                } else if (state.activeCategory === 'Oklejanie') {
+                    if (state.selectedOklejanieUser) {
+                        let rawUserEvents = [];
+                        state.parsedData.forEach(d => {
+                            if (d.user === state.selectedOklejanieUser) {
+                                const up = (d.code || '').toUpperCase();
+                                const targetUp = (d.target || '').toUpperCase();
+                                const actUp = (d.activity || '').toUpperCase();
+
+                                const isJobCode = up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
+                                const isOklejanieTarget = targetUp.includes('OKLEJANIE') || actUp.includes('OKLEJANIE');
+
+                                if (isJobCode && isOklejanieTarget) {
+                                    rawUserEvents.push(d);
+                                }
+                            }
+                        });
+
+                        titleEl.innerHTML = `Szczegóły wbić/wybić OKLEJANIE dla pracownika: <strong class="text-amber-400">${state.selectedOklejanieUser}</strong> <button onclick="state.selectedOklejanieUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 text-slate-200 text-xs rounded hover:bg-slate-700">Powrót</button>`;
+                        thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">Status</th></tr>`;
+
+                        if (!rawUserEvents.length) {
+                            tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak szczegółowych zdarzeń OKLEJANIE dla tego pracownika.</td></tr>';
+                            document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                            document.getElementById('prevPageBtn').disabled = true;
+                            document.getElementById('nextPageBtn').disabled = true;
+                            return;
+                        }
+
+                        rawUserEvents.forEach((row, i) => {
+                            const tr = document.createElement('tr');
+                            tr.className = 'hover:bg-slate-800/40 transition';
+                            tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-mono font-bold">${row.activity || row.target || '-'}</td><td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
+                            tbody.appendChild(tr);
+                        });
+                        document.getElementById('pageInfo').textContent = `Pokazuję ${rawUserEvents.length} zdarzeń`;
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        return;
+                    }
+
+                    let data = getActiveFilteredData();
+                    const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+                    const total = filtered.length;
+
+                    let sumDecimal = filtered.reduce((acc, item) => {
+                        let val = parseFloat(String(item.decimalText).replace(',', '.')) || 0;
+                        return acc + val;
+                    }, 0);
+                    let sumDecimalStr = sumDecimal.toFixed(2).replace('.', ',');
+
+                    const { page, pageSize } = state.pagination;
+                    const start = (page - 1) * pageSize;
+                    const pageData = filtered.slice(start, start + pageSize);
+
+                    titleEl.innerHTML = `Aktywność OKLEJANIE (Kliknij w pracownika, aby zobaczyć szczegóły wbić/wybić) <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} osób | Suma godzin: ${sumDecimalStr}</span>`;
+                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Pracownik</th><th class="py-3 px-3">Czas trwania (Format)</th><th class="py-3 px-3">Wartość dziesiętna</th><th class="py-3 px-3 text-right">Sesji</th></tr>`;
+
+                    if (!pageData.length) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Brak danych OKLEJANIE.</td></tr>';
+                        document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        return;
+                    }
+
+                    pageData.forEach((row, i) => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
+                        tr.onclick = () => { state.selectedOklejanieUser = row.user; renderDetailsTable(); };
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user}</td><td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.durationText}</td><td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row.decimalText}</td><td class="py-2.5 px-3 text-right font-mono text-slate-300">${row.sessionsCount}</td>`;
+                        tbody.appendChild(tr);
+                    });
+
+                    const trSum = document.createElement('tr');
+                    trSum.className = 'bg-slate-950/80 font-bold border-t border-cyber-border';
+                    trSum.innerHTML = `<td colspan="3" class="py-2.5 px-3 text-right text-slate-400 uppercase text-[10px]">Suma całkowita:</td><td class="py-2.5 px-3 text-emerald-400 font-mono">${sumDecimalStr}</td><td></td>`;
+                    tbody.appendChild(trSum);
+
+                    document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
+                    document.getElementById('prevPageBtn').disabled = page === 1;
+                    document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+                } else if (state.activeCategory === 'Odbicia') {
+                    if (state.selectedOdbiciaUser) {
+                        let rawUserEvents = state.parsedData.filter(d => {
+                            if (d.user !== state.selectedOdbiciaUser) return false;
+                            const up = (d.code || '').toUpperCase();
+                            return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP');
+                        });
+
+                        if (state.selectedOdbiciaActivity && state.selectedOdbiciaActivity !== 'ALL') {
+                            rawUserEvents = rawUserEvents.filter(d => {
+                                const act = (d.activity || d.target || '').toUpperCase();
+                                return act === state.selectedOdbiciaActivity.toUpperCase();
+                            });
+                        }
+
+                        const openStarts = {};
+                        const sortedForDur = [...rawUserEvents].sort((a, b) => {
+                            const tA = parseDateTime(a.date, a.time);
+                            const tB = parseDateTime(b.date, b.time);
+                            return tA.localeCompare(tB);
+                        });
+
+                        sortedForDur.forEach(row => {
+                            const codeUp = (row.code || '').toUpperCase();
+                            const actUp = (row.activity || row.target || '').trim().toUpperCase();
+                            const isStart = codeUp.includes('JOB START') || codeUp.includes('START');
+                            const isEnd = codeUp.includes('JOB END') || codeUp.includes('JOB STOP');
+
+                            if (isStart) {
+                                openStarts[actUp] = row;
+                                row._durationText = '-';
+                            } else if (isEnd) {
+                                if (openStarts[actUp]) {
+                                    const startRow = openStarts[actUp];
+                                    const tStart = parseDateTimeInSeconds(startRow.date, startRow.time);
+                                    const tEnd = parseDateTimeInSeconds(row.date, row.time);
+                                    let diffSec = tEnd - tStart;
+                                    if (diffSec < 0) diffSec += 86400;
+
+                                    const h = Math.floor(diffSec / 3600);
+                                    const m = Math.floor((diffSec % 3600) / 60);
+                                    const s = diffSec % 60;
+                                    let durStr = '';
+                                    if (h > 0) durStr += `${h}g `;
+                                    if (m > 0 || h > 0) durStr += `${m}m `;
+                                    durStr += `${s}s`;
+
+                                    const finalDur = durStr.trim() || '0s';
+                                    row._durationText = finalDur;
+                                    startRow._durationText = finalDur;
+                                    delete openStarts[actUp];
+                                } else {
+                                    row._durationText = '-';
+                                }
+                            }
+                        });
+
+                        titleEl.innerHTML = `Historia wbić / aktywności dla pracownika: <strong class="text-amber-400">${state.selectedOdbiciaUser}</strong> <button onclick="state.selectedOdbiciaUser=null; renderDetailsTable();" class="ml-3 px-2 py-0.5 bg-slate-800 text-slate-200 text-xs rounded hover:bg-slate-700">Powrót</button>`;
+                        thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Kod</th><th class="py-3 px-3">Czas na zadaniu</th><th class="py-3 px-3">Aktywność / Target</th><th class="py-3 px-3">CZAS TRWANIA</th><th class="py-3 px-3">Status</th></tr>`;
+
+                        if (!rawUserEvents.length) {
+                            tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-500">Brak zarejestrowanych odbić Job Start / Job End dla tego pracownika.</td></tr>';
+                            document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                            document.getElementById('prevPageBtn').disabled = true;
+                            document.getElementById('nextPageBtn').disabled = true;
+                            return;
+                        }
+
+                        rawUserEvents.forEach((row, i) => {
+                            const tr = document.createElement('tr');
+                            tr.className = 'hover:bg-slate-800/40 transition';
+                            const codeUp = (row.code || '').toUpperCase();
+                            const isAct = codeUp.includes('JOB START') || codeUp.includes('START');
+                            const elapsedText = isAct ? getElapsedTimeFromStart(row.date, row.time) : 'Zakończono';
+
+                            tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${i + 1}</td>
+                                <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
+                                <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.code || '-'}</td>
+                                <td class="py-2.5 px-3 font-mono font-bold text-amber-400">${elapsedText}</td>
+                                <td class="py-2.5 px-3 text-cyan-300 font-mono font-bold">${row.activity || row.target || '-'}</td>
+                                <td class="py-2.5 px-3 text-emerald-400 font-mono font-bold">${row._durationText || '-'}</td>
+                                <td class="py-2.5 px-3 text-emerald-400 font-semibold">ZAREJESTROWANO</td>`;
+                            tbody.appendChild(tr);
+                        });
+                        document.getElementById('pageInfo').textContent = `Pokazuję ${rawUserEvents.length} zdarzeń dla ${state.selectedOdbiciaUser}`;
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        return;
+                    }
+
+                    const allOdbiciaRows = state.parsedData.filter(d => {
+                        const up = (d.code || '').toUpperCase();
+                        return up.includes('JOB START') || up.includes('JOB END') || up.includes('JOB STOP') || up.includes('USER') || up.includes('PLTTI');
+                    });
+
+                    const activitiesSet = new Set();
+                    allOdbiciaRows.forEach(d => {
+                        const act = (d.activity || d.target || '').trim();
+                        if (act) activitiesSet.add(act.toUpperCase());
+                    });
+                    const uniqueActivities = Array.from(activitiesSet).sort();
+
+                    let optionsHtml = `<option value="ALL" ${state.selectedOdbiciaActivity === 'ALL' ? 'selected' : ''}>Wszystkie Aktywności</option>`;
+                    uniqueActivities.forEach(act => {
+                        optionsHtml += `<option value="${act}" ${state.selectedOdbiciaActivity === act ? 'selected' : ''}>${act}</option>`;
+                    });
+
+                    let data = getActiveFilteredData();
+                    const filtered = data.filter(item => !search || JSON.stringify(item).toLowerCase().includes(search));
+                    const total = filtered.length;
+
+                    const activeCount = filtered.filter(r => r._isActive).length;
+                    const inactiveCount = filtered.filter(r => !r._isActive).length;
+
+                    const { page, pageSize } = state.pagination;
+                    const start = (page - 1) * pageSize;
+                    const pageData = filtered.slice(start, start + pageSize);
+
+                    titleEl.innerHTML = `<div class="flex flex-wrap items-center gap-3 w-full">
+                        <span>Aktualny Stan Wbić Pracowników (Live)</span>
+                        <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded text-[10px] font-mono font-bold">Aktywni (Job Start): ${activeCount}</span>
+                        <span class="px-2 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/30 rounded text-[10px] font-mono font-bold">Nieaktywni (Job Stop): ${inactiveCount}</span>
+                        <select onchange="state.selectedOdbiciaActivity=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-2.5 py-1 text-amber-400 focus:outline-none focus:border-amber-500 font-mono ml-auto">
+                            ${optionsHtml}
+                        </select>
+                    </div>`;
+
+                    thead.innerHTML = `<tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Zdarzenie / Status</th><th class="py-3 px-3">Czas na zadaniu</th><th class="py-3 px-3">Aktywność</th><th class="py-3 px-3">Pracownik</th></tr>`;
+
+                    if (!pageData.length) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak danych o odbiciach.</td></tr>';
+                        document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        return;
+                    }
+
+                    pageData.forEach((row, i) => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
+                        tr.onclick = () => { state.selectedOdbiciaUser = row.user; renderDetailsTable(); };
+
+                        const isActive = row._isActive !== undefined ? row._isActive : (row.code || '').toUpperCase().includes('START');
+                        const badgeClass = isActive 
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+                            : 'bg-rose-500/20 text-rose-400 border-rose-500/40';
+                        const statusLabel = isActive ? (row.code || 'Job Start') : (row.code || 'Job Stop');
+
+                        const elapsedText = isActive ? getElapsedTimeFromStart(row.date, row.time) : 'Zakończono';
+                        const elapsedBadgeClass = isActive ? 'text-amber-400 font-bold font-mono' : 'text-slate-500 font-mono text-[11px]';
+
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td>
+                            <td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td>
+                            <td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] border rounded font-mono font-bold ${badgeClass}">${statusLabel}</span></td>
+                            <td class="py-2.5 px-3 ${elapsedBadgeClass}">${elapsedText}</td>
+                            <td class="py-2.5 px-3 text-amber-300 font-mono font-bold">${row.activity || row.target || '-'}</td>
+                            <td class="py-2.5 px-3 text-cyan-300 font-semibold hover:underline">${row.user || '-'}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                    document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} osób`;
+                    document.getElementById('prevPageBtn').disabled = page === 1;
+                    document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+                } else {
+                    let data = getActiveFilteredData();
+                    if (state.selectedUser) data = data.filter(d => d.user === state.selectedUser);
+                    
+                    const cf = state.columnFilters;
+                    const filtered = data.filter(item => {
+                        if (search && !JSON.stringify(item).toLowerCase().includes(search)) return false;
+                        if (cf.time && !`${item.date || ''} ${item.time || ''}`.toLowerCase().includes(cf.time.toLowerCase())) return false;
+                        if (cf.code && !`${item.code || ''}`.toLowerCase().includes(cf.code.toLowerCase())) return false;
+                        if (cf.sku && !`${item.sku || ''}`.toLowerCase().includes(cf.sku.toLowerCase())) return false;
+                        if (cf.source && !`${item.source || ''}`.toLowerCase().includes(cf.source.toLowerCase())) return false;
+                        if (cf.target && !`${item.target || ''}`.toLowerCase().includes(cf.target.toLowerCase())) return false;
+                        if (cf.pa && !`${item.paValue || ''} ${item.container || ''}`.toLowerCase().includes(cf.pa.toLowerCase())) return false;
+                        if (cf.user && !`${item.user || ''}`.toLowerCase().includes(cf.user.toLowerCase())) return false;
+                        return true;
+                    });
+
+                    const total = filtered.length;
+                    const { page, pageSize } = state.pagination;
+                    const start = (page - 1) * pageSize;
+                    const pageData = filtered.slice(start, start + pageSize);
+
+                    let titleSuffix = state.selectedUser ? ` (Filtruję pracownika: <strong class="text-amber-400">${state.selectedUser}</strong> <button onclick="clearUserSelection()" class="ml-2 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded transition">Pokaż wszystkich</button>)` : '';
+                    titleEl.innerHTML = `Szczegóły Operacji <span class="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">${total} ops</span>${titleSuffix}`;
+                    
+                    thead.innerHTML = `
+                        <tr><th class="py-3 px-3">Lp.</th><th class="py-3 px-3">Data / Czas</th><th class="py-3 px-3">Kod</th><th class="py-3 px-3">Typ / Strefa</th><th class="py-3 px-3">SKU</th><th class="py-3 px-3">SKĄD</th><th class="py-3 px-3 text-right">Sztuk</th><th class="py-3 px-3">Docelowa</th><th class="py-3 px-3">Pracownik</th></tr>
+                        <tr class="bg-slate-950/90 border-b border-cyber-border/80">
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterTime" value="${cf.time}" placeholder="Szukaj..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('time', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterCode" value="${cf.code}" placeholder="Kod..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('code', this.value)"></td>
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterSku" value="${cf.sku}" placeholder="SKU..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('sku', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterSource" value="${cf.source}" placeholder="Skąd..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('source', this.value)"></td>
+                            <td class="p-1"></td>
+                            <td class="p-1"><input type="text" id="colFilterTarget" value="${cf.target}" placeholder="Gdzie..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('target', this.value)"></td>
+                            <td class="p-1"><input type="text" id="colFilterUser" value="${cf.user}" placeholder="Operator..." class="w-full bg-slate-900 border border-cyber-border text-[10px] rounded px-1.5 py-1 text-slate-200 focus:outline-none focus:border-amber-500 font-mono" oninput="handleColFilterInput('user', this.value)"></td>
+                        </tr>
+                    `;
+
+                    if (!pageData.length) {
+                        tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Brak wierszy.</td></tr>';
+                        document.getElementById('pageInfo').textContent = 'Pokazuję 0 z 0 wierszy';
+                        document.getElementById('prevPageBtn').disabled = true;
+                        document.getElementById('nextPageBtn').disabled = true;
+                        
+                        if (activeId) {
+                            const el = document.getElementById(activeId);
+                            if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                        }
+                        return;
+                    }
+
+                    pageData.forEach((row, i) => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-800/40 transition';
+                        tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500">${start + i + 1}</td><td class="py-2.5 px-3 text-slate-400">${row.date || '-'} ${row.time || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.code || '-'}</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-[10px] bg-amber-500/10 text-amber-400 rounded">${row.putawayZone || '-'}</span></td><td class="py-2.5 px-3 text-emerald-400">${row.sku || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.source || '-'}</td><td class="py-2.5 px-3 font-bold text-amber-300 text-right">${row.qty || '-'}</td><td class="py-2.5 px-3 text-slate-300">${row.target || '-'}</td><td class="py-2.5 px-3 text-cyan-300 font-semibold cursor-pointer hover:underline" onclick="event.stopPropagation(); state.selectedUser = '${row.user}'; state.pagination.page = 1; renderAll();" title="Filtruj tego pracownika">${row.user || '-'}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                    document.getElementById('pageInfo').textContent = `Pokazuję ${start + 1}-${Math.min(start + pageSize, total)} z ${total} wierszy`;
+                    document.getElementById('prevPageBtn').disabled = page === 1;
+                    document.getElementById('nextPageBtn').disabled = start + pageSize >= total;
+
+                    if (activeId) {
+                        const el = document.getElementById(activeId);
+                        if (el) { el.focus(); if (selStart !== null && selEnd !== null) el.setSelectionRange(selStart, selEnd); }
+                    }
+                }
+            }
+        }
+
+        function initPaginationControls() {
+            document.getElementById('prevPageBtn').addEventListener('click', () => { if (state.pagination.page > 1) { state.pagination.page--; renderDetailsTable(); } });
+            document.getElementById('nextPageBtn').addEventListener('click', () => { state.pagination.page++; renderDetailsTable(); });
+        }
+
+        function initExport() {
+            document.getElementById('exportCsvBtn').addEventListener('click', () => {
+                const data = getActiveFilteredData();
+                if (!data.length) return;
+                let csv = 'Lp;Data;Czas;Kod;Typ;SKU;Skad;Sztuki;Docel;User;PA;TypPA;Kontener\n';
+                data.forEach((r, idx) => csv += `${idx+1};"${r.date || ''}";"${r.time || ''}";"${r.code || ''}";"${r.putawayZone || ''}";"${r.sku || ''}";"${r.source || ''}";${r.qty || 0};"${r.target || ''}";"${r.user || ''}";"${r.paValue || ''}";"${r.paType || ''}";"${r.container || ''}"\n`);
+                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `WMS_EXPORT_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+            });
+        }
+
+        // ==========================================
+        // MODUŁ MOVETASK (IZOLOWANA LOGIKA)
+        // ==========================================
+        const MT_STORAGE_KEY = 'wms_movetask_standalone_v1';
+        let mtTasksData = [];
+        let mtActiveZoneFilter = 'ALL';
+
+        function initMovetaskModule() {
+            const inputEl = document.getElementById('movetaskInput');
+            if (inputEl) {
+                inputEl.addEventListener('input', () => {
+                    const lines = inputEl.value.trim() ? inputEl.value.trim().split('\n').filter(l => l.trim().length > 0).length : 0;
+                    document.getElementById('mtRawLinesInfo').textContent = `Wklejono wierszy: ${lines}`;
+                });
+            }
+            loadMovetaskData();
+        }
+
+        function loadMovetaskData() {
+            try {
+                const saved = localStorage.getItem(MT_STORAGE_KEY);
+                if (saved) {
+                    mtTasksData = JSON.parse(saved);
+                    updateMovetaskUI();
+                }
+            } catch (e) {
+                console.error('Błąd odczytu MOVETASK:', e);
+            }
+        }
+
+        function clearMovetask() {
+            mtTasksData = [];
+            localStorage.removeItem(MT_STORAGE_KEY);
+            document.getElementById('movetaskInput').value = '';
+            document.getElementById('mtRawLinesInfo').textContent = 'Wklejono wierszy: 0';
+            mtActiveZoneFilter = 'ALL';
+            updateMovetaskUI();
+            showToast('Wyczyszczono dane MOVETASK.');
+        }
+
+        function processMovetask() {
+            const rawText = document.getElementById('movetaskInput').value;
+            if (!rawText.trim()) return;
+
+            const lines = rawText.split(/\r?\n/).filter(line => line.trim().length > 0);
+            const parsed = [];
+
+            lines.forEach((line) => {
+                const cols = line.split('\t');
+                const colA = (cols[0] || '').trim();
+                const colB = (cols[1] || '').trim();
+                const colI = (cols[8] || '').trim();
+                const colP = (cols[15] || '').trim();
+
+                const upperA = colA.toUpperCase();
+                const upperI = colI.toUpperCase();
+
+                if (!upperA.includes('PUTAWAY')) return;
+
+                let assignedZone = null;
+
+                if (upperI.startsWith('V1IN') || upperI.startsWith('V2IN')) {
+                    assignedZone = 'VNA';
+                } else if (upperI.startsWith('REC')) {
+                    if (colP === '') {
+                        assignedZone = 'REC';
+                    } else {
+                        assignedZone = 'SHELF';
+                    }
+                }
+
+                if (assignedZone) {
+                    parsed.push({
+                        zone: assignedZone,
+                        colA: colA,
+                        colB: colB || '-',
+                        colI: colI,
+                        colP: colP
+                    });
+                }
+            });
+
+            mtTasksData = parsed;
+            localStorage.setItem(MT_STORAGE_KEY, JSON.stringify(mtTasksData));
+            updateMovetaskUI();
+            showToast(`Przeliczono MOVETASK: ${parsed.length} palet.`);
+        }
+
+        function setMtZoneFilter(zone) {
+            mtActiveZoneFilter = zone;
+            
+            const styles = {
+                ALL: { id: 'mtCardALL', active: 'border-2 border-amber-500', inactive: 'border border-amber-500/30 hover:border-amber-400' },
+                REC: { id: 'mtCardREC', active: 'border-2 border-cyan-400', inactive: 'border border-cyan-500/40 hover:border-cyan-400' },
+                VNA: { id: 'mtCardVNA', active: 'border-2 border-emerald-400', inactive: 'border border-emerald-500/40 hover:border-emerald-400' },
+                SHELF: { id: 'mtCardSHELF', active: 'border-2 border-purple-400', inactive: 'border border-purple-500/40 hover:border-purple-400' }
+            };
+
+            Object.keys(styles).forEach(k => {
+                const el = document.getElementById(styles[k].id);
+                if (el) {
+                    el.className = `bg-cyber-card/90 backdrop-blur-md rounded-2xl p-5 cursor-pointer transition hover:scale-[1.01] flex flex-col justify-between ${k === zone ? styles[k].active : styles[k].inactive}`;
+                }
+            });
+
+            const badgeNames = { ALL: 'Wszystkie (ALL)', REC: 'Strefa REC', VNA: 'Strefa V1 / V2IN', SHELF: 'Strefa SHELF' };
+            document.getElementById('mtActiveFilterBadge').textContent = badgeNames[zone];
+
+            renderMovetaskTable();
+        }
+
+        function updateMovetaskUI() {
+            const recCount = mtTasksData.filter(t => t.zone === 'REC').length;
+            const vnaCount = mtTasksData.filter(t => t.zone === 'VNA').length;
+            const shelfCount = mtTasksData.filter(t => t.zone === 'SHELF').length;
+            const totalCount = mtTasksData.length;
+
+            document.getElementById('mtCountAll').textContent = totalCount;
+            document.getElementById('mtCountRec').textContent = recCount;
+            document.getElementById('mtCountVna').textContent = vnaCount;
+            document.getElementById('mtCountShelf').textContent = shelfCount;
+
+            const badgeEl = document.getElementById('badgeMovetask');
+            if (badgeEl) badgeEl.textContent = totalCount;
+
+            renderMovetaskTable();
+        }
+
+        function renderMovetaskTable() {
+            const tbody = document.getElementById('movetaskTableBody');
+            if (!tbody) return;
+            const query = document.getElementById('mtSearchInput').value.toLowerCase().trim();
+            tbody.innerHTML = '';
+
+            let filtered = mtTasksData;
+            if (mtActiveZoneFilter !== 'ALL') {
+                filtered = filtered.filter(t => t.zone === mtActiveZoneFilter);
+            }
+            if (query) {
+                filtered = filtered.filter(t => 
+                    t.colA.toLowerCase().includes(query) ||
+                    t.colB.toLowerCase().includes(query) ||
+                    t.colI.toLowerCase().includes(query) ||
+                    t.colP.toLowerCase().includes(query) ||
+                    t.zone.toLowerCase().includes(query)
+                );
+            }
+
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak pasujących rekordów do wyświetlenia.</td></tr>';
+                return;
+            }
+
+            const zoneBadges = {
+                REC: '<span class="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">REC</span>',
+                VNA: '<span class="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">V1 / V2IN</span>',
+                SHELF: '<span class="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">SHELF</span>'
+            };
+
+            filtered.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/40 transition';
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 text-slate-500 font-mono">${idx + 1}</td>
+                    <td class="py-2.5 px-3">${zoneBadges[row.zone]}</td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-amber-400">${row.colA}</td>
+                    <td class="py-2.5 px-3 font-mono text-slate-300">${row.colB}</td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-white">${row.colI}</td>
+                    <td class="py-2.5 px-3 font-mono ${row.colP ? 'text-purple-300 font-semibold' : 'text-slate-600 italic'}">${row.colP || '(puste)'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
