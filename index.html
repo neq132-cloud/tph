@@ -118,6 +118,10 @@
                     <span class="flex items-center gap-3"><i data-lucide="users" class="w-4 h-4"></i> Pracownicy</span>
                     <span id="badgePracownicy" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
                 </button>
+                <button onclick="switchCategory('Movetask')" id="navMovetask" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-3"><i data-lucide="layers" class="w-4 h-4"></i> MOVETASK</span>
+                    <span id="badgeMovetask" class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded font-mono text-[10px]">0</span>
+                </button>
             </nav>
         </div>
 
@@ -147,7 +151,7 @@
         <main class="p-6 space-y-6 max-w-7xl mx-auto w-full">
 
             <!-- BENTO GRID TOP: Import & Presence -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div id="topBentoGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 <!-- Import Card (2 okienka) -->
                 <div class="lg:col-span-2 bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
@@ -338,6 +342,123 @@
                     </div>
                 </div>
             </section>
+
+            <!-- SEKCJA MOVETASK (NIEZALEŻNY MODUŁ) -->
+            <div id="movetaskSection" class="hidden space-y-6">
+                <!-- Panel Wklejania -->
+                <section class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-cyber-border pb-3">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clipboard-paste" class="w-4 h-4 text-amber-400"></i>
+                            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Wklej dane z Excela (MOVETASK)</h2>
+                        </div>
+                        <div class="flex items-center gap-3 text-[11px] font-mono text-slate-400">
+                            <span>Kol. A: <strong class="text-white">PUTAWAY</strong></span>
+                            <span>•</span>
+                            <span>Kol. I: <strong class="text-white">Strefa (REC / V1IN / V2IN)</strong></span>
+                            <span>•</span>
+                            <span>Kol. P: <strong class="text-white">Warunek SHELF</strong></span>
+                        </div>
+                    </div>
+
+                    <textarea id="movetaskInput" rows="5" placeholder="Zaznacz wiersze w Excelu (od kolumny A przynajmniej do kolumny P), skopiuj (Ctrl+C) i wklej tutaj (Ctrl+V)..." class="w-full bg-slate-950/90 border border-cyber-border rounded-xl p-3 text-xs font-mono text-slate-200 custom-scrollbar focus:outline-none focus:border-amber-500"></textarea>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <span id="mtRawLinesInfo" class="text-xs font-mono text-slate-400">Wklejono wierszy: 0</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="clearMovetask()" class="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Wyczyść
+                            </button>
+                            <button onclick="processMovetask()" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center gap-2">
+                                <i data-lucide="cpu" class="w-4 h-4"></i> Przelicz Strefy
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Kafelki Stref -->
+                <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Wszystkie -->
+                    <div onclick="setMtZoneFilter('ALL')" id="mtCardALL" class="bg-cyber-card/90 backdrop-blur-md border-2 border-amber-500 rounded-2xl p-5 cursor-pointer transition hover:scale-[1.01] flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Wszystkie Palety</span>
+                            <div class="p-2 bg-amber-500/10 text-amber-400 rounded-xl"><i data-lucide="package" class="w-4 h-4"></i></div>
+                        </div>
+                        <div class="mt-3 flex items-baseline justify-between">
+                            <span id="mtCountAll" class="text-3xl font-black text-white font-mono">0</span>
+                            <span class="text-[11px] font-mono text-slate-400">PUTAWAY łącznie</span>
+                        </div>
+                    </div>
+
+                    <!-- Strefa REC -->
+                    <div onclick="setMtZoneFilter('REC')" id="mtCardREC" class="bg-cyber-card/90 backdrop-blur-md border border-cyan-500/40 hover:border-cyan-400 rounded-2xl p-5 cursor-pointer transition hover:scale-[1.01] flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">Strefa REC</span>
+                            <div class="p-2 bg-cyan-500/10 text-cyan-400 rounded-xl"><i data-lucide="arrow-down-to-line" class="w-4 h-4"></i></div>
+                        </div>
+                        <div class="mt-3 flex items-baseline justify-between">
+                            <span id="mtCountRec" class="text-3xl font-black text-white font-mono">0</span>
+                            <span class="text-[10px] font-mono text-cyan-300/80">I: REC* | P: puste</span>
+                        </div>
+                    </div>
+
+                    <!-- Strefa VNA (V1IN / V2IN) -->
+                    <div onclick="setMtZoneFilter('VNA')" id="mtCardVNA" class="bg-cyber-card/90 backdrop-blur-md border border-emerald-500/40 hover:border-emerald-400 rounded-2xl p-5 cursor-pointer transition hover:scale-[1.01] flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Strefa V1 / V2IN</span>
+                            <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl"><i data-lucide="forklift" class="w-4 h-4"></i></div>
+                        </div>
+                        <div class="mt-3 flex items-baseline justify-between">
+                            <span id="mtCountVna" class="text-3xl font-black text-white font-mono">0</span>
+                            <span class="text-[10px] font-mono text-emerald-300/80">I: V1IN / V2IN</span>
+                        </div>
+                    </div>
+
+                    <!-- Strefa SHELF -->
+                    <div onclick="setMtZoneFilter('SHELF')" id="mtCardSHELF" class="bg-cyber-card/90 backdrop-blur-md border border-purple-500/40 hover:border-purple-400 rounded-2xl p-5 cursor-pointer transition hover:scale-[1.01] flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Strefa SHELF</span>
+                            <div class="p-2 bg-purple-500/10 text-purple-400 rounded-xl"><i data-lucide="grid" class="w-4 h-4"></i></div>
+                        </div>
+                        <div class="mt-3 flex items-baseline justify-between">
+                            <span id="mtCountShelf" class="text-3xl font-black text-white font-mono">0</span>
+                            <span class="text-[10px] font-mono text-purple-300/80">I: REC* | P: wypełnione</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tabela Podglądu -->
+                <section class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border rounded-2xl p-5 cyber-glow space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyber-border pb-3">
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Podgląd Zadań MOVETASK</h3>
+                            <span id="mtActiveFilterBadge" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] font-mono">Wszystkie</span>
+                        </div>
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400"></i>
+                            <input type="text" id="mtSearchInput" oninput="renderMovetaskTable()" placeholder="Szukaj w tabeli..." class="bg-slate-950 border border-cyber-border text-xs rounded-xl pl-9 pr-3 py-1.5 text-slate-200 focus:outline-none focus:border-amber-500">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto custom-scrollbar border border-cyber-border rounded-xl max-h-[450px]">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-950 text-slate-400 font-medium uppercase tracking-wider border-b border-cyber-border sticky top-0 z-10">
+                                <tr>
+                                    <th class="py-3 px-3">Lp.</th>
+                                    <th class="py-3 px-3">Zakwalifikowana Strefa</th>
+                                    <th class="py-3 px-3">Kol. A (Kod)</th>
+                                    <th class="py-3 px-3">Kol. B (SKU / Info)</th>
+                                    <th class="py-3 px-3">Kol. I (Lokalizacja)</th>
+                                    <th class="py-3 px-3">Kol. P (Wartość)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movetaskTableBody" class="divide-y divide-cyber-border">
+                                <tr><td colspan="6" class="py-8 text-center text-slate-500">Brak danych. Wklej wiersze z Excela powyżej.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
 
         </main>
     </div>
@@ -629,6 +750,7 @@
             initPaginationControls();
             initExport();
             initPresenceModule();
+            initMovetaskModule();
 
             loadDataFromLocalStorage();
         });
@@ -714,7 +836,7 @@
             state.selectedOdbiciaUser = null;
             state.selectedOdbiciaActivity = 'ALL';
 
-            ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'TtiAdd', 'Oklejanie', 'Odbicia', 'Pracownicy'].forEach(c => {
+            ['Putaway', 'Relocate', 'Receipt', 'Adjustment', 'ClosedPA', 'TtiAdd', 'Oklejanie', 'Odbicia', 'Pracownicy', 'Movetask'].forEach(c => {
                 const btn = document.getElementById(`nav${c}`);
                 if (btn) {
                     if (c === cat) {
@@ -725,8 +847,22 @@
                 }
             });
 
-            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'Adjustment': 'Adjustment', 'ClosedPA': 'Zamknięte PA', 'TtiAdd': 'TTI ADD', 'Oklejanie': 'OKLEJANIE', 'Odbicia': 'Odbicia (Live)', 'Pracownicy': 'Analiza Pracowników' };
+            const labels = { 'Putaway': 'Putaway & SHELF', 'Relocate': 'Relokacje', 'Receipt': 'Przyjęcia', 'Adjustment': 'Adjustment', 'ClosedPA': 'Zamknięte PA', 'TtiAdd': 'TTI ADD', 'Oklejanie': 'OKLEJANIE', 'Odbicia': 'Odbicia (Live)', 'Pracownicy': 'Analiza Pracowników', 'Movetask': 'MOVETASK (Strefy)' };
             document.getElementById('activeCatLabel').textContent = labels[cat];
+
+            if (cat === 'Movetask') {
+                document.getElementById('topBentoGrid').style.display = 'none';
+                document.getElementById('kpiContainer').style.display = 'none';
+                document.getElementById('workersSection').style.display = 'none';
+                document.getElementById('detailsSection').style.display = 'none';
+                document.getElementById('movetaskSection').classList.remove('hidden');
+                updateMovetaskUI();
+                return;
+            } else {
+                document.getElementById('movetaskSection').classList.add('hidden');
+                document.getElementById('topBentoGrid').style.display = 'grid';
+                document.getElementById('detailsSection').style.display = 'block';
+            }
             
             const hideHeaderSections = (cat === 'Odbicia' || cat === 'TtiAdd' || cat === 'Oklejanie' || cat === 'Pracownicy');
             document.getElementById('kpiContainer').style.display = hideHeaderSections ? 'none' : 'grid';
@@ -1098,6 +1234,7 @@
 
         function renderAll() {
             renderSidebarBadges();
+            if (state.activeCategory === 'Movetask') return;
             renderDashboardCards();
             renderWorkers();
             renderDrilldown();
@@ -1125,10 +1262,11 @@
             document.getElementById('badgeOklejanie').textContent = oklejanieCount;
             document.getElementById('badgeOdbicia').textContent = allWorkers.size;
             document.getElementById('badgePracownicy').textContent = allWorkers.size;
+            document.getElementById('badgeMovetask').textContent = mtTasksData.length;
         }
 
         function renderDashboardCards() {
-            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy' || state.activeCategory === 'Movetask') return;
             const putawayItems = state.parsedData.filter(d => d.code.toUpperCase().includes('PUTAWAY') || d.putawayZone === 'SHELF');
             const relocateItems = state.parsedData.filter(d => d.taskType === 'Relocate');
             const receiptItems = state.parsedData.filter(d => d.taskType === 'Receipt');
@@ -1160,7 +1298,7 @@
         }
 
         function renderWorkers() {
-            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy' || state.activeCategory === 'Movetask') return;
             const activeData = getActiveFilteredData();
             const userMap = {};
             activeData.forEach(d => userMap[d.user] = (userMap[d.user] || 0) + 1);
@@ -1198,7 +1336,7 @@
         function clearUserSelection() { state.selectedUser = null; renderAll(); }
 
         function renderDrilldown() {
-            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy') return;
+            if (state.activeCategory === 'Odbicia' || state.activeCategory === 'TtiAdd' || state.activeCategory === 'Oklejanie' || state.activeCategory === 'Pracownicy' || state.activeCategory === 'Movetask') return;
             const nameEl = document.getElementById('selectedUserName');
             const clearBtn = document.getElementById('clearUserBtn');
             const tbody = document.getElementById('drilldownTableBody');
@@ -1375,6 +1513,7 @@
         }
 
         function renderDetailsTable() {
+            if (state.activeCategory === 'Movetask') return;
             const tbody = document.getElementById('detailsTableBody');
             const thead = document.getElementById('tableHead');
             const titleEl = document.getElementById('tableSectionTitle');
@@ -1466,7 +1605,7 @@
                 titleEl.innerHTML = `<div class="flex flex-col space-y-3 w-full">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div class="flex items-center gap-3">
-                            <span class="text-xs font-bold text-slate-300 uppercase">WYBÓR PRACOWNIKA:</span>
+                            <span>WYBÓR PRACOWNIKA:</span>
                             <select onchange="state.selectedWorkerUser=this.value; state.pagination.page=1; renderDetailsTable();" class="bg-slate-950 border border-cyber-border text-xs rounded-xl px-3 py-1.5 text-amber-400 font-bold focus:outline-none focus:border-amber-500 font-mono">
                                 ${userOptionsHtml}
                             </select>
@@ -1542,7 +1681,7 @@
                     if (codeUpper.includes('RECEIPT')) processBadge = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40';
                     else if (codeUpper.includes('RELOCATE')) processBadge = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
                     else if (codeUpper.includes('ADJUSTMENT')) processBadge = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
-                    else if (codeUpper.includes('PREADV')) processBadge = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+                    else if (codeUpper.includes('PREADV')) processBadge = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
                     else if (codeUpper.includes('PUTAWAY')) processBadge = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
 
                     tr.innerHTML = `<td class="py-2.5 px-3 text-slate-500 font-mono">${start + i + 1}</td>
@@ -2185,6 +2324,180 @@
                 const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `WMS_EXPORT_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+            });
+        }
+
+        // ==========================================
+        // MODUŁ MOVETASK (IZOLOWANA LOGIKA)
+        // ==========================================
+        const MT_STORAGE_KEY = 'wms_movetask_standalone_v1';
+        let mtTasksData = [];
+        let mtActiveZoneFilter = 'ALL';
+
+        function initMovetaskModule() {
+            const inputEl = document.getElementById('movetaskInput');
+            if (inputEl) {
+                inputEl.addEventListener('input', () => {
+                    const lines = inputEl.value.trim() ? inputEl.value.trim().split('\n').filter(l => l.trim().length > 0).length : 0;
+                    document.getElementById('mtRawLinesInfo').textContent = `Wklejono wierszy: ${lines}`;
+                });
+            }
+            loadMovetaskData();
+        }
+
+        function loadMovetaskData() {
+            try {
+                const saved = localStorage.getItem(MT_STORAGE_KEY);
+                if (saved) {
+                    mtTasksData = JSON.parse(saved);
+                    updateMovetaskUI();
+                }
+            } catch (e) {
+                console.error('Błąd odczytu MOVETASK:', e);
+            }
+        }
+
+        function clearMovetask() {
+            mtTasksData = [];
+            localStorage.removeItem(MT_STORAGE_KEY);
+            document.getElementById('movetaskInput').value = '';
+            document.getElementById('mtRawLinesInfo').textContent = 'Wklejono wierszy: 0';
+            mtActiveZoneFilter = 'ALL';
+            updateMovetaskUI();
+            showToast('Wyczyszczono dane MOVETASK.');
+        }
+
+        function processMovetask() {
+            const rawText = document.getElementById('movetaskInput').value;
+            if (!rawText.trim()) return;
+
+            const lines = rawText.split(/\r?\n/).filter(line => line.trim().length > 0);
+            const parsed = [];
+
+            lines.forEach((line) => {
+                const cols = line.split('\t');
+                const colA = (cols[0] || '').trim();
+                const colB = (cols[1] || '').trim();
+                const colI = (cols[8] || '').trim();
+                const colP = (cols[15] || '').trim();
+
+                const upperA = colA.toUpperCase();
+                const upperI = colI.toUpperCase();
+
+                if (!upperA.includes('PUTAWAY')) return;
+
+                let assignedZone = null;
+
+                if (upperI.startsWith('V1IN') || upperI.startsWith('V2IN')) {
+                    assignedZone = 'VNA';
+                } else if (upperI.startsWith('REC')) {
+                    if (colP === '') {
+                        assignedZone = 'REC';
+                    } else {
+                        assignedZone = 'SHELF';
+                    }
+                }
+
+                if (assignedZone) {
+                    parsed.push({
+                        zone: assignedZone,
+                        colA: colA,
+                        colB: colB || '-',
+                        colI: colI,
+                        colP: colP
+                    });
+                }
+            });
+
+            mtTasksData = parsed;
+            localStorage.setItem(MT_STORAGE_KEY, JSON.stringify(mtTasksData));
+            updateMovetaskUI();
+            showToast(`Przeliczono MOVETASK: ${parsed.length} palet.`);
+        }
+
+        function setMtZoneFilter(zone) {
+            mtActiveZoneFilter = zone;
+            
+            const styles = {
+                ALL: { id: 'mtCardALL', active: 'border-2 border-amber-500', inactive: 'border border-amber-500/30 hover:border-amber-400' },
+                REC: { id: 'mtCardREC', active: 'border-2 border-cyan-400', inactive: 'border border-cyan-500/40 hover:border-cyan-400' },
+                VNA: { id: 'mtCardVNA', active: 'border-2 border-emerald-400', inactive: 'border border-emerald-500/40 hover:border-emerald-400' },
+                SHELF: { id: 'mtCardSHELF', active: 'border-2 border-purple-400', inactive: 'border border-purple-500/40 hover:border-purple-400' }
+            };
+
+            Object.keys(styles).forEach(k => {
+                const el = document.getElementById(styles[k].id);
+                if (el) {
+                    el.className = `bg-cyber-card/90 backdrop-blur-md rounded-2xl p-5 cursor-pointer transition hover:scale-[1.01] flex flex-col justify-between ${k === zone ? styles[k].active : styles[k].inactive}`;
+                }
+            });
+
+            const badgeNames = { ALL: 'Wszystkie (ALL)', REC: 'Strefa REC', VNA: 'Strefa V1 / V2IN', SHELF: 'Strefa SHELF' };
+            document.getElementById('mtActiveFilterBadge').textContent = badgeNames[zone];
+
+            renderMovetaskTable();
+        }
+
+        function updateMovetaskUI() {
+            const recCount = mtTasksData.filter(t => t.zone === 'REC').length;
+            const vnaCount = mtTasksData.filter(t => t.zone === 'VNA').length;
+            const shelfCount = mtTasksData.filter(t => t.zone === 'SHELF').length;
+            const totalCount = mtTasksData.length;
+
+            document.getElementById('mtCountAll').textContent = totalCount;
+            document.getElementById('mtCountRec').textContent = recCount;
+            document.getElementById('mtCountVna').textContent = vnaCount;
+            document.getElementById('mtCountShelf').textContent = shelfCount;
+
+            const badgeEl = document.getElementById('badgeMovetask');
+            if (badgeEl) badgeEl.textContent = totalCount;
+
+            renderMovetaskTable();
+        }
+
+        function renderMovetaskTable() {
+            const tbody = document.getElementById('movetaskTableBody');
+            if (!tbody) return;
+            const query = document.getElementById('mtSearchInput').value.toLowerCase().trim();
+            tbody.innerHTML = '';
+
+            let filtered = mtTasksData;
+            if (mtActiveZoneFilter !== 'ALL') {
+                filtered = filtered.filter(t => t.zone === mtActiveZoneFilter);
+            }
+            if (query) {
+                filtered = filtered.filter(t => 
+                    t.colA.toLowerCase().includes(query) ||
+                    t.colB.toLowerCase().includes(query) ||
+                    t.colI.toLowerCase().includes(query) ||
+                    t.colP.toLowerCase().includes(query) ||
+                    t.zone.toLowerCase().includes(query)
+                );
+            }
+
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak pasujących rekordów do wyświetlenia.</td></tr>';
+                return;
+            }
+
+            const zoneBadges = {
+                REC: '<span class="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">REC</span>',
+                VNA: '<span class="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">V1 / V2IN</span>',
+                SHELF: '<span class="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">SHELF</span>'
+            };
+
+            filtered.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/40 transition';
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 text-slate-500 font-mono">${idx + 1}</td>
+                    <td class="py-2.5 px-3">${zoneBadges[row.zone]}</td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-amber-400">${row.colA}</td>
+                    <td class="py-2.5 px-3 font-mono text-slate-300">${row.colB}</td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-white">${row.colI}</td>
+                    <td class="py-2.5 px-3 font-mono ${row.colP ? 'text-purple-300 font-semibold' : 'text-slate-600 italic'}">${row.colP || '(puste)'}</td>
+                `;
+                tbody.appendChild(tr);
             });
         }
     </script>
