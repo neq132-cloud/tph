@@ -355,7 +355,7 @@
                         <div class="flex items-center gap-3 text-[11px] font-mono text-slate-400">
                             <span>Kol. A: <strong class="text-white">PUTAWAY</strong></span>
                             <span>•</span>
-                            <span>Kol. I: <strong class="text-white">Strefa (REC / V1IN / V2IN)</strong></span>
+                            <span>Kol. I: <strong class="text-white">Strefa (REC / KITTING / V1IN / V2IN)</strong></span>
                             <span>•</span>
                             <span>Kol. P: <strong class="text-white">Warunek SHELF</strong></span>
                         </div>
@@ -398,7 +398,7 @@
                         </div>
                         <div class="mt-3 flex items-baseline justify-between">
                             <span id="mtCountRec" class="text-3xl font-black text-white font-mono">0</span>
-                            <span class="text-[10px] font-mono text-cyan-300/80">I: REC* | P: puste</span>
+                            <span class="text-[10px] font-mono text-cyan-300/80">I: REC* (P puste) / KITTING*</span>
                         </div>
                     </div>
 
@@ -2390,6 +2390,8 @@
 
                 if (upperI.startsWith('V1IN') || upperI.startsWith('V2IN')) {
                     assignedZone = 'VNA';
+                } else if (upperI.startsWith('KITTING')) {
+                    assignedZone = 'REC';
                 } else if (upperI.startsWith('REC')) {
                     if (colP === '') {
                         assignedZone = 'REC';
